@@ -72,11 +72,10 @@ def test_predict_single_event():
     cutoff = datetime(2017, 3, 10, 12, 30)
     predict = cutoff
     times = [cutoff]
-    coords = [ [75, 75] ]
-    data = open_cp.TimedPoints(times, coords)
+    coords = _np.array([75, 75]).reshape((2,1))
     
     pred = testmod.ProspectiveHotSpot(region)
-    pred.data = data
+    pred.data = open_cp.TimedPoints(times, coords)
     prediction = pred.predict(cutoff, predict)
     
     wanted = [ [0.5, 0.5, 0.5], [0.5, 1, 0.5], [0.5, 0.5, 0.5] ]
@@ -92,7 +91,7 @@ def test_predict_filter_by_time():
     cutoff = datetime(2017, 3, 10, 12, 30)
     predict = datetime(2017, 3, 17, 12, 30)
     times = [cutoff, cutoff + timedelta(hours = 5)]
-    coords = [ [25, 25], [75, 75] ]
+    coords = [ [25, 75], [25, 75] ]
     data = open_cp.TimedPoints(times, coords)
     
     pred = testmod.ProspectiveHotSpot(region)
@@ -109,7 +108,7 @@ def test_predict_multiple_events():
     cutoff = datetime(2017, 3, 15, 12, 30)
     predict = datetime(2017, 3, 17, 12, 30)
     times = [cutoff - timedelta(days = 5), cutoff]
-    coords = [ [25, 25], [75, 75] ]
+    coords = [ [25, 75], [25, 75] ]
     data = open_cp.TimedPoints(times, coords)
     
     pred = testmod.ProspectiveHotSpot(region)

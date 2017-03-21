@@ -49,18 +49,20 @@ import numpy.testing as npt
 
 # Test builder object pattern doesn't quite work in Python, but nevermind...
 def a_valid_TimedPoints():
-    timestamps = [dt(2017,3,20,12,30), dt(2017,3,20,14,30)]
-    coords = [ [1, 5], [7, 10] ]
+    timestamps = [dt(2017,3,20,12,30), dt(2017,3,20,14,30), dt(2017,3,21,0)]
+    coords = [ [1, 5, 8], [7, 10, 3] ]
     return TimedPoints(timestamps, coords)
 
 def test_TimedPoints_builds():
     tp = a_valid_TimedPoints()
     assert tp.timestamps[0] == np.datetime64("2017-03-20T12:30")
     assert tp.timestamps[1] == np.datetime64("2017-03-20T14:30")
-    npt.assert_array_almost_equal(tp.coords[0], [1, 5])
-    npt.assert_array_almost_equal(tp.coords[1], [7, 10])
-    assert len(tp.timestamps) == 2
-    assert tp.coords.shape == (2, 2)
+    assert tp.timestamps[2] == np.datetime64("2017-03-21")
+    npt.assert_array_almost_equal(tp.coords[:,0], [1, 7])
+    npt.assert_array_almost_equal(tp.coords[:,1], [5, 10])
+    npt.assert_array_almost_equal(tp.coords[:,2], [8, 3])
+    assert len(tp.timestamps) == 3
+    assert tp.coords.shape == (2, 3)
 
 def test_TimedPoints_must_be_time_ordered():
     timestamps = [dt(2017,3,20,14,30), dt(2017,3,20,12,30)]
@@ -70,18 +72,19 @@ def test_TimedPoints_must_be_time_ordered():
 
 def test_TimedPoints_from_coords():
     tp2 = a_valid_TimedPoints()
-    tp = TimedPoints.from_coords(tp2.timestamps, tp2.coords[:,0], tp2.coords[:,1])
+    tp = TimedPoints.from_coords(tp2.timestamps, [3, 1, 4], [1, 5, 9])
     assert tp.timestamps[0] == np.datetime64("2017-03-20T12:30")
     assert tp.timestamps[1] == np.datetime64("2017-03-20T14:30")
-    npt.assert_array_almost_equal(tp.coords[0], [1, 5])
-    npt.assert_array_almost_equal(tp.coords[1], [7, 10])
-    assert len(tp.timestamps) == 2
-    assert tp.coords.shape == (2, 2)
+    npt.assert_array_almost_equal(tp.coords[0], [3, 1, 4])
+    npt.assert_array_almost_equal(tp.coords[1], [1, 5, 9])
+    assert len(tp.timestamps) == 3
+    assert tp.coords.shape == (2, 3)
 
 def test_TimedPoints_events_before():
     tp2 = a_valid_TimedPoints()
     tp = tp2.events_before(dt(2017,3,20,14,0))
     assert tp.timestamps[0] == np.datetime64("2017-03-20T12:30")
     assert len(tp.timestamps) == 1
-    npt.assert_array_almost_equal(tp.coords[0], [1, 5])
-    assert tp.coords.shape == (1, 2)
+    assert( tp.coords[0] == pytest.approx(1) )
+    assert( tp.coords[1] == pytest.approx(7) )
+    assert tp.coords.shape == (2, 1)

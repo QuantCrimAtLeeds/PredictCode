@@ -72,14 +72,14 @@ class ProspectiveHotSpot(predictors.Predictor):
     def _total_weight(self, cell, time_deltas, coords):
         return sum(
             self.weight(cell, t, x, y)
-            for t, x, y in zip(time_deltas, coords[:,0], coords[:,1]) )
+            for t, x, y in zip(time_deltas, coords[0], coords[1]) )
 
     def predict(self, cutoff_time, predict_time):
         if not cutoff_time <= predict_time:
             raise ValueError("Data cutoff point should be before prediction time")
-        mask = self._data.timestamps <= cutoff_time
-        time_deltas = _np.datetime64(predict_time) - self._data.timestamps[mask]
-        coords = self._data.coords[mask]
+        events = self.data.events_before(cutoff_time)
+        time_deltas = _np.datetime64(predict_time) - events.timestamps
+        coords = events.coords
         width = int(_np.rint((self.region.xmax - self.region.xmin) / self.grid))
         height = int(_np.rint((self.region.ymax - self.region.ymin) / self.grid))
         matrix = _np.empty((height, width))

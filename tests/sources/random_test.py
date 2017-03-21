@@ -44,8 +44,8 @@ def test_uniform_random(poisson_mock):
     expected_times.sort()
     assert( all(expected_times == points.timestamps) )
 
-    assert( all(points.coords[:,0] == [80, 50, 20, 80, 50]) )
-    assert( all(points.coords[:,1] == [-18, -12, -15, -18, -12]) )
+    assert( all(points.coords[0] == [80, 50, 20, 80, 50]) )
+    assert( all(points.coords[1] == [-18, -12, -15, -18, -12]) )
 
 @mock.patch("numpy.random.random", RandomFromBuffer([0.1, 0.2, 0.15]))
 def test_rejection_sample_2d_single_sample_no_rejection():
@@ -112,5 +112,5 @@ def test_random_spatial(poisson_mock):
     end = datetime(2017, 3, 20, 0)
     points = testmod.random_spatial(sampler, start, end, 100)
 
-    np.testing.assert_allclose(points.coords[:,0], [1,2,3])
-    np.testing.assert_allclose(points.coords[:,1], [4,5,6])
+    np.testing.assert_allclose(points.coords[0], [1,2,3])
+    np.testing.assert_allclose(points.coords[1], [4,5,6])

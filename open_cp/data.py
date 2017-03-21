@@ -14,25 +14,27 @@ class TimedPoints:
             prev = time
 
     def __init__(self, timestamps, coords):
-        if len(timestamps) != len(coords):
-            raise Exception("Input data should all be of the same length")
         self._assert_times_ordered(timestamps)
         self.timestamps = _np.array(timestamps, dtype="datetime64[ms]")
         self.coords = _np.array(coords).astype(_np.float64)
+        if len(self.coords.shape) != 2 or self.coords.shape[0] != 2:
+            raise Exception("Coordinates should be of shape (2,#)")
+        if len(self.timestamps) != self.coords.shape[1]:
+            raise Exception("Input data should all be of the same length")
 
     def __getitem__(self, index):
-        return [self.timestamps[index], self.coords[index][0], self.coords[index][1]]
+        return [self.timestamps[index], *self.coords[0]]
 
     def events_before(self, cutoff_time):
         mask = self.timestamps <= cutoff_time
-        return TimedPoints(self.timestamps[mask], self.coords[mask])
+        return TimedPoints(self.timestamps[mask], self.coords[:,mask])
 
     @classmethod
     def from_coords(cls, timestamps, xcoords, ycoords):
         lengths = { len(timestamps), len(xcoords), len(ycoords) }
         if len(lengths) != 1:
             raise Exception("Input data should all be of the same length")
-        return cls(timestamps,_np.stack([xcoords, ycoords], axis=1))
+        return cls(timestamps,_np.stack([xcoords, ycoords]))
 
 
 class Point():
