@@ -1,5 +1,5 @@
 import pytest
-from open_cp.data import Point, RectangluarRegion, TimedPoints
+from open_cp.data import Point, RectangularRegion, TimedPoints
 
 def test_Point_getters():
     p = Point(5, 8)
@@ -22,7 +22,7 @@ def test_Point_immutable():
 
 
 def test_RectangluarRegion_getters():
-    r = RectangluarRegion(5, 8, 10, 14)
+    r = RectangularRegion(5, 8, 10, 14)
     assert r.xmin == 5
     assert r.xmax == 8
     assert r.ymin == 10
@@ -31,10 +31,10 @@ def test_RectangluarRegion_getters():
     assert r.min.y == 10
     assert r.max.x == 8
     assert r.max.y == 14
-    assert r.__repr__() == "RectangluarRegion( (5,10) -> (8,14) )"
+    assert r.__repr__() == "RectangularRegion( (5,10) -> (8,14) )"
 
 def test_RectangluarRegion_add():
-    r = RectangluarRegion(5, 8, 10, 14)
+    r = RectangularRegion(5, 8, 10, 14)
     addition = Point(3, 7)
     rr = r + addition
     assert rr.xmin == 8

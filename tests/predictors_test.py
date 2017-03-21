@@ -85,3 +85,11 @@ def test_sample_to_grid_y():
         for y in range(15):
             diffs.append( grid.grid_risk(x,y) - y * 20)
     assert sum( x >= 8.5 and x <= 11.5 for x in diffs) > 100
+
+def test_sample_to_grid_xy():
+    grid = sample_to_grid(x_y_kernel, cell_width=10, cell_height=20, width=10, height=15)
+    diffs = []
+    for x in range(10):
+        for y in range(15):
+            diffs.append( grid.grid_risk(x,y) - y * 20 - x * 10)
+    assert sum( x >= 13 and x <= 17 for x in diffs) > 100

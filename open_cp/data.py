@@ -54,7 +54,8 @@ class Point():
     def __repr__(self):
         return "Point({},{})".format(self.x, self.y)
 
-class RectangluarRegion():
+
+class RectangularRegion():
     def __init__(self, xmin=0, xmax=1, ymin=0, ymax=1):
         self._min = Point(xmin, ymin)
         self._max = Point(xmax, ymax)
@@ -84,14 +85,17 @@ class RectangluarRegion():
         return self._max
 
     def __add__(self, other):
-        return RectangluarRegion(xmin = self.xmin + other.x, xmax = self.xmax + other.x,
-            ymin = self.ymin + other.y, ymax = self.ymax + other.y)
+        return RectangularRegion(xmin = self.xmin + other.x,
+                                 xmax = self.xmax + other.x,
+                                 ymin = self.ymin + other.y,
+                                 ymax = self.ymax + other.y)
 
     def __repr__(self):
-        return "RectangluarRegion( ({},{}) -> ({},{}) )".format(self.xmin, self.ymin, self.xmax, self.ymax)
+        return "RectangularRegion( ({},{}) -> ({},{}) )".format(self.xmin,
+                                 self.ymin, self.xmax, self.ymax)
 
 
-import pyproj
+import pyproj as _proj
 
 def points_from_lon_lat():
     pass
