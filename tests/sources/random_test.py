@@ -98,10 +98,20 @@ def test_rejection_sample_2d_multiple_passes():
 def test_KernelSampler(rejection_sample_mock):
     rejection_sample_mock.return_value = np.array([[0.1, 0.2, 0.3],[0.4, 0.5, 0.6]])
     region = open_cp.RectangularRegion(10, 30, 50, 100)
-    sampler = testmod.KernelSampler(region, None, None)
+    def kernel(pts):
+        return pts[0] + 2 * pts[1]
+    sampler = testmod.KernelSampler(region, kernel, None)
     points = sampler(size = 3)
     np.testing.assert_allclose(points[0], [12, 14, 16])
     np.testing.assert_allclose(points[1], [70, 75, 80])
+
+    kernel_in_use = rejection_sample_mock.call_args_list[0][0][0]
+    assert( kernel_in_use([0, 0]) == 110 )
+    assert( kernel_in_use([0, 1]) == 10 + 100 * 2 )
+    assert( kernel_in_use([1, 0]) == 30 + 50 * 2 )
+    assert( kernel_in_use([1, 1]) == 30 + 100 * 2 )
+    np.testing.assert_allclose( kernel_in_use(np.array([[0, 0, 1, 1], [0, 1, 0, 1]])),
+        [110, 210, 130, 230] )
 
 @mock.patch("numpy.random.poisson")
 def test_random_spatial(poisson_mock):

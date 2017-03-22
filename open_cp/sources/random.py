@@ -48,11 +48,20 @@ def rejection_sample_2d(kernel, k_max, samples=1, oversample=2):
 
 class KernelSampler():
     def __init__(self, region, kernel, k_max):
-        self.sampler = lambda num : rejection_sample_2d(kernel, k_max, num)
+        """The kernel should be defined on all of the region"""
         self.x = region.xmin
         self.xscale = region.xmax - region.xmin
         self.y = region.ymin
         self.yscale = region.ymax - region.ymin
+        def rescaled_kernel(pts):
+            #scale = _np.array([[self.xscale], [self.yscale]])
+            #offset = _np.array([[self.x], [self.y]])
+            npts = _np.empty_like(pts)
+            npts[0] = pts[0] * self.xscale + self.x
+            npts[1] = pts[1] * self.yscale + self.y
+            #return kernel(pts * scale + offset)
+            return kernel(npts)
+        self.sampler = lambda num : rejection_sample_2d(rescaled_kernel, k_max, num)
 
     def __call__(self, size=1):
         points = self.sampler(size)
