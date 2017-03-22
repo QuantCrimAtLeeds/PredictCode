@@ -138,7 +138,25 @@ class TimedPoints:
         return cls(timestamps,_np.stack([xcoords, ycoords]))
 
 
-import pyproj as _proj
+try:
+    import pyproj as _proj
+except ModuleNotFoundError:
+    import sys
+    print("Package 'pyproj' not found: projection methods will not be supported.", file=sys.stderr)
+    _proj = None
 
-def points_from_lon_lat():
-    pass
+# http://spatialreference.org/ref/epsg/
+# 7405 is suitable for UK
+def points_from_lon_lat(points, proj=None, epsg=None):
+    if not _proj:
+        return points
+    if not proj:
+        if not epsg:
+            raise Exception("Need to provide one of 'proj' object or 'epsg' code")
+        proj = _proj.Proj({"init": "epsg:"+str(epsg)})
+    
+    transformed = _np.empty(points.coords.shape)
+    for i in range(len(points.timestamps)):
+        transformed[0][i], transformed[1][i] = proj(points.xcoords[i], points.ycoords[i])
+    
+    return TimedPoints(points.timestamps, transformed)

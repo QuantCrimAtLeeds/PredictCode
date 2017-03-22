@@ -1,5 +1,6 @@
 import pytest
 from open_cp.data import Point, RectangularRegion, TimedPoints
+import open_cp.data
 
 import numpy as np
 
@@ -126,3 +127,15 @@ def test_TimedPoints_events_before():
     assert( tp.coords[0] == pytest.approx(1) )
     assert( tp.coords[1] == pytest.approx(7) )
     assert tp.coords.shape == (2, 1)
+
+def test_project_from_lon_lat():
+    tp = TimedPoints([np.datetime64("2016-12")], [[-1.5],[50]])
+    tp1 = open_cp.data.points_from_lon_lat(tp, epsg=7405)
+    npt.assert_array_equal(tp.timestamps, tp1.timestamps)
+    assert( tp1.xcoords[0] == pytest.approx(435830.0305552669) )
+    assert( tp1.ycoords[0] == pytest.approx(11285.188608689801) )
+
+    import pyproj, math
+    proj = pyproj.Proj({"init": "epsg:4326"})
+    tp2 = open_cp.data.points_from_lon_lat(tp, proj=proj)
+    npt.assert_allclose( tp.coords / 180 * math.pi, tp2.coords )
