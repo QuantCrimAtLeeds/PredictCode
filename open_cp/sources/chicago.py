@@ -30,7 +30,7 @@ def default_burglary_data():
         return None
 
 def load(filename, primary_description_names, to_meters=True):
-    xcoords, ycoords, times = [], [], []
+    data = []
 
     with open(filename) as file:
         reader = csv.reader(file)
@@ -43,12 +43,14 @@ def load(filename, primary_description_names, to_meters=True):
             y = row[lookup[_Y_FIELD]].strip()
             t = row[lookup[_TIME_FIELD]].strip()
             if x != "" and y != "":
-                times.append(_date_from_csv(t))
-                xcoords.append(float(x))
-                ycoords.append(float(y))
-        
-    xcoords = np.array(xcoords)
-    ycoords = np.array(ycoords)
+                data.append((_date_from_csv(t), float(x), float(y)))
+
+    data.sort(key = lambda triple : triple[0])
+    xcoords = np.empty(len(data))
+    ycoords = np.empty(len(data))
+    for i, (_, x, y) in enumerate(data):
+        xcoords[i], ycoords[i] = x, y
+    times = [t for t, _, _ in data]
     if to_meters:
         xcoords /= _FEET_IN_METERS
         ycoords /= _FEET_IN_METERS

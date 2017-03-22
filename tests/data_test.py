@@ -1,6 +1,8 @@
 import pytest
 from open_cp.data import Point, RectangularRegion, TimedPoints
 
+import numpy as np
+
 def test_Point_getters():
     p = Point(5, 8)
     assert p.x == 5
@@ -42,9 +44,11 @@ def test_RectangluarRegion_add():
     assert rr.ymin == 17
     assert rr.ymax == 21
 
+def test_RectangluarRegion_aspect():
+    assert( RectangularRegion(xmin=5, xmax=5, ymin=1, ymax=10).aspect_ratio is np.nan )
+    assert( RectangularRegion(xmin=5, xmax=10, ymin=1, ymax=10).aspect_ratio == pytest.approx(9/5) )
 
 from datetime import datetime as dt
-import numpy as np
 import numpy.testing as npt
 
 # Test builder object pattern doesn't quite work in Python, but nevermind...
@@ -63,6 +67,40 @@ def test_TimedPoints_builds():
     npt.assert_array_almost_equal(tp.coords[:,2], [8, 3])
     assert len(tp.timestamps) == 3
     assert tp.coords.shape == (2, 3)
+
+def test_coords_properties():
+    tp = a_valid_TimedPoints()
+    npt.assert_allclose( tp.xcoords, [1, 5, 8] )
+    npt.assert_allclose( tp.ycoords, [7, 10, 3] )
+
+def test_accessor():
+    tp = a_valid_TimedPoints()
+    assert( tp[0][0] == np.datetime64("2017-03-20T12:30") )
+    assert( tp[0][1] == pytest.approx(1) )
+    assert( tp[0][2] == pytest.approx(7) )
+    assert( tp[2][0] == np.datetime64("2017-03-21") )
+    assert( tp[2][1] == pytest.approx(8) )
+    assert( tp[2][2] == pytest.approx(3) )
+
+def test_accessor_index():
+    tp = a_valid_TimedPoints()
+    tp1 = tp[ [2,1] ]
+    np.testing.assert_equal( tp1.timestamps, [np.datetime64("2017-03-20T14:30"), np.datetime64("2017-03-21")])
+    np.testing.assert_allclose( tp1.xcoords, [5, 8])
+    np.testing.assert_allclose( tp1.ycoords, [10, 3])
+
+    tp2 = tp[ tp.xcoords < 5 ]
+    np.testing.assert_equal( tp2.timestamps, [np.datetime64("2017-03-20T12:30")] )
+    np.testing.assert_allclose( tp2.coords, [[1], [7]])
+
+def test_bounding_box():
+    tp = a_valid_TimedPoints()
+    box = tp.bounding_box()
+    assert( box.xmin == pytest.approx(1) )
+    assert( box.xmax == pytest.approx(8) )
+    assert( box.ymin == pytest.approx(3) )
+    assert( box.ymax == pytest.approx(10) )
+    assert( tp.time_range() == (np.datetime64("2017-03-20T12:30"), np.datetime64("2017-03-21")) )
 
 def test_TimedPoints_must_be_time_ordered():
     timestamps = [dt(2017,3,20,14,30), dt(2017,3,20,12,30)]

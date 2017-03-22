@@ -1,36 +1,38 @@
 import pytest
 import unittest.mock as mock
-import io
+from tests.helpers import MockOpen
 import os.path
 import numpy as np
 
 import open_cp.sources.chicago as chicago
 
-# ARGH: https://github.com/pytest-dev/pytest/issues/2180
+def test_load_default_filename():
+    with mock.patch("builtins.open", MockOpen(None)) as open_mock:
+        assert( chicago.default_burglary_data() == None )
+        filename = open_mock.calls[0][0][0]
+        assert( os.path.split(filename)[1] == "chicago.csv" )
 
-class OurOpen():
-    _original_open = open
-    def __call__(self, filename, **kwargs):
-        return _original_open(filename, **kwargs)
+string_data = "\n".join([
+    ",".join([chicago._DESCRIPTION_FIELD, chicago._X_FIELD, chicago._Y_FIELD,
+        "other", chicago._TIME_FIELD]),
+    "THEFT, 789, 1012, ahgd, 01/01/2017 10:30:23 PM",
+    "ASSAULT, 12, 34, dgs, sgjhg",
+    "THEFT, 123, 456, as, 03/13/2016 02:53:30 AM"
+    ])
 
-@mock.patch("builtins.open", OurOpen())
-def test_load_default_filename(open_mock):
-    #open_mock.return_value = None
-    assert( chicago.default_burglary_data() == None )
-    #filename = open_mock.call_args[0][0]
-    #assert( os.path.split(filename)[1] == "chicago.csv" )
+def test_load_data():
+    with mock.patch("builtins.open", MockOpen(string_data)) as open_mock:
+        points = chicago.load("filename", {"THEFT"})
+        assert( open_mock.calls[0][0] == ("filename",) )
 
-@mock.patch("builtins.open")
-def test_load_data(open_mock):
-    string_data = "\n".join([
-        ",".join([chicago._DESCRIPTION_FIELD, chicago._X_FIELD, chicago._Y_FIELD,
-            "other", chicago._TIME_FIELD]),
-        "THEFT, 123, 456, as, 03/13/2016 02:53:30 AM",
-        "ASSAULT, 12, 34, dgs, sgjhg",
-        "THEFT, 789, 1012, ahgd, 01/01/2017 10:30:23 PM" ])
+        assert( len(points.timestamps) == 2 )
+        assert( points.timestamps[0] == np.datetime64("2016-03-13T02:53:30") )
+        assert( points.timestamps[1] == np.datetime64("2017-01-01T22:30:23") )
+        np.testing.assert_allclose( points.coords[:,0], np.array([123, 456]) / 3.28084 )
+        np.testing.assert_allclose( points.coords[:,1], np.array([789, 1012]) / 3.28084 )
 
-    #open_mock.return_value = io.StringIO(string_data, newline="\n")
-    points = chicago.load("filename", {"THEFT"})
-    #assert( open_mock.call_args[0][0] == "filename" )
-
-    #assert( points.timestamps[0] == np.DateTime64("2016-03-13T02:53:30"))
+def test_load_data_keep_in_feet():
+    with mock.patch("builtins.open", MockOpen(string_data)) as open_mock:
+        points = chicago.load("filename", {"THEFT"}, to_meters=False)
+        np.testing.assert_allclose( points.coords[:,0], [123, 456] )
+        np.testing.assert_allclose( points.coords[:,1], [789, 1012] )
