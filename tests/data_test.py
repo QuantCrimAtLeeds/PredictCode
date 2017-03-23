@@ -96,12 +96,12 @@ def test_accessor_index():
 
 def test_bounding_box():
     tp = a_valid_TimedPoints()
-    box = tp.bounding_box()
+    box = tp.bounding_box
     assert( box.xmin == pytest.approx(1) )
     assert( box.xmax == pytest.approx(8) )
     assert( box.ymin == pytest.approx(3) )
     assert( box.ymax == pytest.approx(10) )
-    assert( tp.time_range() == (np.datetime64("2017-03-20T12:30"), np.datetime64("2017-03-21")) )
+    assert( tp.time_range == (np.datetime64("2017-03-20T12:30"), np.datetime64("2017-03-21")) )
 
 def test_TimedPoints_must_be_time_ordered():
     timestamps = [dt(2017,3,20,14,30), dt(2017,3,20,12,30)]
@@ -127,6 +127,11 @@ def test_TimedPoints_events_before():
     assert( tp.coords[0] == pytest.approx(1) )
     assert( tp.coords[1] == pytest.approx(7) )
     assert tp.coords.shape == (2, 1)
+
+def test_TimedPoints_events_before_empty():
+    tp2 = a_valid_TimedPoints()
+    tp = tp2.events_before(dt(2017,3,20,12,0))
+    assert( tp.empty )
 
 def test_project_from_lon_lat():
     tp = TimedPoints([np.datetime64("2016-12")], [[-1.5],[50]])

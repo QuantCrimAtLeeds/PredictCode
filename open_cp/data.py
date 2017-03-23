@@ -73,6 +73,8 @@ class TimedPoints:
 
     @staticmethod
     def _is_time_ordered(timestamps):
+        if len(timestamps) == 0:
+            return True
         it = iter(timestamps)
         prev = next(it)
         for time in it  :
@@ -122,11 +124,17 @@ class TimedPoints:
         mask = self.timestamps <= cutoff_time
         return TimedPoints(self.timestamps[mask], self.coords[:,mask])
 
+    @property
+    def empty(self):
+        return len(self.timestamps) == 0
+
+    @property
     def bounding_box(self):
         return RectangularRegion(xmin = _np.min(self.xcoords),
             xmax = _np.max(self.xcoords), ymin = _np.min(self.ycoords),
             ymax = _np.max(self.ycoords))
 
+    @property
     def time_range(self):
         return ( self.timestamps[0], self.timestamps[-1] )
 

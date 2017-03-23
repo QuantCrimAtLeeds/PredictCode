@@ -1,6 +1,6 @@
 import pytest
 from pytest import approx
-import open_cp.prohotspot.predictor as testmod
+import open_cp.prohotspot as testmod
 
 import numpy as _np
 from datetime import datetime, timedelta
@@ -119,3 +119,58 @@ def test_predict_multiple_events():
     assert( prediction.grid_risk(0, 1) == approx(1 / 4 + 1 / 2) )
     assert( prediction.grid_risk(1, 0) == approx(1 / 4 + 1 / 2) )
     assert( prediction.grid_risk(1, 1) == approx(1 / 4 + 1) )
+
+
+# Aim is to now test the predictition algorithm.  If we believe the weight code
+# is correct (which we do!) then we can supply our own simplified weight and
+# test that the predict code does the right thing with it.
+
+class TestWeight(testmod.Weight):
+    def __call__(self, cell, timestamp, x, y):
+        return 1
+
+def a_valid_predictor():
+    region = open_cp.RectangularRegion(0,100,0,144)
+    predictor = testmod.ProspectiveHotSpot(region)
+    predictor.weight = TestWeight()
+    predictor.grid = 10
+    timestamps = [datetime(2017,3,1)]
+    xcoords = [50]
+    ycoords = [50]
+    predictor.data = open_cp.TimedPoints.from_coords(timestamps, xcoords, ycoords)
+    return predictor
+
+def test_ProspectiveHotSpot_cannot_pass_wrong_data_type():
+    p = a_valid_predictor()
+    with pytest.raises(TypeError):
+        p.data = [1,2,3]
+
+def test_ProspectiveHotSpot_times_ordered():
+    p = a_valid_predictor()
+    with pytest.raises(ValueError):
+        p.predict(datetime(2017,1,1), datetime(2016,1,1))
+
+def test_ProspectiveHotSpot_correct_return():
+    p = a_valid_predictor()
+    prediction = p.predict(datetime(2017,3,2), datetime(2017,3,2))
+    # Grid size
+    assert( prediction.xsize == 10 )
+    assert( prediction.ysize == 10 )
+    # Weight is uniformly 1.
+    for i in range(10):
+        for j in range(14):
+            assert( prediction.grid_risk(i, j) == 1 )
+    assert( prediction.grid_risk(-1,0) == 0 )
+    assert( prediction.grid_risk(10,0) == 0 )
+    assert( prediction.grid_risk(0,14) == 0 )
+
+# TODO: Maybe a "non-zero" test?
+def test_ProspectiveHotSpot_filters_by_time():
+    p = a_valid_predictor()
+    prediction = p.predict(datetime(2017,2,1), datetime(2017,3,10))
+    assert( prediction.grid_risk(0,0) == 0 )
+
+# Need to test:
+#  - That the weight gets the correct time _delta_ from "predict time"
+#  - gets the correct cell outlines
+#  - that we record the total weight

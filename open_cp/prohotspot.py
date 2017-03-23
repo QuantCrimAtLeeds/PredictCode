@@ -1,5 +1,5 @@
-from .. import predictors
-from .. import data
+from . import predictors
+from . import data
 
 import abc as _abc
 import numpy as _np
