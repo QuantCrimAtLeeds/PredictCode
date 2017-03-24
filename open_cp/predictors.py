@@ -45,6 +45,15 @@ class GridPrediction(Prediction):
 class ContinuousPrediction(Prediction):
     def grid_risk(self, gx, gy):
         raise TypeError("Grid sampling not supported")
+        
+    def to_kernel(self):
+        """Returns a callable object which when called at `point` gives the
+        risk at (point[0], point[1]).  `point` may be an array."""
+        def kernel(point):
+            if isinstance(point, _np.ndarray) and len(point.shape) > 1:
+                return _np.array([self.risk(xx, yy) for xx, yy in point.T])
+            return self.risk(point[0], point[1])
+        return kernel
 
 
 class GridPredictionArray(GridPrediction):
@@ -83,11 +92,18 @@ class GridPredictionArray(GridPrediction):
         data.sort()
         return _np.searchsorted(data, self._matrix, side="right") / len(data)
 
+
 def sample_to_grid(kernel, cell_width, cell_height, width, height, xoffset=0, yoffset=0, samples=50):
     """Stuff
 
     kernel : Assumed signature array -> array where input array is of shape (2, #points) and
     output array is of shape (#points)
+    
+    cell_width / cell_height : Size of the cells in the produced grid
+    
+    width / height : Size of the grid (so e.g. spatial width will be cell_width * width)
+    
+    xoffset / yoffset : Start position of the grid, default (0, 0)
     """
 
     matrix = _np.empty((height, width))
@@ -97,3 +113,9 @@ def sample_to_grid(kernel, cell_width, cell_height, width, height, xoffset=0, yo
             yy = (y + _np.random.random(samples)) * cell_height + yoffset
             matrix[y][x] = _np.mean(kernel(_np.stack([xx,yy], axis=0)))
     return GridPredictionArray(cell_width, cell_height, matrix, xoffset, yoffset)
+
+def sample_region_to_grid(kernel, cell_size, region, samples=50):
+    width = int(_np.rint((region.xmax - region.xmin) / cell_size))
+    height = int(_np.rint((region.ymax - region.ymin) / cell_size))
+    return sample_to_grid(kernel, cell_size, cell_size, width, height,
+                          region.xmin, region.ymin)
