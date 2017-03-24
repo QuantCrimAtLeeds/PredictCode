@@ -49,9 +49,13 @@ def test_ContinuousPrediction_cannot_make_grid_prediction():
 
 import numpy as np
 
+def a_valid_grid_prediction_array():
+    matrix = np.array([[1,2,3], [4,5,6]])
+    return GridPredictionArray(10, 10, matrix)
+    
+
 def test_GridPredictionArray():
-    matrix = np.array([ [1,2,3], [4,5,6]])
-    gpa = GridPredictionArray(10, 10, matrix)
+    gpa = a_valid_grid_prediction_array()
     assert gpa.grid_risk(-1, 0) == 0
     assert gpa.grid_risk(0, -1) == 0
     assert gpa.grid_risk(0, 0) == 1
@@ -59,6 +63,26 @@ def test_GridPredictionArray():
     assert gpa.grid_risk(2, 0) == 3
     assert gpa.grid_risk(3, 0) == 0
     assert gpa.grid_risk(0, 2) == 0
+                        
+def test_GridPredictionArray_intensity_matrix_property():
+    gpa = a_valid_grid_prediction_array()
+    np.testing.assert_allclose( gpa.intensity_matrix, [[1,2,3], [4,5,6]] )    
+    
+def test_GridPredictionArray_mesh_data():
+    gpa = a_valid_grid_prediction_array()
+    xcs, ycs = gpa.mesh_data()
+    np.testing.assert_allclose( xcs, [0, 10, 20, 30] )
+    np.testing.assert_allclose( ycs, [0, 10, 20] )
+
+def test_GridPredictionArray_percentiles():
+    matrix = np.array([[4,6,6], [1,4,4]])
+    gpa = GridPredictionArray(10, 10, matrix)
+    pm = gpa.percentile_matrix()
+    assert( pm.shape == (2,3) )
+    p = 1/6
+    np.testing.assert_allclose( pm[0], [4*p,1,1] )
+    np.testing.assert_allclose( pm[1], [p,4*p,4*p] )
+
 
 def x_kernel(points):
     return points[0]
