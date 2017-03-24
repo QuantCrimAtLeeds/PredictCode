@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch
 
 from open_cp.predictors import *
 
@@ -38,13 +39,18 @@ def test_GridPrediction_with_offset():
     test.risk(25 + 15, 30 + 20 + 8)
 
 
-def test_ContinuousPrediction_cannot_make_grid_prediction():
+@patch("numpy.random.random")
+def test_ContinuousPrediction_samples_to_grid(random_mock):
+    random_mock.return_value = np.array([0.1, 0.2, 0.4, 0.9])
     class Test(ContinuousPrediction):
         def risk(self, x, y):
-            pass
+            return x + y
     
-    with pytest.raises(TypeError):
-        Test().grid_risk(1, 2)
+    # Samples x in [50,100] and y in [100,150]
+    # So x = 55, 60, 70, 95
+    #    y = 105, 110, 120, 145
+    expected = ( 160 + 170 + 190 + 240 ) /4
+    assert( Test().grid_risk(1, 2) == pytest.approx(expected) )
 
 
 import numpy as np
@@ -93,27 +99,28 @@ def y_kernel(points):
 def x_y_kernel(points):
     return points[0] + points[1]
 
-def test_sample_to_grid_x():
+@patch("numpy.random.random")
+def test_sample_to_grid_x(random_mock):
+    random_mock.return_value = np.array([0,0.1,0.2,1])
     grid = sample_to_grid(x_kernel, cell_width=10, cell_height=20, width=10, height=15)
-    diffs = []
     for x in range(10):
         for y in range(15):
-            diffs.append( grid.grid_risk(x,y) - x * 10)
-    # Most differences should be around 5.0
-    assert sum( x >= 4 and x <= 6 for x in diffs) > 100
+            diff = grid.grid_risk(x,y) - x * 10
+            # 10 * (0 + 0.1 + 0.2 + 1) == 13
+            assert( diff == pytest.approx(13/4) )
 
-def test_sample_to_grid_y():
+@patch("numpy.random.random")
+def test_sample_to_grid_y(random_mock):
+    random_mock.return_value = np.array([0.2, 0.3, 0.7])
     grid = sample_to_grid(y_kernel, cell_width=10, cell_height=20, width=10, height=15)
-    diffs = []
     for x in range(10):
         for y in range(15):
-            diffs.append( grid.grid_risk(x,y) - y * 20)
-    assert sum( x >= 8.5 and x <= 11.5 for x in diffs) > 100
+            assert( grid.grid_risk(x,y) - y * 20 == pytest.approx(8) )
 
-def test_sample_to_grid_xy():
+@patch("numpy.random.random")
+def test_sample_to_grid_xy(random_mock):
+    random_mock.return_value = np.array([0.1, 0.2, 0.7, 0.8])
     grid = sample_to_grid(x_y_kernel, cell_width=10, cell_height=20, width=10, height=15)
-    diffs = []
     for x in range(10):
         for y in range(15):
-            diffs.append( grid.grid_risk(x,y) - y * 20 - x * 10)
-    assert sum( x >= 13 and x <= 17 for x in diffs) > 100
+            assert( grid.grid_risk(x,y) - y * 20 - x * 10 == pytest.approx(13.5) )

@@ -18,6 +18,7 @@ class Predictor(metaclass=abc.ABCMeta):
 class Prediction(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def risk(self, x, y):
+        """For efficiency, we require that x and y may be arrays"""
         pass
 
     @abc.abstractclassmethod
@@ -43,15 +44,22 @@ class GridPrediction(Prediction):
 
 
 class ContinuousPrediction(Prediction):
+    def __init__(self, cell_width=50, cell_height=50, xoffset=0, yoffset=0, samples=50):
+        self.samples = samples
+        self.cell_width = cell_width
+        self.cell_height = cell_height
+        self.xoffset = xoffset
+        self.yoffset = yoffset
+    
     def grid_risk(self, gx, gy):
-        raise TypeError("Grid sampling not supported")
+        x = (gx + _np.random.random(self.samples)) * self.cell_width + self.xoffset
+        y = (gy + _np.random.random(self.samples)) * self.cell_height + self.yoffset
+        return _np.mean(self.risk(x, y))
         
     def to_kernel(self):
         """Returns a callable object which when called at `point` gives the
         risk at (point[0], point[1]).  `point` may be an array."""
         def kernel(point):
-            if isinstance(point, _np.ndarray) and len(point.shape) > 1:
-                return _np.array([self.risk(xx, yy) for xx, yy in point.T])
             return self.risk(point[0], point[1])
         return kernel
 
@@ -66,6 +74,9 @@ class GridPredictionArray(GridPrediction):
         if gx < 0 or gy < 0 or gx >= xlim or gy >= ylim:
             return 0
         return self._matrix[gy][gx]
+
+    # TODO: Add a static constructor which takes a Prediction object and calls
+    # grid_risk on it.
 
     @property
     def intensity_matrix(self):

@@ -43,11 +43,16 @@ def test_RetroHotSpot_single_event():
     assert( prediction.risk(0, 10) == 1 )
     assert( prediction.risk(0, 9) == 0 )
     
-def test_RetroHotSpot_multiple_events():
+def a_valid_RetroHotSpot():
     r = testmod.RetroHotSpot()
     r.weight = TestWeight()
-    r.data = open_cp.TimedPoints.from_coords([datetime.datetime(2017,3,1)]*3,
+    r.data = open_cp.TimedPoints.from_coords([datetime.datetime(2017,3,1),
+        datetime.datetime(2017,3,2), datetime.datetime(2017,3,3)],
         [50, 100, 125], [50, 100, 25])
+    return r    
+    
+def test_RetroHotSpot_multiple_events():
+    r = a_valid_RetroHotSpot()
     prediction = r.predict()
     assert( prediction.risk(40, 40) == 1 )
     assert( prediction.risk(140, 130) == 1 )
@@ -55,3 +60,22 @@ def test_RetroHotSpot_multiple_events():
     assert( prediction.risk(80, 60) == 3 )
     assert( prediction.risk(60, 90) == 2 )
     
+
+def test_RetroHostSpot_filter_events_after_time():
+    r = a_valid_RetroHotSpot()
+    prediction = r.predict(start_time = datetime.datetime(2017,3,2))
+    assert( prediction.risk(40, 40) == 0 )
+    assert( prediction.risk(80, 60) == 2 )
+
+def test_RetroHostSpot_filter_events_before_time():
+    r = a_valid_RetroHotSpot()
+    prediction = r.predict(end_time = datetime.datetime(2017,3,2))
+    assert( prediction.risk(40, 40) == 1 )
+    assert( prediction.risk(80, 60) == 2 )
+    assert( prediction.risk(125, 25) == 0 )
+
+def test_RetroHostSpot_filter_events_by_time():
+    r = a_valid_RetroHotSpot()
+    prediction = r.predict(start_time = datetime.datetime(2017,3,3),
+            end_time = datetime.datetime(2017,3,2))
+    assert( prediction.risk(80, 60) == 0 )

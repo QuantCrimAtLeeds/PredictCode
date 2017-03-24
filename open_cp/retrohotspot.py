@@ -53,9 +53,16 @@ class RetroHotSpot(predictors.Predictor):
             mask = end_mask if (mask is None) else (mask & end_mask)
         coords = self.data.coords
         if mask is not None:
-            coords = coords[mask]
+            coords = coords[:,mask]
         
-        def kernel(x_loc, y_loc):
-            return _np.sum(self.weight(coords[0] - x_loc, coords[1] - y_loc))
+        if coords.shape[1] == 0:
+            def kernel(x, y):
+                return 0
+        else:
+            def kernel(x_loc, y_loc):
+                x = _np.stack([x_loc]*coords.shape[1], axis=-1)
+                y = _np.stack([y_loc]*coords.shape[1], axis=-1)
+                return _np.sum(self.weight(x - coords[0], y - coords[1]), axis=-1)
+                #return _np.sum(self.weight(coords[0] - x_loc, coords[1] - y_loc))
         
         return KernelRiskPredictor(kernel)
