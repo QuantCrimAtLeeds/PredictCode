@@ -54,12 +54,9 @@ class KernelSampler():
         self.y = region.ymin
         self.yscale = region.ymax - region.ymin
         def rescaled_kernel(pts):
-            #scale = _np.array([[self.xscale], [self.yscale]])
-            #offset = _np.array([[self.x], [self.y]])
             npts = _np.empty_like(pts)
             npts[0] = pts[0] * self.xscale + self.x
             npts[1] = pts[1] * self.yscale + self.y
-            #return kernel(pts * scale + offset)
             return kernel(npts)
         self.sampler = lambda num : rejection_sample_2d(rescaled_kernel, k_max, num)
 

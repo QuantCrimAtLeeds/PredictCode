@@ -17,6 +17,8 @@ CSV files are available here:
 
 https://data.police.uk/data/
 
+Once downloaded, rename as "uk_police.csv"
+
 I have not systematically checked, but the data for each police force seems to
 be in the same format.
 
