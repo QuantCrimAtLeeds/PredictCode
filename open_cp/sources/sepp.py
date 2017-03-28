@@ -5,6 +5,15 @@ import abc as _abc
 import numpy as _np
 from numpy import timedelta64
 
+## TODO: I want to standise the notion of a "kernel" across the project
+# I think it should just be (using duck typing) anything which can be
+# called with an array of shape (k,n) where k is the dimension of space,
+# and n is the number of samples.  It should return an array of length n.
+# Should be normalised or not.
+#
+# But maybe we do want to keep the ABC which also have a property returning
+# the maximimum of kernel is a time region?
+
 class SpaceTimeKernel(metaclass=_abc.ABCMeta):
     """To produce a kernel as required by the samplers in this package,
     either extend this abstract class implementing `intensity(t, x, y)`
@@ -97,6 +106,29 @@ class TimeKernel(metaclass=_abc.ABCMeta):
         pass
 
 
+class HomogeneousPoisson(TimeKernel):
+    def __init__(self, rate=1):
+        self._rate = rate
+
+    def __call__(self, times):
+        return _np.zeros_like(times) + self._rate
+    
+    def kernel_max(self, time_start, time_end):
+        return self._rate
+
+
+class Exponential(TimeKernel):
+    def __init__(self, exp_rate=1, total_rate=1):
+        self._rate = exp_rate
+        self._total = total_rate
+
+    def __call__(self, times):
+        return _np.exp( -self._rate * times) * self._rate * self._total
+    
+    def kernel_max(self, time_start, time_end):
+        return self._rate * self._total
+
+
 class SpaceSampler(metaclass=_abc.ABCMeta):
     @_abc.abstractmethod
     def __call__(self, length):
@@ -107,7 +139,7 @@ class SpaceSampler(metaclass=_abc.ABCMeta):
 class GaussianSpaceSampler(SpaceSampler):
     def __init__(self, mus, variances, correlation):
         self.mus = mus
-        self.variances = variances
+        self.stds = _np.sqrt(_np.array(variances))
         self.correlation = correlation
     
     def __call__(self, length):
@@ -116,23 +148,28 @@ class GaussianSpaceSampler(SpaceSampler):
         sin, cos = _np.sin(theta), _np.cos(theta)
         x = xy[0] * sin + xy[1] * cos
         y = xy[0] * cos + xy[1] * sin
-        x = x * self.variances[0] + self.mus[0]
-        y = y * self.variances[1] + self.mus[1]
+        x = x * self.stds[0] + self.mus[0]
+        y = y * self.stds[1] + self.mus[1]
         return _np.vstack([x,y])
 
 
 class InhomogeneousPoissonFactors(Sampler):
-    def __init__(self, region, time_kernel, space_sampler):
-        """region is the spatial extent of the simulation"""
-        self._region = region
+    def __init__(self, time_kernel, space_sampler):
         if not isinstance(time_kernel, TimeKernel):
             raise ValueError("time_kernel should be of type TimeKernel")
         self._time_kernel = time_kernel
         self._space_sampler = space_sampler
     
     def sample(self, start_time, end_time):
-        # TODO; Oversample and reject for time, and then add "marks"
-        pass
+        kmax = self._time_kernel.kernel_max(start_time, end_time)
+        number_samples = _np.random.poisson(lam=kmax * (end_time - start_time))
+        times = _np.random.random(size=number_samples) * (end_time - start_time) + start_time
+        accept_prob = _np.random.random(size=number_samples) * kmax
+        accept = (self._time_kernel(times) >= accept_prob)
+        times = times[accept]
+        points = self._space_sampler(len(times))
+        return _np.vstack([times, points])
+
 
 class SelfExcitingPointProcess(Sampler):
     def __init__(self, region=None, background_sampler=None, trigger_sampler=None):
