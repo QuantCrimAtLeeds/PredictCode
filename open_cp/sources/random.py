@@ -25,6 +25,8 @@ def _rejection_sample_2d_single(kernel, k_max):
 def rejection_sample_2d(kernel, k_max, samples=1, oversample=2):
     """Stuff
 
+    The kernel is assumed to be defined on [0,1] times [0,1]
+
     kernel : Assumed signature array -> array where input array is of shape (2, #points)
     and output array is of shape (#points)
     """
