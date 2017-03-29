@@ -1,6 +1,7 @@
 import abc
 import math
 import numpy as _np
+from . import data
 
 def _round(x):
     return math.floor(x + 0.5)
@@ -13,7 +14,19 @@ class Predictor(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def predict(self, cutoff_time, predict_time):
         pass
+    
+    
+class DataPredictor(Predictor):
+    @property
+    def data(self):
+        return self._data
 
+    @data.setter
+    def data(self, value):
+        if not isinstance(value, data.TimedPoints):
+            raise TypeError("data should be of class TimedPoints")
+        self._data = value
+        
 
 class Prediction(metaclass=abc.ABCMeta):
     @abc.abstractmethod

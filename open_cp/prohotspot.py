@@ -53,21 +53,11 @@ class ClassicDiagonalsDifferent(ClassicDiagonalsSame):
         return abs(x1 - x2) + abs(y1 - y2)
 
 
-class ProspectiveHotSpot(predictors.Predictor):
+class ProspectiveHotSpot(predictors.DataPredictor):
     def __init__(self, region):
         self.grid = 50
         self.region = region
         self.weight = ClassicDiagonalsSame()
-
-    @property
-    def data(self):
-        return self._data
-
-    @data.setter
-    def data(self, value):
-        if not isinstance(value, data.TimedPoints):
-            raise TypeError("data should be of class TimedPoints")
-        self._data = value
 
     def _total_weight(self, cell, time_deltas, coords):
         return sum(

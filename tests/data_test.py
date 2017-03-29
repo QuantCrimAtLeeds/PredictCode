@@ -83,6 +83,10 @@ def test_accessor():
     assert( tp[2][1] == pytest.approx(8) )
     assert( tp[2][2] == pytest.approx(3) )
 
+def test_time_deltas():
+    tp = a_valid_TimedPoints()
+    npt.assert_allclose(tp.time_deltas(), [0, 120, 12*60-30])
+
 def test_accessor_index():
     tp = a_valid_TimedPoints()
     tp1 = tp[ [2,1] ]
@@ -127,6 +131,7 @@ def test_TimedPoints_events_before():
     assert( tp.coords[0] == pytest.approx(1) )
     assert( tp.coords[1] == pytest.approx(7) )
     assert tp.coords.shape == (2, 1)
+    assert tp.number_data_points == 1
 
 def test_TimedPoints_events_before_empty():
     tp2 = a_valid_TimedPoints()

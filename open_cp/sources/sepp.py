@@ -193,6 +193,6 @@ class SelfExcitingPointProcess(Sampler):
         output.sort(key = lambda triple : triple[0])
         return _np.array(output).T
 
-def scale_to_real_time(points, start_time, time_unit=timedelta64(1, "m")):
+def scale_to_real_time(points, start_time, time_unit=timedelta64(60, "s")):
     times = [_np.datetime64(start_time) + time_unit * t for t in points[0]]
     return data.TimedPoints.from_coords(times, points[1], points[2])

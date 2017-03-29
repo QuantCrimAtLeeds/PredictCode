@@ -127,6 +127,10 @@ class TimedPoints:
     @property
     def empty(self):
         return len(self.timestamps) == 0
+    
+    @property
+    def number_data_points(self):
+        return len(self.timestamps)
 
     @property
     def bounding_box(self):
@@ -137,6 +141,9 @@ class TimedPoints:
     @property
     def time_range(self):
         return ( self.timestamps[0], self.timestamps[-1] )
+
+    def time_deltas(self, time_unit = _np.timedelta64(1, "m")):
+        return ( self.timestamps - self.timestamps[0] ) / time_unit
 
     @classmethod
     def from_coords(cls, timestamps, xcoords, ycoords):

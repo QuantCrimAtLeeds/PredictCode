@@ -30,19 +30,9 @@ class Quartic(Weight):
         return weight * ( distance_sq <= cutoff)
 
         
-class RetroHotSpot(predictors.Predictor):
+class RetroHotSpot(predictors.DataPredictor):
     def __init__(self):
         self.weight = Quartic()
-
-    @property
-    def data(self):
-        return self._data
-
-    @data.setter
-    def data(self, value):
-        if not isinstance(value, data.TimedPoints):
-            raise TypeError("data should be of class TimedPoints")
-        self._data = value
 
     def predict(self, start_time=None, end_time=None):
         mask = None

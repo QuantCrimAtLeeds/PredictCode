@@ -1,5 +1,27 @@
 import scipy.spatial as _spatial
 import numpy as _np
+import abc as _abc
+
+
+class KernelEstimator(metaclass=_abc.ABCMeta):
+    @_abc.abstractmethod
+    def __call__(self, coords):
+        """Input should be N coordinates in n dimensional space, and when n>1,
+        an array of shape (n,N) to be consistent with ourselves.
+        
+        Output is an instance of Kernel"""
+        pass
+
+
+class Kernel(metaclass=_abc.ABCMeta):
+    @_abc.abstractmethod
+    def __call__(self, points):
+        """Input should be N coordinates in n dimensional space, and when N>1,
+        an array of shape (N,n) to follow the 'kernel convention'.
+        
+        Output is an array of length N giving the kernel intensity at each point."""
+        pass
+
 
 def _gaussian_kernel(pts, mean, var):
     """pts is array of shape (N,k) where k is the dimension of space.
@@ -30,8 +52,8 @@ def _gaussian_kernel(pts, mean, var):
     return _np.mean(_np.product(x, axis=2), axis=1)
 
 def kth_nearest_neighbour_gaussian_kde(coords, k=15):
-    """Input should be N coordinates in k dimensional space, and when k>1,
-    an array of shape (k,N) to be consistent with ourselves"""
+    """Input should be N coordinates in n dimensional space, and when n>1,
+    an array of shape (n,N) to be consistent with ourselves"""
     if len(coords.shape) == 1:
         stds = _np.std(coords, ddof=1)
         points = coords / stds
@@ -42,7 +64,6 @@ def kth_nearest_neighbour_gaussian_kde(coords, k=15):
         points = points / stds
 
     tree = _spatial.KDTree(points)
-    
     distance_to_k = _np.empty(points.shape[0])
     for i, p in enumerate(points):
         distances, indexes = tree.query(p, k=k+1)
@@ -56,3 +77,11 @@ def kth_nearest_neighbour_gaussian_kde(coords, k=15):
         return _gaussian_kernel(point.T, means, var)
 
     return kernel
+
+
+class KthNearestNeighbourGaussianKDE(KernelEstimator):
+    def __init__(self, k=15):
+        self.k = k
+        
+    def __call__(self, coords):
+        return kth_nearest_neighbour_gaussian_kde(coords, self.k)
