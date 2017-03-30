@@ -12,13 +12,10 @@ def _normalise_matrix(p):
 def p_matrix(points, background_kernel, trigger_kernel):
     number_data_points = points.shape[-1]
     p = _np.zeros((number_data_points, number_data_points))
-    for j in range(number_data_points):
-        t = points[0][j] - points[0][:j]
-        x = points[1][j] - points[1][:j]
-        y = points[2][j] - points[2][:j]
-        p[0:j, j] = trigger_kernel(_np.vstack([t,x,y]))
-    for j, v in enumerate(background_kernel(points)):
-        p[j][j] = v
+    for j in range(1, number_data_points):
+        d = points[:, j][:,None] - points[:, :j]
+        p[0:j, j] = trigger_kernel(d)
+    p += _np.diag(background_kernel(points))
     return _normalise_matrix(p)
 
 def initial_p_matrix(points, initial_time_bandwidth = 0.1,
@@ -26,9 +23,10 @@ def initial_p_matrix(points, initial_time_bandwidth = 0.1,
     def bkernel(pts):
         return _np.zeros(pts.shape[-1]) + 1
     def tkernel(pts):
+        time = _np.exp( - pts[0] / initial_time_bandwidth ) / initial_time_bandwidth
         norm = 2 * initial_space_bandwidth ** 2
-        return ( _np.exp( - initial_time_bandwidth * pts[0] ) *
-                _np.exp( - (pts[1]**2 + pts[2]**2) / norm ) )
+        space = _np.exp( - (pts[1]**2 + pts[2]**2) / norm )
+        return time * space / ( norm * _np.pi )
     return p_matrix(points, bkernel, tkernel)
 
 def sample_points(points, p):

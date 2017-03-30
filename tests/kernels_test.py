@@ -5,8 +5,7 @@ import open_cp.kernels as testmod
 
 
 def slow_gaussian_kernel(pts, mean, var):
-    assert(len(pts.shape) == 2 and len(
-        mean.shape) == 2 and len(var.shape) == 2)
+    assert(len(pts.shape) == 2 and len(mean.shape) == 2 and len(var.shape) == 2)
     space_dim = pts.shape[1]
     num_pts = pts.shape[0]
     num_samples = mean.shape[0]
@@ -115,23 +114,23 @@ def test_1d_kth_nearest():
         np.testing.assert_allclose( kernel(test_points), expected_kernel(test_points) )
 
 def test_2d_kth_nearest():
-    pts = np.random.random(size=(2,20))
-    stds = np.std(pts, axis=1)
-    rescaled = np.empty_like(pts)
-    for i in range(2):
-        rescaled[i] = pts[i] / stds[i]
-    for k in [1,2,3,4,5,6]:
-        distances = [slow_kth_nearest(rescaled, i)[k] for i in range(pts.shape[1])]
-        def expected_kernel(x):
-            value = 0
-            for i in range(pts.shape[1]):
-                prod = 1
-                for coord in range(2):
-                    p = pts[coord,i]
-                    prod *= stats.norm(loc=p, scale=distances[i]*stds[coord]).pdf(x[coord])
-                value += prod
-            return value / pts.shape[1]
-        kernel = testmod.kth_nearest_neighbour_gaussian_kde(pts, k=k)
-        test_points = np.random.random(size=(2,10))
-        np.testing.assert_allclose( kernel(test_points), expected_kernel(test_points) )
-    
+    for space_dim in range(2, 5):
+        pts = np.random.random(size=(space_dim, 20))
+        stds = np.std(pts, axis=1)
+        rescaled = np.empty_like(pts)
+        for i in range(space_dim):
+            rescaled[i] = pts[i] / stds[i]
+        for k in [1,2,3,4,5,6]:
+            distances = [slow_kth_nearest(rescaled, i)[k] for i in range(pts.shape[1])]
+            def expected_kernel(x):
+                value = 0
+                for i in range(pts.shape[1]):
+                    prod = 1
+                    for coord in range(space_dim):
+                        p = pts[coord,i]
+                        prod *= stats.norm(loc=p, scale=distances[i]*stds[coord]).pdf(x[coord])
+                    value += prod
+                return value / pts.shape[1]
+            kernel = testmod.kth_nearest_neighbour_gaussian_kde(pts, k=k)
+            test_points = np.random.random(size=(space_dim, 10))
+            np.testing.assert_allclose( kernel(test_points), expected_kernel(test_points) )

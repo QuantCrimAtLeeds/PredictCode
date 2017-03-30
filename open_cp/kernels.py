@@ -16,8 +16,8 @@ class KernelEstimator(metaclass=_abc.ABCMeta):
 class Kernel(metaclass=_abc.ABCMeta):
     @_abc.abstractmethod
     def __call__(self, points):
-        """Input should be N coordinates in n dimensional space, and when N>1,
-        an array of shape (N,n) to follow the 'kernel convention'.
+        """Input should be N coordinates in n dimensional space, and when n>1,
+        an array of shape (n,N) to be consistent with ourselves.
         
         Output is an array of length N giving the kernel intensity at each point."""
         pass
@@ -54,6 +54,9 @@ def _gaussian_kernel(pts, mean, var):
 def kth_nearest_neighbour_gaussian_kde(coords, k=15):
     """Input should be N coordinates in n dimensional space, and when n>1,
     an array of shape (n,N) to be consistent with ourselves"""
+    coords = _np.asarray(coords)
+    k = min(k, coords.shape[-1] - 1)
+    
     if len(coords.shape) == 1:
         stds = _np.std(coords, ddof=1)
         points = coords / stds
