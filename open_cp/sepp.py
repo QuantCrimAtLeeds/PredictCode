@@ -58,9 +58,7 @@ class StocasticDecluster():
         number_background_events = backgrounds.shape[-1]
         number_triggered_events = number_events - number_background_events
         norm_tkernel = lambda pts : ( tkernel(pts) * number_triggered_events / number_events )
-        total_time = self.points[0][-1] - self.points[0][0]
-        norm_bkernel = lambda pts : ( bkernel(pts) * total_time *
-                                     number_background_events / number_events )
+        norm_bkernel = lambda pts : ( bkernel(pts) * number_background_events )
         pnew = p_matrix(self.points, norm_bkernel, norm_tkernel)
         return pnew, norm_bkernel, norm_tkernel
     
