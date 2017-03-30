@@ -23,7 +23,7 @@ class Kernel(metaclass=_abc.ABCMeta):
         pass
 
 
-def _gaussian_kernel(pts, mean, var):
+def _gaussian_kernel(points, mean, var):
     """pts is array of shape (N,k) where k is the dimension of space.
 
     mean is array of shape (M,k) and var an array of shape (M,k)
@@ -32,24 +32,29 @@ def _gaussian_kernel(pts, mean, var):
     we compute the Gaussian kernel centred on mean[i][j] with variance var[i][j],
     and then product over the j, sum over the i, and finally divide by M.
 
-    Returns an array of shape (N).
+    Returns an array of shape (N) unless N=1 when returns a scalar.
     """
-    # TODO: Doesn't allow pts to be scalar... (do I care?)
-
     if len(mean.shape) == 1:
-        mean = _np.broadcast_to(mean, (1, len(mean))).T
-        var = _np.broadcast_to(var, (1, len(var))).T
-    if len(pts.shape) == 1:
-        pts = _np.broadcast_to(pts, (1, len(pts))).T
+        # So k=1
+        mean = mean[:, None]
+        var = var[:, None]
+        if len(points.shape) == 0:
+            pts = _np.array([points])[:, None]
+        else:
+            pts = points[:, None]
+    else:
+        # k>1 so if points is 1D it's a single point
+        if len(points.shape) == 1:
+            pts = points[None, :]
+        else:
+            pts = points
 
     # x[i][j] = (pts[i] - mean[j])**2   (as a vector)
-    x = _np.broadcast_to(pts, (mean.shape[0],) + pts.shape).swapaxes(0, 1)
-    x = x - _np.broadcast_to(mean, x.shape)
-    x = x ** 2
-
-    var_broad = _np.broadcast_to(var, (pts.shape[0], ) + var.shape) * 2.0
+    x = (pts[:,None,:] - mean[None,:,:]) ** 2
+    var_broad = var[None,:,:] * 2.0
     x = _np.exp( - x / var_broad ) / _np.sqrt((_np.pi * var_broad))
-    return _np.mean(_np.product(x, axis=2), axis=1)
+    return_array = _np.mean(_np.product(x, axis=2), axis=1)
+    return return_array if pts.shape[0] > 1 else return_array[0]
 
 def kth_nearest_neighbour_gaussian_kde(coords, k=15):
     """Input should be N coordinates in n dimensional space, and when n>1,
@@ -60,7 +65,7 @@ def kth_nearest_neighbour_gaussian_kde(coords, k=15):
     if len(coords.shape) == 1:
         stds = _np.std(coords, ddof=1)
         points = coords / stds
-        points = _np.broadcast_to(points, (1, len(coords))).T
+        points = points[:, None]
     else:
         points = coords.T
         stds = _np.std(points, axis=0, ddof=1)
@@ -76,8 +81,10 @@ def kth_nearest_neighbour_gaussian_kde(coords, k=15):
     var = _np.tensordot(distance_to_k, stds, axes=0) ** 2
 
     def kernel(point):
+        # TODO: If we have one dimensional data and point is just a number,
+        #    this doesnt work.
         # Allow the "kernel" convention in argument passing
-        return _gaussian_kernel(point.T, means, var)
+        return _gaussian_kernel(_np.asarray(point).T, means, var)
 
     return kernel
 
@@ -88,3 +95,18 @@ class KthNearestNeighbourGaussianKDE(KernelEstimator):
         
     def __call__(self, coords):
         return kth_nearest_neighbour_gaussian_kde(coords, self.k)
+
+
+class KNNG1_NDFactors(KernelEstimator):
+    """Applies the KthNearestNeighbourGaussianKDE to first coorindate
+    with one value of k, and then to the remaining coordinates with another
+    value of k, and combines the result."""
+    
+    def __init__(self, k_first=100, k_rest=15):
+        self.k_first = k_first
+        self.k_rest = k_rest
+        
+    def __call__(self, coords):
+        first = kth_nearest_neighbour_gaussian_kde(coords[0], self.k_first)
+        rest = kth_nearest_neighbour_gaussian_kde(coords[1:], self.k_rest)
+        return lambda coords : first(coords[0]) * rest(coords[1:])

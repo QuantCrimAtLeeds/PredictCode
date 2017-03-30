@@ -26,7 +26,6 @@ def slow_gaussian_kernel(pts, mean, var):
 
     return out
 
-
 def test_slow_gaussian_kernel_single():
     pts = np.empty((1, 1))
     pts[0][0] = 1
@@ -35,9 +34,9 @@ def test_slow_gaussian_kernel_single():
     var = np.empty((1, 1))
     var[0][0] = 3
 
-    expected = np.array(np.exp(-0.25 / 6) / np.sqrt(6 * np.pi))
-    np.testing.assert_allclose(expected, slow_gaussian_kernel(pts, mean, var))
-
+    expected = np.exp(-0.25 / 6) / np.sqrt(6 * np.pi)
+    got = slow_gaussian_kernel(pts, mean, var)
+    np.testing.assert_allclose(expected, got)
 
 def test_gaussian_kernel_single():
     pts = np.empty((1, 1))
@@ -47,20 +46,40 @@ def test_gaussian_kernel_single():
     var = np.empty((1, 1))
     var[0][0] = 3
 
-    expected = np.array(np.exp(-0.25 / 6) / np.sqrt(6 * np.pi))
+    expected = np.exp(-0.25 / 6) / np.sqrt(6 * np.pi)
     np.testing.assert_allclose(
         expected, testmod._gaussian_kernel(pts, mean, var))
-
 
 def test_gaussian_kernel_allows_simple_single():
     pts = np.array([1])
     mean = np.array([0.5])
     var = np.array([3])
 
-    expected = np.array(np.exp(-0.25 / 6) / np.sqrt(6 * np.pi))
+    expected = np.array([np.exp(-0.25 / 6) / np.sqrt(6 * np.pi)])
     np.testing.assert_allclose(
         expected, testmod._gaussian_kernel(pts, mean, var))
 
+def test_gaussian_kernel_allows_scalar():
+    pts = np.array(1)
+    mean = np.array([0.5, 1])
+    var = np.array([3, 4])
+
+    expected = np.exp(-0.25 / 6) / np.sqrt(6 * np.pi)
+    expected += 1 / np.sqrt(8 * np.pi)
+    got = testmod._gaussian_kernel(pts, mean, var)
+    assert( not isinstance(got, np.ndarray) )
+    assert( got == pytest.approx(expected / 2) )
+
+def test_gaussian_kernel_1D_data():
+    mean = np.array([1,2,3])
+    var = np.array([4,5,6])
+    pts = np.array([10])
+    
+    expected = sum(
+        np.exp(-(10-m)**2/(2*v)) / np.sqrt(2*np.pi*v)
+        for m, v in zip(mean, var) )
+    np.testing.assert_allclose( np.array([expected / 3]),
+        testmod._gaussian_kernel(pts, mean, var) )
 
 def test_gaussian_kernel():
     pts = np.random.rand(20, 2)
@@ -71,11 +90,10 @@ def test_gaussian_kernel():
     assert(got.shape == (20,))
     np.testing.assert_allclose(expected, got)
 
-
 def slow_kth_nearest(points, index):
     """(k, N) input.  Returns ordered list [0,...] of distance to kth nearest point from index"""
     if len(points.shape) == 1:
-        points = np.broadcast_to(points, (1, len(points)))
+        points = points[None, :]
     pt = points.T[index]
     distances = np.empty(points.shape[1])
     for i in range(points.shape[1]):
