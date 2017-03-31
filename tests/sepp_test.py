@@ -121,7 +121,7 @@ class TestSamplerAdd(testmod.Sampler):
     
 def test_SelfExcitingPointProcess():
     region = open_cp.data.RectangularRegion(0,100,0,100)
-    sampler = testmod.SelfExcitingPointProcess(region, TestSamplerMiddle2(), TestSamplerAdd())
+    sampler = testmod.SelfExcitingPointProcess(TestSamplerMiddle2(), TestSamplerAdd())
     pts = sampler.sample(0, 10)
     np.testing.assert_allclose(pts[0], [10/3, 16/3, 20/3, 22/3, 26/3, 28/3])
     np.testing.assert_allclose(pts[1], [0, 1, 1, 2, 2, 3])

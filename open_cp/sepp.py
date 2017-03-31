@@ -1,8 +1,4 @@
 from . import predictors
-#from . import data
-#from . import kernels
-
-#import abc as _abc
 import numpy as _np
 
 def _normalise_matrix(p):
@@ -18,15 +14,29 @@ def p_matrix(points, background_kernel, trigger_kernel):
     p += _np.diag(background_kernel(points))
     return _normalise_matrix(p)
 
+def p_matrix_fast(points, background_kernel, trigger_kernel, time_cutoff=150, space_cutoff=1):
+    number_data_points = points.shape[-1]
+    p = _np.zeros((number_data_points, number_data_points))
+    space_cutoff *= space_cutoff
+    for j in range(1, number_data_points):
+        d = points[:, j][:,None] - points[:, :j]
+        dmask = (d[0] <= time_cutoff) & ((d[1]**2 + d[2]**2) < space_cutoff)
+        d = d[:, dmask]
+        if d.shape[-1] == 0:
+            continue
+        p[0:j, j][dmask] = trigger_kernel(d)
+    p += _np.diag(background_kernel(points))
+    return _normalise_matrix(p)
+
 def initial_p_matrix(points, initial_time_bandwidth = 0.1,
         initial_space_bandwidth = 50.0):
     def bkernel(pts):
         return _np.zeros(pts.shape[-1]) + 1
     def tkernel(pts):
-        time = _np.exp( - pts[0] / initial_time_bandwidth ) / initial_time_bandwidth
+        time = _np.exp( - pts[0] / initial_time_bandwidth )
         norm = 2 * initial_space_bandwidth ** 2
         space = _np.exp( - (pts[1]**2 + pts[2]**2) / norm )
-        return time * space / ( norm * _np.pi )
+        return time * space
     return p_matrix(points, bkernel, tkernel)
 
 def sample_points(points, p):

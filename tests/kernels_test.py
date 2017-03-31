@@ -3,6 +3,15 @@ import scipy.stats as stats
 import pytest
 import open_cp.kernels as testmod
 
+def test_1D_kth_distance():
+    coords = [0,1,2,3,6,7,9,15]
+    distances = testmod.compute_kth_distance(coords, k=3)
+    np.testing.assert_allclose(distances, [3,2,2,3,3,4,6,9])
+
+def test_2D_kth_distance():
+    coords = [[0,0,1,1],[0,1,0,2]]
+    distances = testmod.compute_kth_distance(coords, k=2)
+    np.testing.assert_allclose(distances, [1,np.sqrt(2),np.sqrt(2),2])
 
 def slow_gaussian_kernel(pts, mean, var):
     assert(len(pts.shape) == 2 and len(mean.shape) == 2 and len(var.shape) == 2)

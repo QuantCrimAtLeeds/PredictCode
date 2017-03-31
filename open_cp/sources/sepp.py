@@ -171,27 +171,34 @@ class InhomogeneousPoissonFactors(Sampler):
         return _np.vstack([times, points])
 
 
+from collections import namedtuple as _namedtuple
+
 class SelfExcitingPointProcess(Sampler):
-    def __init__(self, region=None, background_sampler=None, trigger_sampler=None):
-        """region is the spatial extent of the simulation"""
-        self.region = region
+    Sample = _namedtuple("Sample", ["points", "backgrounds", "trigger_deltas", "trigger_points"])
+
+    def __init__(self, background_sampler=None, trigger_sampler=None):
         self.background_sampler = background_sampler
         self.trigger_sampler = trigger_sampler
-        
+
     def sample(self, start_time, end_time):
-        output = []
+        return self.sample_with_details(start_time, end_time).points
+
+    def sample_with_details(self, start_time, end_time):
         background_points = self.background_sampler.sample(start_time, end_time)
         to_process = [ pt for pt in background_points.T ]
-        output.extend(to_process)
+        output = list(to_process)
+        trigger_deltas, trigger_points = [], []
         while len(to_process) > 0:
             trigger_point = to_process.pop()
-            time, x, y = trigger_point
-            new_points = self.trigger_sampler.sample(0, end_time - time)
-            new_points += trigger_point[:,None]
-            output.extend(new_points.T)
-            to_process.extend(new_points.T)
+            new_points = self.trigger_sampler.sample(0, end_time - trigger_point[0])
+            trigger_deltas.extend(new_points.T)
+            trigger_points.extend([trigger_point] * new_points.shape[-1])
+            shifted_points = new_points + trigger_point[:,None]
+            output.extend(shifted_points.T)
+            to_process.extend(shifted_points.T)
         output.sort(key = lambda triple : triple[0])
-        return _np.array(output).T
+        return SelfExcitingPointProcess.Sample(_np.asarray(output).T, _np.asarray(background_points),
+            _np.asarray(trigger_deltas).T, _np.asarray(trigger_points).T)
 
 def scale_to_real_time(points, start_time, time_unit=timedelta64(60, "s")):
     times = [_np.datetime64(start_time) + time_unit * t for t in points[0]]

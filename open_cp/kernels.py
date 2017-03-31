@@ -56,33 +56,72 @@ def _gaussian_kernel(points, mean, var):
     return_array = _np.mean(_np.product(x, axis=2), axis=1)
     return return_array if pts.shape[0] > 1 else return_array[0]
 
-def kth_nearest_neighbour_gaussian_kde(coords, k=15):
-    """Input should be N coordinates in n dimensional space, and when n>1,
-    an array of shape (n,N) to be consistent with ourselves"""
-    coords = _np.asarray(coords)
-    k = min(k, coords.shape[-1] - 1)
+def compute_kth_distance(coords, k=15):
+    """Input is an array of shape (n,N) of N points in n dimensional space;
+    if n=1 then input if an array of shape (N)
     
-    if len(coords.shape) == 1:
-        stds = _np.std(coords, ddof=1)
-        points = coords / stds
+    Returns an array of shape (N) where the i-th entry is the distance from
+    the i-th point to its k-th nearest neighbour."""
+    points = _np.asarray(coords)
+    k = min(k, points.shape[-1] - 1)
+
+    if len(points.shape) == 1:
         points = points[:, None]
     else:
-        points = coords.T
-        stds = _np.std(points, axis=0, ddof=1)
-        points = points / stds
+        points = points.T
 
     tree = _spatial.KDTree(points)
     distance_to_k = _np.empty(points.shape[0])
     for i, p in enumerate(points):
         distances, indexes = tree.query(p, k=k+1)
         distance_to_k[i] = distances[-1]
+    
+    return distance_to_k
 
+def compute_normalised_kth_distance(coords, k=15):
+    """Input is an array of shape (n,N) of N points in n dimensional space;
+    if n=1 then input if an array of shape (N)
+
+    In each coordinate axis independently, the data is scaled to have a sample
+    variance of size 1.
+
+    Returns an array of shape (N) where the i-th entry is the distance from
+    the i-th point to its k-th nearest neighbour."""
+    coords = _np.asarray(coords)
+
+    if len(coords.shape) == 1:
+        points = coords / _np.std(coords, ddof=1)
+    else:
+        points = coords / _np.std(coords, axis=1, ddof=1)[:, None]
+    return compute_kth_distance(points, k)
+
+def marginal_knng(coords, coord_index=0, k=15):
+    if len(coords.shape) == 1:
+        raise ValueError("Input data is already one dimensional")
+    distances = compute_normalised_kth_distance(coords, k)
+    data = coords[coord_index]
+    var = (_np.std(data, ddof=1) * distances) ** 2
+    def kernel(x):
+        return _gaussian_kernel(_np.asarray(x).T, data, var)
+    return kernel
+
+def kth_nearest_neighbour_gaussian_kde(coords, k=15):
+    """Input should be N coordinates in n dimensional space, and when n>1,
+    an array of shape (n,N) to be consistent with ourselves"""
+    coords = _np.asarray(coords)
     means = coords.T
+
+    if len(coords.shape) == 1:
+        stds = _np.std(coords, ddof=1)
+        points = coords / stds
+    else:
+        stds = _np.std(means, axis=0, ddof=1)
+        points = coords / stds[:, None]
+    distance_to_k = compute_kth_distance(points, k)
+
     var = _np.tensordot(distance_to_k, stds, axes=0) ** 2
 
     def kernel(point):
-        # TODO: If we have one dimensional data and point is just a number,
-        #    this doesnt work.
         # Allow the "kernel" convention in argument passing
         return _gaussian_kernel(_np.asarray(point).T, means, var)
 
@@ -98,7 +137,7 @@ class KthNearestNeighbourGaussianKDE(KernelEstimator):
 
 
 class KNNG1_NDFactors(KernelEstimator):
-    """Applies the KthNearestNeighbourGaussianKDE to first coorindate
+    """Applies the KthNearestNeighbourGaussianKDE to first coordinate
     with one value of k, and then to the remaining coordinates with another
     value of k, and combines the result."""
     
@@ -107,6 +146,12 @@ class KNNG1_NDFactors(KernelEstimator):
         self.k_rest = k_rest
         
     def __call__(self, coords):
-        first = kth_nearest_neighbour_gaussian_kde(coords[0], self.k_first)
-        rest = kth_nearest_neighbour_gaussian_kde(coords[1:], self.k_rest)
-        return lambda coords : first(coords[0]) * rest(coords[1:])
+        first = self.first(coords)
+        rest = self.rest(coords)
+        return lambda pts : first(pts[0]) * rest(pts[1:])
+
+    def first(self, coords):
+        return kth_nearest_neighbour_gaussian_kde(coords[0], self.k_first)
+
+    def rest(self, coords):
+        return kth_nearest_neighbour_gaussian_kde(coords[1:], self.k_rest)

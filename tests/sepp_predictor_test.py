@@ -20,7 +20,7 @@ def expected_initial_matrix(points):
         p[j][j] = 1
         for i in range(j):
             td = points[0][j] - points[0][i]
-            t = np.exp( - 0.1 * td )
+            t = np.exp( - td / 0.1 )
             xd = points[1][j] - points[1][i]
             yd = points[2][j] - points[2][i]
             s = np.exp( -(xd**2 + yd**2) / (2*50*50))
