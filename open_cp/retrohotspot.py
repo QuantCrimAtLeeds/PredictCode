@@ -4,15 +4,6 @@ from . import data
 import abc as _abc
 import numpy as _np
 
-class KernelRiskPredictor(predictors.ContinuousPrediction):
-    def __init__(self, kernel):
-        self._kernel = kernel;
-    
-    def risk(self, x, y):
-        """Assume x and y can be 1D arrays"""
-        return self._kernel(x,y)
-
-
 class Weight(metaclass=_abc.ABCMeta):
     @_abc.abstractmethod
     def __call__(self, x, y):
@@ -55,4 +46,4 @@ class RetroHotSpot(predictors.DataPredictor):
                 return _np.sum(self.weight(x - coords[0], y - coords[1]), axis=-1)
                 #return _np.sum(self.weight(coords[0] - x_loc, coords[1] - y_loc))
         
-        return KernelRiskPredictor(kernel)
+        return predictors.KernelRiskPredictor(kernel)

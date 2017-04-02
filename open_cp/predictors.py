@@ -77,6 +77,16 @@ class ContinuousPrediction(Prediction):
         return kernel
 
 
+class KernelRiskPredictor(ContinuousPrediction):
+    def __init__(self, kernel):
+        self._kernel = kernel;
+    
+    # TODO: This is the wrong "kernel" interface
+    def risk(self, x, y):
+        """Assume x and y can be 1D arrays"""
+        return self._kernel(x,y)
+
+
 class GridPredictionArray(GridPrediction):
     def __init__(self, xsize, ysize, matrix, xoffset = 0, yoffset = 0):
         super().__init__(xsize, ysize, xoffset, yoffset)
