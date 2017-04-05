@@ -171,6 +171,36 @@ class InhomogeneousPoissonFactors(Sampler):
         return _np.vstack([times, points])
 
 
+class HomogeneousPoissonSampler(Sampler):
+    def __init__(self, rate):
+        self.rate = rate
+
+    def sample(self, start_time, end_time):
+        time_length = end_time - start_time
+        number_points = _np.random.poisson(time_length * self.rate)
+        times = _np.random.random(number_points) * time_length + start_time
+        return _np.sort(times)
+
+
+class ExponentialDecaySampler(Sampler):
+    def __init__(self, intensity, exp_rate):
+        self.intensity = intensity
+        self.exp_rate = exp_rate
+
+    def sample(self, start_time, end_time):
+        #max_time = end_time - start_time
+        #s_time_max = self.intensity * (1 - _np.exp(-self.exp_rate * max_time))
+        #number_points = _np.random.poisson(s_time_max)
+        #unit_rate_poisson = _np.random.random(number_points) * s_time_max
+        #times = _np.log( self.intensity / (self.intensity - unit_rate_poisson) ) / self.exp_rate
+        #return _np.sort(times) + start_time
+        number_points = _np.random.poisson(self.intensity)
+        unit_rate_poisson = _np.random.random(number_points)
+        times = _np.log( 1 / unit_rate_poisson ) / self.exp_rate
+        mask = (times >= start_time) & (times < end_time)
+        return _np.sort( times[mask] )
+
+
 from collections import namedtuple as _namedtuple
 
 class SelfExcitingPointProcess(Sampler):
@@ -189,14 +219,22 @@ class SelfExcitingPointProcess(Sampler):
         output = list(to_process)
         trigger_deltas, trigger_points = [], []
         while len(to_process) > 0:
-            trigger_point = to_process.pop()
-            new_points = self.trigger_sampler.sample(0, end_time - trigger_point[0])
+            trigger_point = _np.asarray(to_process.pop())
+            trigger_point_time = trigger_point[0] if trigger_point.shape else trigger_point
+            new_points = self.trigger_sampler.sample(0, end_time - trigger_point_time)
             trigger_deltas.extend(new_points.T)
             trigger_points.extend([trigger_point] * new_points.shape[-1])
-            shifted_points = new_points + trigger_point[:,None]
+            if trigger_point.shape:
+                shifted_points = new_points + trigger_point[:,None]
+            else:
+                shifted_points = new_points + trigger_point
             output.extend(shifted_points.T)
             to_process.extend(shifted_points.T)
-        output.sort(key = lambda triple : triple[0])
+        if len(output) > 0:
+            if _np.asarray(output[0]).shape:
+                output.sort(key = lambda triple : triple[0])
+            else:
+                output.sort()
         return SelfExcitingPointProcess.Sample(_np.asarray(output).T, _np.asarray(background_points),
             _np.asarray(trigger_deltas).T, _np.asarray(trigger_points).T)
 
