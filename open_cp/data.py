@@ -63,6 +63,13 @@ class RectangularRegion():
                                  ymin = self.ymin + other.y,
                                  ymax = self.ymax + other.y)
 
+    def grid_size(self, cell_width, cell_height = None):
+        if cell_height is None:
+            cell_height = cell_width
+        xsize = int(_np.rint((self.xmax - self.xmin) / cell_width))
+        ysize = int(_np.rint((self.ymax - self.ymin) / cell_height))
+        return xsize, ysize
+
     def __repr__(self):
         return "RectangularRegion( ({},{}) -> ({},{}) )".format(self.xmin,
                                  self.ymin, self.xmax, self.ymax)
@@ -140,17 +147,41 @@ class TimedPoints:
 
     @property
     def time_range(self):
+        """Find the time range.
+
+        :return: A pair (start, end) of timestamps.
+        """
         return ( self.timestamps[0], self.timestamps[-1] )
 
     def time_deltas(self, time_unit = _np.timedelta64(1, "m")):
+        """Returns a numpy array of floats, converted from the timestamps,
+        starting from 0, and with the optional unit.
+
+        :param time_unit: The unit to measure time by.  Defaults to 1 minute,
+        so timestamps an hour apart will be converted to floats 60.0 apart.
+        No rounding occurs, so there is no loss in accuracy by passing a
+        different time unit.
+        """
         return ( self.timestamps - self.timestamps[0] ) / time_unit
 
-    @classmethod
-    def from_coords(cls, timestamps, xcoords, ycoords):
+    def to_time_space_coords(self, time_unit = _np.timedelta64(1, "m")):
+        """Returns a single numpy array `[t,x,y]` where the time stamps are
+        converted to floats, starting from 0, and with the optional unit.
+
+        :param time_unit: The unit to measure time by.  Defaults to 1 minute,
+        so timestamps an hour apart will be converted to floats 60.0 apart.
+        No rounding occurs, so there is no loss in accuracy by passing a
+        different time unit.
+        """
+        times = self.time_deltas(time_unit)
+        return np.vstack([times, self.xcoords, self.ycoords])
+
+    @staticmethod
+    def from_coords(timestamps, xcoords, ycoords):
         lengths = { len(timestamps), len(xcoords), len(ycoords) }
         if len(lengths) != 1:
             raise Exception("Input data should all be of the same length")
-        return cls(timestamps,_np.stack([xcoords, ycoords]))
+        return TimedPoints(timestamps, _np.stack([xcoords, ycoords]))
 
 
 try:

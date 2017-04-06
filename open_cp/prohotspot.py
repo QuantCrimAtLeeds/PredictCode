@@ -53,7 +53,7 @@ class ClassicDiagonalsDifferent(ClassicDiagonalsSame):
         return abs(x1 - x2) + abs(y1 - y2)
 
 
-class ProspectiveHotSpot(predictors.DataPredictor):
+class ProspectiveHotSpot(predictors.DataTrainer):
     def __init__(self, region):
         self.grid = 50
         self.region = region

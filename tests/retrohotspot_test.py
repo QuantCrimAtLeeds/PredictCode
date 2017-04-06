@@ -22,11 +22,6 @@ def test_Quartic_can_pass_array():
     ycoords = np.array([0,0,50,200,100,150])
     expected = np.array([1,(15/16)**2,(15/16)**2,0,0.25,0])
     np.testing.assert_allclose(w(xcoords, ycoords), expected)
-
-def test_RetroHotSpot_data_set():
-    r = testmod.RetroHotSpot()
-    with raises(TypeError):
-        r.data = "bib"
         
 # Again, having tested the real weight, we'll use a test weight
 
@@ -59,7 +54,6 @@ def test_RetroHotSpot_multiple_events():
     assert( prediction.risk(160, 20) == 1 )
     assert( prediction.risk(80, 60) == 3 )
     assert( prediction.risk(60, 90) == 2 )
-    
 
 def test_RetroHostSpot_filter_events_after_time():
     r = a_valid_RetroHotSpot()
@@ -79,3 +73,19 @@ def test_RetroHostSpot_filter_events_by_time():
     prediction = r.predict(start_time = datetime.datetime(2017,3,3),
             end_time = datetime.datetime(2017,3,2))
     assert( prediction.risk(80, 60) == 0 )
+
+def test_RetroHotSpotGrid():
+    region = open_cp.RectangularRegion(xmin=0, xmax=500, ymin=100, ymax=500)
+    r = testmod.RetroHotSpotGrid(region, grid_size=20)
+    r.weight = TestWeight()
+    times = [np.datetime64("2017-04-02")] * 3
+    r.data = open_cp.TimedPoints.from_coords(times, [0, 50, 50], [100, 120, 210])
+
+    grid = r.predict()
+    assert(grid.intensity_matrix.shape == (20, 25))
+    # Count 1 for each event with l^\infty distance <= 50 from centre of grid point
+    # (0,0) -> (10, 110)
+    assert(grid.grid_risk(0, 0) == 2)
+    assert(grid.grid_risk(2, 5) == 1)
+    assert(grid.grid_risk(4, 1) == 1)
+    assert(grid.grid_risk(5, 1) == 0)

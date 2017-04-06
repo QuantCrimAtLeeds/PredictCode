@@ -260,13 +260,7 @@ class OptimisationResult():
         self.ell2_error = ell2_error
 
 
-def timed_points_to_space_time(timed_points, time_unit = _np.timedelta64(1, "m")):
-    times = timed_points.timestamps - timed_points.timestamps[0]
-    times /= time_unit
-    return np.vstack([times, timed_points.xcoords, timed_points.ycoords])
-
-
-class SEPPPredictor(predictors.DataPredictor):
+class SEPPPredictor(predictors.DataTrainer):
     ## TODO: Some docs
     def __init__(self, k_time=100, k_space=15):
         self.k_time = k_time
@@ -280,7 +274,7 @@ class SEPPPredictor(predictors.DataPredictor):
         decluster.background_kernel_estimator = kernels.KNNG1_NDFactors(self.k_time, self.k_space)
         decluster.trigger_kernel_estimator = kernels.KthNearestNeighbourGaussianKDE(self.k_space)
         events = self.data.events_before(cutoff_time)
-        decluster.points = timed_points_to_space_time(event)
+        decluster.points = events.to_time_space_coords()
         kernel = decluster.predict_time_space_intensity(iterations=40)
         def timed_evaluated_kernel(x, y):
             # TODO: Test!

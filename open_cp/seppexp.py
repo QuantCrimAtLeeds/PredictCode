@@ -79,7 +79,11 @@ def maximisation(cells, omega, theta, mu, time_duration):
     return (omega, theta, mu)
 
 def maximisation_corrected(cells, omega, theta, mu, time_duration):
-    """TODO Perform an iteration of the EM algorithm.
+    """Perform an iteration of the EM algorithm.  This version applies "edge
+    corrections" (see Lewis, Mohler) which take account of the fact that by
+    looking at a finite time window, we ignore aftershocks which occur after
+    the end of the time window.  This leads to better parameter estimation
+    when `omega` is small.
 
     :param cells: An array (of any shape) each entry of which is an array of
     times of events, in increasing order.

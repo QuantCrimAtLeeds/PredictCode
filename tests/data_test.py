@@ -49,6 +49,11 @@ def test_RectangluarRegion_aspect():
     assert( RectangularRegion(xmin=5, xmax=5, ymin=1, ymax=10).aspect_ratio is np.nan )
     assert( RectangularRegion(xmin=5, xmax=10, ymin=1, ymax=10).aspect_ratio == pytest.approx(9/5) )
 
+def test_RectangluarRegion_grid_size():
+    region = RectangularRegion(xmin=4, xmax=50, ymin=1, ymax=10)
+    assert( region.grid_size(10) == (5, 1) )
+    assert( region.grid_size(10, 5) == (5, 2) )
+
 from datetime import datetime as dt
 import numpy.testing as npt
 
