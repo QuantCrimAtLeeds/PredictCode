@@ -233,10 +233,15 @@ class KNNG1_NDFactors(KernelEstimator):
         self.k_first = k_first
         self.k_rest = k_rest
         
+    class KNNG1_NDFactors_Kernel(Kernel):
+        def __init__(self, first, rest):
+            self.first, self.rest = first, rest
+
+        def __call__(self, points):
+            return self.first(points[0]) * self.rest(points[1:])
+
     def __call__(self, coords):
-        first = self.first(coords)
-        rest = self.rest(coords)
-        return lambda pts : first(pts[0]) * rest(pts[1:])
+        return self.KNNG1_NDFactors_Kernel(self.first(coords), self.rest(coords))
 
     def first(self, coords):
         """Find the kernel estimate for the first coordinate only.

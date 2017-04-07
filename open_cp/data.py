@@ -3,6 +3,7 @@
 import numpy as _np
 
 class Point():
+    """A simple 2 dimensional point class."""
     def __init__(self, x=0, y=0):
         self._x = x
         self._y = y
@@ -23,6 +24,7 @@ class Point():
 
 
 class RectangularRegion():
+    """Stores a rectangular region."""
     def __init__(self, xmin=0, xmax=1, ymin=0, ymax=1):
         self._min = Point(xmin, ymin)
         self._max = Point(xmax, ymax)
@@ -45,14 +47,17 @@ class RectangularRegion():
 
     @property
     def min(self):
+        """The pair (xmin, ymin)"""
         return self._min
 
     @property
     def max(self):
+        """The pair (xmax, ymax)"""
         return self._max
 
     @property
     def aspect_ratio(self):
+        """Height divided by width"""
         if self.xmax == self.xmin:
             return _np.nan
         return (self.ymax - self.ymin) / (self.xmax - self.xmin)
@@ -64,6 +69,12 @@ class RectangularRegion():
                                  ymax = self.ymax + other.y)
 
     def grid_size(self, cell_width, cell_height = None):
+        """Return the size of grid defined by this region.
+
+        :param cell_width: The width of each cell in the grid.
+        :param cell_height: Optional .  The height of each cell in the grid;
+        defaults to a square grid where the height is the same as the width.
+        """
         if cell_height is None:
             cell_height = cell_width
         xsize = int(_np.rint((self.xmax - self.xmin) / cell_width))
@@ -76,7 +87,21 @@ class RectangularRegion():
 
 
 class TimedPoints:
-    """Stores a list of timestamped x-y coordinates of events"""
+    """Stores a list of timestamped x-y coordinates of events.
+    
+    :param timestamps: An array of timestamps (must be convertible to
+    :class numpy.datetime64:).
+    :param coords: An array of shape (2,n) where `n` must match the number of
+    timestamps.
+    """
+    def __init__(self, timestamps, coords):
+        self._assert_times_ordered(timestamps)
+        self.timestamps = _np.array(timestamps, dtype="datetime64[ms]")
+        self.coords = _np.array(coords).astype(_np.float64)
+        if len(self.coords.shape) != 2 or self.coords.shape[0] != 2:
+            raise Exception("Coordinates should be of shape (2,#)")
+        if len(self.timestamps) != self.coords.shape[1]:
+            raise Exception("Input data should all be of the same length")
 
     @staticmethod
     def _is_time_ordered(timestamps):
@@ -93,15 +118,6 @@ class TimedPoints:
     def _assert_times_ordered(self, timestamps):
         if not self._is_time_ordered(timestamps):
             raise ValueError("Input must be time ordered")
-
-    def __init__(self, timestamps, coords):
-        self._assert_times_ordered(timestamps)
-        self.timestamps = _np.array(timestamps, dtype="datetime64[ms]")
-        self.coords = _np.array(coords).astype(_np.float64)
-        if len(self.coords.shape) != 2 or self.coords.shape[0] != 2:
-            raise Exception("Coordinates should be of shape (2,#)")
-        if len(self.timestamps) != self.coords.shape[1]:
-            raise Exception("Input data should all be of the same length")
 
     @property
     def xcoords(self):
@@ -127,20 +143,34 @@ class TimedPoints:
             new_coords[1,i] = y
         return TimedPoints(new_times, new_coords)
 
-    def events_before(self, cutoff_time):
+    def events_before(self, cutoff_time=None):
+        """Returns just the events with timestamps before (or equal to) the
+        cutoff.
+
+        :param cutoff_time: End of the time period we're interested in.
+        Default is `None` which means return all the data.
+        """
+        if cutoff_time is None:
+            return self
         mask = self.timestamps <= cutoff_time
         return TimedPoints(self.timestamps[mask], self.coords[:,mask])
 
     @property
     def empty(self):
+        """True or False, do we have any events"""
         return len(self.timestamps) == 0
     
     @property
     def number_data_points(self):
+        """The number of events"""
         return len(self.timestamps)
 
     @property
     def bounding_box(self):
+        """The smallest (space) box containing all the data points.
+        
+        :return: A :class RectangularRegion: instance.
+        """
         return RectangularRegion(xmin = _np.min(self.xcoords),
             xmax = _np.max(self.xcoords), ymin = _np.min(self.ycoords),
             ymax = _np.max(self.ycoords))
@@ -178,6 +208,9 @@ class TimedPoints:
 
     @staticmethod
     def from_coords(timestamps, xcoords, ycoords):
+        """Static constructor allowing you to pass separate arrays of x and y
+        coordinates.
+        """
         lengths = { len(timestamps), len(xcoords), len(ycoords) }
         if len(lengths) != 1:
             raise Exception("Input data should all be of the same length")
@@ -191,9 +224,19 @@ except ModuleNotFoundError:
     print("Package 'pyproj' not found: projection methods will not be supported.", file=sys.stderr)
     _proj = None
 
-# http://spatialreference.org/ref/epsg/
-# 7405 is suitable for UK
 def points_from_lon_lat(points, proj=None, epsg=None):
+    """Converts longitude / latitude data into x,y coordinates using a
+    projection.  The module `pyproj` must be loaded, otherwise this does
+    nothing.
+
+    :param points: A :class TimedPoints: instance of lon/lat data.
+    :param proj: Optionally, a `pyproj.Proj` object describing the projection.
+    :param epsg: If no `proj` is given, this must be supplied.  A valid EPSG
+    projection reference.  For example, 7405 is suitable for UK data. See
+    http://spatialreference.org/ref/epsg/
+
+    :return: A :class TimedPoints: instance of projected data with the same timestamps.
+    """
     if not _proj:
         return points
     if not proj:

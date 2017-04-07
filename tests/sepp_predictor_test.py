@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 import open_cp.sepp as testmod
 
@@ -54,5 +55,49 @@ def test_sample_points():
     np.testing.assert_allclose(trigs[:,0], [0.2, 2, -2] )
     np.testing.assert_allclose(trigs[:,1], [0.3, 3, -3] )
     
+def test_p_matrix():
+    def bk(pts):
+        return np.zeros_like(pts[0]) + 1
+    def tk(pts):
+        return np.zeros_like(pts[0]) + 0.5
+    points = np.empty((3,2))
+    p = testmod.p_matrix(points, bk, tk)
+    expected = np.asarray([[1,0.5], [0,1]])
+    np.testing.assert_allclose(p, testmod._normalise_matrix(expected))
 
-    
+def test_p_matrix_fast():
+    def bk(pts):
+        return pts[0]**2
+    def tk(pts):
+        return pts[1]**2
+    points = np.random.random(size=(3,10))
+    p = testmod.p_matrix(points, bk, tk)
+    pf = testmod.p_matrix_fast(points, bk, tk, time_cutoff=2, space_cutoff=2)
+    np.testing.assert_allclose(p, pf)
+
+def test_p_matrix_fast_timecutoff():
+    def bk(pts):
+        return np.zeros_like(pts[0]) + 0.5
+    def tk(pts):
+        return np.zeros_like(pts[0]) + 1
+    points = np.asarray([[0,1,2], [1,2,3]]).T
+    p = np.asarray([[1, 0], [0, 1]])
+    pf = testmod.p_matrix_fast(points, bk, tk, time_cutoff=0.9, space_cutoff=2)
+    np.testing.assert_allclose(p, pf)
+    pf = testmod.p_matrix_fast(points, bk, tk, time_cutoff=1, space_cutoff=1.4)
+    np.testing.assert_allclose(p, pf)
+    pf = testmod.p_matrix_fast(points, bk, tk, time_cutoff=1, space_cutoff=2)
+    assert(pf[0][1] > 0.1)    
+
+def test_make_kernel():
+    def bk(pts):
+        return pts[1]
+    def tk(pts):
+        return pts[2]
+    data = np.array([[0,1], [2,3], [4,5]])
+    kernel = testmod.make_kernel(data, bk, tk)
+    pts = np.array([[0,5.7,2], [0.1,5.7,2], [1.1,5.7,2]]).T
+    assert(kernel(pts[:,0]) == pytest.approx(5.7))
+    assert(kernel(pts[:,1]) == pytest.approx(5.7 + 4))
+    assert(kernel(pts[:,2]) == pytest.approx(5.7 + 4 + 5))
+    np.testing.assert_allclose(kernel(pts), [5.7, 9.7, 14.7])

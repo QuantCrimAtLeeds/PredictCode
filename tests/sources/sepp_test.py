@@ -57,11 +57,6 @@ def test_multi_dim_random_mock(random_mock, poisson_mock):
     poisson_mock.assert_called_with(lam=3.2)
 
 
-def test_InhomogeneousPoisson_kernel_type():
-    with pytest.raises(ValueError):
-        region = open_cp.data.RectangularRegion(10, 20, 50, 100)
-        testmod.InhomogeneousPoisson(region, "fish")
-
 class TestKernel(testmod.SpaceTimeKernel):
     def intensity(self, t, x, y):
         return np.zeros_like(t) + 2
@@ -79,9 +74,9 @@ def test_InhomogeneousPoisson_zero_kernel(poisson_mock):
     points = sampler.sample(10, 20)
     poisson_mock.assert_called_with(lam=10000)
     
-    np.testing.assert_allclose( points[0], [11,12,13,11,12] )
-    np.testing.assert_allclose( points[1], np.array([3,1,2,3,1]) + 10 )
-    np.testing.assert_allclose( points[2], np.array([2,3,1,2,3]) * 5 + 50 )
+    np.testing.assert_allclose( points[0], [11,11,12,12,13] )
+    np.testing.assert_allclose( points[1], np.array([3,3,1,1,2]) + 10 )
+    np.testing.assert_allclose( points[2], np.array([2,2,3,3,1]) * 5 + 50 )
 
 
 class TestKernel1(testmod.SpaceTimeKernel):

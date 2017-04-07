@@ -5,6 +5,25 @@ sepp
 Implements the ETAS (Epidemic Type Aftershock-Sequences) model intensity
 estimation scheme outlined in Mohler et al. (2011).
 
+As this is a statistical model, we separate out the statistical optimisation
+procedure into a separate class, :class StocasticDecluster:  This allows
+testing and exploration of the model without worry about real world issues such
+as time-stamps.  
+
+We can think of this algorithm in terms of a "machine learning" workflow, and
+separate a "training" stage from a "prediction" stage.  The statistical model
+is that we have a "background" rate of random events, and then that existing
+events cause a time/space localised increase in risk, described by a "trigger"
+kernel.  The trigger kernel does not vary with the time/space location of the
+event (which is perhaps a limit of the model).  As such, both the background
+and trigger kernels should be fairly constant in time, and so if "trained"
+on historical data, should be valid to make predictions for, say, the next
+few weeks or months.  (Over long time scales, we should expect the background
+kernel to change.)
+
+This is also useful in practise, as the training stage is slow, but once
+trained, the kernels can quickly be evaluated to make predictions.
+
 References
 ~~~~~~~~~~
 Mohler et al, "Self-Exciting Point Process Modeling of Crime",
@@ -14,7 +33,7 @@ Mohler et al, "Self-Exciting Point Process Modeling of Crime",
 Rosser, Cheng, "Improving the Robustness and Accuracy of Crime Prediction with
 the Self-Exciting Point Process Through Isotropic Triggering"
    Appl. Spatial Analysis
-   DOI 10.1007/s12061-016-9198-y
+   DOI: 10.1007/s12061-016-9198-y
 """
 
 from . import predictors
@@ -67,10 +86,10 @@ def p_matrix_fast(points, background_kernel, trigger_kernel, time_cutoff=150, sp
 
     number_data_points = points.shape[-1]
     p = _np.zeros((number_data_points, number_data_points))
-    space_cutoff *= space_cutoff
+    space_cutoff_sq = space_cutoff**2
     for j in range(1, number_data_points):
         d = points[:, j][:,None] - points[:, :j]
-        dmask = (d[0] <= time_cutoff) & ((d[1]**2 + d[2]**2) < space_cutoff)
+        dmask = (d[0] <= time_cutoff) & ((d[1]**2 + d[2]**2) <= space_cutoff_sq)
         d = d[:, dmask]
         if d.shape[-1] == 0:
             continue
@@ -81,7 +100,7 @@ def p_matrix_fast(points, background_kernel, trigger_kernel, time_cutoff=150, sp
 def initial_p_matrix(points, initial_time_bandwidth = 0.1,
         initial_space_bandwidth = 50.0):
     """Returns an initial estimate of the probability matrix.  Uses a Gaussian
-    kernel in space, and an exponential kernel in    time, both non-normalised.
+    kernel in space, and an exponential kernel in time, both non-normalised.
     Diagonal (i.e. background "probabilities") are set to 1.  Finally the
     matrix is normalised.
 
@@ -122,6 +141,35 @@ def sample_points(points, p):
     triggered = (points - points[:,choice])[:,~mask]
     return backgrounds, triggered
 
+def make_kernel(data, background_kernel, trigger_kernel):
+    """Produce a kernel object which evaluates the background kernel, and
+    the trigger kernel based on the space-time locations in the data.
+
+    :param data: An array of shape `(3,N)` giving the space-time locations
+    events.  Used when computing the triggered / aftershock events.
+    :param background_kernel: The kernel object giving the background risk
+    intensity.
+    :param trigger_kernel: The kernel object giving the trigger / aftershock
+    risk intensity.
+    
+    :return: A kernel object which can be called on arrays on points.
+    """
+    data_copy = _np.array(data)
+    def one_dim_kernel(pt):
+        mask = data_copy[0] < pt[0]
+        bdata = data_copy[:,mask]
+        if bdata.shape[-1] == 0:
+            return background_kernel(pt)
+        return background_kernel(pt) + _np.sum(trigger_kernel(bdata))
+    def kernel(points):
+        points = _np.asarray(points)
+        if len(points.shape) == 1:
+            return one_dim_kernel(points)
+        out = _np.empty(points.shape[-1])
+        for i, pt in enumerate(points.T):
+            out[i] = one_dim_kernel(pt)
+        return out
+    return kernel
 
 class StocasticDecluster():
     """Implements the 'stocastic declustering algorithm' from Mohler et al
@@ -160,8 +208,7 @@ class StocasticDecluster():
             initial_space_bandwidth = 50.0,
             space_cutoff = 500.0,
             time_cutoff = 120 * (_np.timedelta64(1, "D") / _np.timedelta64(1, "m")),
-            points = None
-            ):
+            points = None):
         self.background_kernel_estimator = background_kernel_estimator
         self.trigger_kernel_estimator = trigger_kernel_estimator
         self.initial_time_bandwidth = initial_time_bandwidth
@@ -197,31 +244,7 @@ class StocasticDecluster():
             time_cutoff = self.time_cutoff, space_cutoff = self.space_cutoff)
         return pnew, norm_bkernel, norm_tkernel
     
-    def _make_kernel(self, bkernel, tkernel):
-        def kernel(pt):
-            # TODO: Vectorise this!
-            bdata = self.points[self.points[0] < pt[0]]
-            return bkernel(pt) + _np.sum(tkernel(bdata))
-        return kernel
-    
     def run_optimisation(self, iterations=20):
-        """Runs the optimisation algorithm, and returns information on the
-        result.
-
-        :return: :class:`OptimisationResult`
-        """
-
-        p = initial_p_matrix(self.points, self.initial_time_bandwidth, self.initial_space_bandwidth)
-        errors = []
-        for _ in range(iterations):
-            pnew, bkernel, tkernel = self.next_iteration(p)
-            errors.append(_np.sum((pnew - p) ** 2))
-            p = pnew
-        kernel = self._make_kernel(bkernel, tkernel)
-        return OptimisationResult(kernel=kernel, p=p, background_kernel=bkernel,
-            trigger_kernel=tkernel, ell2_error=_np.sqrt(_np.asarray(errors)))
-
-    def predict_time_space_intensity(self, iterations=20):
         """Runs the optimisation algorithm by taking an initial estimation of
         the probability matrix, and then running the optimisation step.  If
         this step ever classifies most events as background, or as triggered,
@@ -230,15 +253,18 @@ class StocasticDecluster():
 
         :param iterations: The number of optimisation steps to perform.
 
-        :return: the estimated intensity kernel.
-        
-        Tuple of `(kernel, p, bkernel, tkenerl)` where `kernel` is , `p` is the estimated probability matrix,
-        `bkernel` is the estimated background kernel, and `tkernel` the
-        estimated triggering kernel.
+        :return: :class:`OptimisationResult`
         """
+        p = initial_p_matrix(self.points, self.initial_time_bandwidth, self.initial_space_bandwidth)
+        errors = []
+        for _ in range(iterations):
+            pnew, bkernel, tkernel = self.next_iteration(p)
+            errors.append(_np.sum((pnew - p) ** 2))
+            p = pnew
+        kernel = make_kernel(self.points, bkernel, tkernel)
+        return OptimisationResult(kernel=kernel, p=p, background_kernel=bkernel,
+            trigger_kernel=tkernel, ell2_error=_np.sqrt(_np.asarray(errors)))
 
-        result = run_optimisation(iterations)
-        return result.kernel
 
 class OptimisationResult():
     """Contains results of the optimisation process.
@@ -251,7 +277,6 @@ class OptimisationResult():
     estimates of the probability matrix.  That these decay is a good indication
     of convergence.
     """
-
     def __init__(self, kernel, p, background_kernel, trigger_kernel, ell2_error):
         self.kernel = kernel
         self.p = p
@@ -261,27 +286,87 @@ class OptimisationResult():
 
 
 class SEPPPredictor(predictors.DataTrainer):
-    ## TODO: Some docs
+    """Returned by :class SEPPTrainer: encapsulated computed background and
+    triggering kernels.  This class allows these to be evaluated on potentially
+    different data to produce predictions.
+
+    When making a prediction, the *time* component of the background kernel
+    is ignored.  This is allowed, because the kernel estimation used looks
+    at time and space separately for the background kernel.  We do this because
+    KDE methods don't allow us to "predict" into the future.
+
+    This class also stores information about the optimisation procedure.
+    """
+    def __init__(self, result):
+        self.result = result
+
+    @property
+    def background_kernel():
+        return self.result.background_kernel
+
+    @property
+    def trigger_kernel():
+        return self.result.trigger_kernel
+
+    @property
+    def background_kernel_space_only():
+        # Assume the estimate was KNNG1_NDFactors so the kernel is of type KNNG1_NDFactors_Kernel
+        # Duck-typing allows anything which follows this interface, of course
+        return lambda pts : self.background_kernel.first(pts[1:])
+
+    def predict(self, predict_time, cutoff_time=None):
+        """Make a prediction at a time, using the data held by this instance.
+        That is, evaluate the background kernel plus the trigger kernel at
+        events before the prediction time.  Optionally you can limit the data
+        used, though this is against the underlying statistical model.
+
+        :param predict_time: Time point to make a prediction at.
+        :param cutoff_time: Optionally, limit the input data to only be from
+        before this time.
+
+        :return: Instance of :class predictors.ContinuousPrediction:
+        """
+        events = self.data.events_before(cutoff_time)
+        times = (events.timestamps - predict_time) / _np.timedelta64(1, "m")
+        data = _np.vstack((times, events.xcoords, events.ycoords))
+        return make_kernel(data, self.background_kernel_space_only, self.trigger_kernel)
+
+
+class SEPPTrainer(predictors.DataTrainer):
+    """Use the algorithm described in Mohler et al. 2011.  The kernel
+    estimation used is the "kth nearest neighbour variable bandwidth Gaussian"
+    KDE.  This is a two-step algorithm: this class "trains" itself on data,
+    and returns a class which can then make predictions, possibly on other
+    data.
+
+    :param k_time: The kth nearest neighbour to use in the KDE of the time
+    kernel; defaults to 100.
+    :param k_space: The kth nearest neighbour to use in the KDE of space and
+    space/time kernels; defaults to 15.
+    """
     def __init__(self, k_time=100, k_space=15):
         self.k_time = k_time
         self.k_space = k_space
-        pass
 
-    # TODO: Somehow, this interface decision is now killing me, because I don't
-    # want to force a predict_time as that's rather costly in terms of computation
-    def predict(self, cutoff_time, predict_time):
+    def train(self, cutoff_time=None):
+        """Perform the (slow) training step on historical data.  This estimates
+        kernels, and returns an object which can make predictions.
+
+        :param cutoff_time: If specified, then limit the historical data to
+        before this time.
+        
+        :return: A :class SEPPPredictor: instance.
+        """
         decluster = StocasticDecluster()
-        decluster.background_kernel_estimator = kernels.KNNG1_NDFactors(self.k_time, self.k_space)
         decluster.trigger_kernel_estimator = kernels.KthNearestNeighbourGaussianKDE(self.k_space)
+        decluster.background_kernel_estimator = kernels.KNNG1_NDFactors(self.k_time, self.k_space)
+        # From Rosser, Cheng, suggested 0.1 day^{-1} and 50 metres
+        decluster.initial_time_bandwidth = 24 * 60 / 10 # minutes
+        decluster.initial_space_bandwidth = 50.0
+        # From Rosser, Cheng, suggested 120 days and 500 metres
+        decluster.space_cutoff = 500
+        decluster.time_cutoff = 120 * 24 * 60 # minutes
         events = self.data.events_before(cutoff_time)
         decluster.points = events.to_time_space_coords()
         kernel = decluster.predict_time_space_intensity(iterations=40)
-        def timed_evaluated_kernel(x, y):
-            # TODO: Test!
-            x = _np.asarray(x)
-            if len(x.shape) > 0:
-                times = [cutoff_time] * len(x)
-            else:
-                times = cutoff_time
-            return kernel([x,y,times])
         return predictors.KernelRiskPredictor(timed_evaluated_kernel)

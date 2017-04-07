@@ -1,20 +1,30 @@
+"""
+sources.sepp
+~~~~~~~~~~~~
+
+Produces synthetic data based upon a "self-exciting" or "Hawkes model" point
+process.  These are point processes where the conditional intensity function
+depends upon a background intensity (i.e. a homogeneous or possibly
+inhomogeneous Poisson process) and when each event in the past contributes
+a further (linearly additive) terms governed by a trigger / aftershock kernel.
+
+Such models, with specific forms for the trigger kernel, are known as
+"epidemic type aftershock models" in the Earthquake modelling literature.
+
+Rather than rely upon external libraries (excepting numpy which we do use) we
+produce a number of base classes which define kernels and samplers, and provide
+some common kernels and samplers for backgrounds and triggers.
+"""
+
 from .. import data
+from .. import kernels
 from . import random
 
 import abc as _abc
 import numpy as _np
 from numpy import timedelta64
 
-## TODO: I want to standise the notion of a "kernel" across the project
-# I think it should just be (using duck typing) anything which can be
-# called with an array of shape (k,n) where k is the dimension of space,
-# and n is the number of samples.  It should return an array of length n.
-# Should be normalised or not.
-#
-# But maybe we do want to keep the ABC which also have a property returning
-# the maximimum of kernel is a time region?
-
-class SpaceTimeKernel(metaclass=_abc.ABCMeta):
+class SpaceTimeKernel(kernels.Kernel):
     """To produce a kernel as required by the samplers in this package,
     either extend this abstract class implementing `intensity(t, x, y)`
     or provide your own class which has the same signature as `__call__`
@@ -24,7 +34,7 @@ class SpaceTimeKernel(metaclass=_abc.ABCMeta):
     def intensity(self, t, x, y):
         """t, x and y will be one-dimensional numpy arrays of the same length.
         
-        Return should be a numpy array of the same length as the input"""
+        :return: A numpy array of the same length as the input"""
         pass
     
     def __call__(self, points):
@@ -32,16 +42,22 @@ class SpaceTimeKernel(metaclass=_abc.ABCMeta):
     
     @_abc.abstractmethod
     def kernel_max(self, time_start, time_end):
+        """Return a value which is greater than or equal to the maximum
+        intensity of the kernel over the time range (and for any space input).
+        """
         pass
 
 
-class Sampler(metaclass=_abc.ABCMeta):
-    @_abc.abstractmethod
-    def sample(self, start_time, end_time):
-        pass
-
-    
 class PoissonTimeGaussianSpace(SpaceTimeKernel):
+    """A kernel which is a constant rate Poisson process in time, and a two
+    dimensional Gaussian kernel in space (see
+    https://en.wikipedia.org/wiki/Multivariate_normal_distribution).
+
+    :param time_rate: The rate of the Poisson process in time.
+    :param mus: A pair of the mean values of the Gaussian in each variable.
+    :param variances: A pair of the variances of the Gaussian in each variable.
+    :param correlation: The correlation between the two Gaussians.
+    """
     def __init__(self, time_rate, mus, variances, correlation):
         self.time_rate = time_rate
         self.mus = mus
@@ -65,48 +81,25 @@ class PoissonTimeGaussianSpace(SpaceTimeKernel):
         return self._normalisation() * self.time_rate
 
 
-class InhomogeneousPoisson(Sampler):
-    """A simple rejection (aka Otago thining) sampler.  You need to supply
-    an upper bound on the kernel.  If you have a special kernel, then a custom
-    made sampler is likely to be faster."""
-    
-    def __init__(self, region, kernel):
-        """region is the spatial extent of the simulation"""
-        self._region = region
-        if not isinstance(kernel, SpaceTimeKernel):
-            raise ValueError("kernel should be of type SpaceTimeKernel")
-        self._kernel = kernel
-
-    def _uniform_sample_region(self, start_time, end_time, num_points):
-        pts = _np.random.random((3,num_points))
-        pts *= _np.array([end_time - start_time, self._region.xmax - self._region.xmin,
-            self._region.ymax - self._region.ymin])[:,None]
-        pts += _np.array([start_time, self._region.xmin, self._region.ymin])[:,None]
-        return pts
-
-    def sample(self, start_time, end_time):
-        area = (self._region.xmax - self._region.xmin) * (self._region.ymax - self._region.ymin)
-        kmax = self._kernel.kernel_max(start_time, end_time)
-        total_points = kmax * area * (end_time - start_time)
-        num_points = _np.random.poisson(lam = total_points)
-        pts = self._uniform_sample_region(start_time, end_time, num_points)
-        accept_prob = _np.random.random(num_points) * kmax
-        accept = (self._kernel(pts) >= accept_prob)
-        return pts[:,accept]
-
-
-class TimeKernel(metaclass=_abc.ABCMeta):
-    @_abc.abstractmethod
-    def __call__(self, times):
-        """times is a one-dimensional numpy array; return is of the same type"""
-        pass
+class TimeKernel(kernels.Kernel):
+    """A one dimensional kernel which can estimate its upper bound, for use
+    with rejection sampling.
+    """
     
     @_abc.abstractmethod
     def kernel_max(self, time_start, time_end):
+        """Return a value which is greater than or equal to the maximum
+        intensity of the kernel over the time range.
+        """
         pass
 
 
 class HomogeneousPoisson(TimeKernel):
+    """A constant kernel, representing a homogeneous poisson process.
+    
+    :param rate: The rate of the process: the expected number of events per
+    time unit.
+    """
     def __init__(self, rate=1):
         self._rate = rate
 
@@ -118,6 +111,13 @@ class HomogeneousPoisson(TimeKernel):
 
 
 class Exponential(TimeKernel):
+    """An exponentially decaying kernel.
+
+    :param exp_rate: The "rate" parameter of the exponential.
+    :param total_rate: The overall scaling of the kernel.  If this kernel is
+    used to simulate a point process, then this is the expected number of
+    events.
+    """
     def __init__(self, exp_rate=1, total_rate=1):
         self._rate = exp_rate
         self._total = total_rate
@@ -129,7 +129,65 @@ class Exponential(TimeKernel):
         return self._rate * self._total
 
 
+class Sampler(metaclass=_abc.ABCMeta):
+    """Sample from a point process."""
+    @_abc.abstractmethod
+    def sample(self, start_time, end_time):
+        """Find a sample from a point process.
+
+        :param start_time: The start of the time window to sample from.
+        :param end_time: The end of the time window to sample from.
+
+        :return: An array of shape (3,n) of space/time coordinates.
+        The data should always be _sorted_ in time.
+        """
+        pass
+
+    @staticmethod
+    def _order_by_time(points):
+        """Utility method to sort by time.
+
+        :param points: Usual time/space array of points.
+
+        :return: The same data, with each triple (t,x,y) preserved, but now
+        ordered so that points[0] is increasing.
+        """
+        a = _np.argsort(points[0])
+        return points[:,a]
+
+    
+class InhomogeneousPoisson(Sampler):
+    """A simple rejection (aka Otago thining) sampler.
+
+    :param region: the spatial extent of the simulation.
+    :param kernel: should follow the interface of :class SpaceTimeKernel:
+    """
+    def __init__(self, region, kernel):
+        self._region = region
+        self._kernel = kernel
+
+    def _uniform_sample_region(self, start_time, end_time, num_points):
+        scale = _np.array([end_time - start_time,
+                        self._region.xmax - self._region.xmin,
+                        self._region.ymax - self._region.ymin])
+        offset = _np.array([start_time, self._region.xmin, self._region.ymin])
+        return _np.random.random((3,num_points)) * scale[:,None] + offset[:,None]
+
+    def sample(self, start_time, end_time):
+        area = (self._region.xmax - self._region.xmin) * (self._region.ymax - self._region.ymin)
+        kmax = self._kernel.kernel_max(start_time, end_time)
+        total_points = kmax * area * (end_time - start_time)
+        num_points = _np.random.poisson(lam = total_points)
+        pts = self._uniform_sample_region(start_time, end_time, num_points)
+        accept_prob = _np.random.random(num_points) * kmax
+        accept = (self._kernel(pts) >= accept_prob)
+        return self._order_by_time(pts[:,accept])
+
+
 class SpaceSampler(metaclass=_abc.ABCMeta):
+    """Base class for classes which can return samples from a space (two
+    dimensional) distribution.
+    """
     @_abc.abstractmethod
     def __call__(self, length):
         """Return an array of shape (2,length)"""
@@ -137,6 +195,12 @@ class SpaceSampler(metaclass=_abc.ABCMeta):
 
 
 class GaussianSpaceSampler(SpaceSampler):
+    """Returns samples from a Multivariate normal distribution.
+
+    :param mus: A pair of the mean values of the Gaussian in each variable.
+    :param variances: A pair of the variances of the Gaussian in each variable.
+    :param correlation: The correlation between the two Gaussians.
+    """
     def __init__(self, mus, variances, correlation):
         self.mus = mus
         self.stds = _np.sqrt(_np.array(variances))
@@ -154,24 +218,35 @@ class GaussianSpaceSampler(SpaceSampler):
 
 
 class InhomogeneousPoissonFactors(Sampler):
+    """A time/space sampler where the kernel factorises into a time kernel and
+    a space kernel.  For efficiency, we use a space sampler.
+
+    :param time_kernel: Should follow the interface of :class TimeKernel:
+    :param space_sampler: Should follow the interface of :class SpaceSampler:
+    """
     def __init__(self, time_kernel, space_sampler):
-        if not isinstance(time_kernel, TimeKernel):
-            raise ValueError("time_kernel should be of type TimeKernel")
         self._time_kernel = time_kernel
         self._space_sampler = space_sampler
     
     def sample(self, start_time, end_time):
         kmax = self._time_kernel.kernel_max(start_time, end_time)
-        number_samples = _np.random.poisson(lam=kmax * (end_time - start_time))
+        number_samples = _np.random.poisson(kmax * (end_time - start_time))
         times = _np.random.random(size=number_samples) * (end_time - start_time) + start_time
         accept_prob = _np.random.random(size=number_samples) * kmax
         accept = (self._time_kernel(times) >= accept_prob)
         times = times[accept]
+        times.sort()
         points = self._space_sampler(len(times))
         return _np.vstack([times, points])
 
 
 class HomogeneousPoissonSampler(Sampler):
+    """A one-dimensional time sampler, sampling from a homogeneous Poisson
+    process.
+
+    :param rate: The rate of the process: the expected number of events per
+    time unit.
+    """
     def __init__(self, rate):
         self.rate = rate
 
@@ -183,17 +258,17 @@ class HomogeneousPoissonSampler(Sampler):
 
 
 class ExponentialDecaySampler(Sampler):
+    """A one-dimensional time sampler, sampling from an exponentially decaying
+    kernel.
+
+    :param exp_rate: The "rate" parameter of the exponential.
+    :param intensity: The expected number of events.
+    """
     def __init__(self, intensity, exp_rate):
         self.intensity = intensity
         self.exp_rate = exp_rate
 
     def sample(self, start_time, end_time):
-        #max_time = end_time - start_time
-        #s_time_max = self.intensity * (1 - _np.exp(-self.exp_rate * max_time))
-        #number_points = _np.random.poisson(s_time_max)
-        #unit_rate_poisson = _np.random.random(number_points) * s_time_max
-        #times = _np.log( self.intensity / (self.intensity - unit_rate_poisson) ) / self.exp_rate
-        #return _np.sort(times) + start_time
         number_points = _np.random.poisson(self.intensity)
         unit_rate_poisson = _np.random.random(number_points)
         times = _np.log( 1 / unit_rate_poisson ) / self.exp_rate
@@ -201,11 +276,18 @@ class ExponentialDecaySampler(Sampler):
         return _np.sort( times[mask] )
 
 
-from collections import namedtuple as _namedtuple
+
 
 class SelfExcitingPointProcess(Sampler):
-    Sample = _namedtuple("Sample", ["points", "backgrounds", "trigger_deltas", "trigger_points"])
-
+    """Sample from a self-exciting point process model.  Can sample in
+    arbitrary dimensions: if the samplers return one-dimensional points then
+    we simulate a time-only process.  If the samplers return multi-dimensional
+    points, then we use the first coordinate as time, and the remaining
+    coordinates as space.
+    
+    :param background_sampler: Should follow the interface of :class Sampler:
+    :param trigger_sampler: Should follow the interface of :class Sampler:
+    """
     def __init__(self, background_sampler=None, trigger_sampler=None):
         self.background_sampler = background_sampler
         self.trigger_sampler = trigger_sampler
@@ -213,7 +295,26 @@ class SelfExcitingPointProcess(Sampler):
     def sample(self, start_time, end_time):
         return self.sample_with_details(start_time, end_time).points
 
+    class Sample():
+        """Contains details of the sample as returned by
+        :class SelfExcitingPointProcess:  This can be useful when, for example,
+        checking the correctness of the simulation.
+
+        :param points: All points from the sampled process.
+        :param backgrounds: All the background events.
+        :param trigger_deltas: The "deltas" between trigger and triggered (aka
+        parent and child) points.
+        :param trigger_points: With the same ordering as `trigger_deltas`, the
+        position of the trigger (aka parent) point.
+        """
+        def __init__(self, points, backgrounds, trigger_deltas, trigger_points):
+            self.points = points
+            self.backgrounds = backgrounds
+            self.trigger_deltas = trigger_deltas
+            self.trigger_points = trigger_points
+
     def sample_with_details(self, start_time, end_time):
+        """Takes a sample from the process, but returns details"""
         background_points = self.background_sampler.sample(start_time, end_time)
         to_process = [ pt for pt in background_points.T ]
         output = list(to_process)
@@ -239,5 +340,14 @@ class SelfExcitingPointProcess(Sampler):
             _np.asarray(trigger_deltas).T, _np.asarray(trigger_points).T)
 
 def scale_to_real_time(points, start_time, time_unit=timedelta64(60, "s")):
+    """Transform abstract time/space data to real timestamps.
+
+    :param points: Array of shape (3,n) representing time/space coordinates.
+    :param start_time: The time to map 0.0 to
+    :param time_unit: The duration of unit time, by default 60 seconds
+    (so one minute, but giving the resulting data a resolution of seconds).
+
+    :return: An instance of :class TimedPoints:
+    """
     times = [_np.datetime64(start_time) + time_unit * t for t in points[0]]
     return data.TimedPoints.from_coords(times, points[1], points[2])
