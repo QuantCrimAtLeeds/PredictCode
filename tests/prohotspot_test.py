@@ -6,8 +6,6 @@ from datetime import datetime, timedelta
 from unittest import mock
 import open_cp
 
-# --- Distance tests ---
-
 def test_DistanceDiagonalsSame():
     distance = testmod.DistanceDiagonalsSame()
     assert( distance(1, 1, 2, 2) == 1 )
@@ -37,7 +35,7 @@ def test_ClassicWeight():
     assert( weight(2, 1) == pytest.approx(1/6) )
     assert( weight(1, 2) == pytest.approx(1/6) )
     
-def __test_ClassicWeight_vectorised():
+def test_ClassicWeight_vectorised():
     weight = testmod.ClassicWeight()
     weight.space_bandwidth = 5
     dt = np.asarray([8,0,0,1,2,3,4,5,6,7,1,2])
@@ -106,3 +104,29 @@ def test_ProspectiveHotSpot_additive():
     expected += np.asarray([[1/3,1/3,1/3], [1/3,1/2,1/2], [1/3,1/2,1]])
     prediction = p.predict(datetime(2017,3,2), datetime(2017,3,2))
     np.testing.assert_allclose(prediction.intensity_matrix, expected)
+
+def test_ProspectiveHotSpotContinuous():
+    p = testmod.ProspectiveHotSpotContinuous()
+    timestamps = [datetime(2017,4,5)]
+    xcoords = [0]
+    ycoords = [50]
+    p.data = open_cp.TimedPoints.from_coords(timestamps, xcoords, ycoords)
+
+    prediction = p.predict(datetime(2017,4,5), datetime(2017,4,5))
+    assert(prediction.risk(0, 50) == pytest.approx(1))
+    assert(prediction.risk(0, 0) == pytest.approx(1/2))
+    assert(prediction.risk(50, 0) == pytest.approx(1/(1+np.sqrt(2))))
+
+    prediction = p.predict(datetime(2017,4,5), datetime(2017,4,10))
+    expected = 1 / (1 + 5/7)
+    assert(prediction.risk(0, 50) == pytest.approx(expected))
+
+def test_ProspectiveHotSpotContinuous_vectorise():
+    p = testmod.ProspectiveHotSpotContinuous()
+    timestamps = [datetime(2017,4,5)]
+    xcoords = [0]
+    ycoords = [50]
+    p.data = open_cp.TimedPoints.from_coords(timestamps, xcoords, ycoords)
+    prediction = p.predict(datetime(2017,4,5), datetime(2017,4,5))
+    expected = np.asarray([1, 1/2, 1/(1+np.sqrt(2))])
+    np.testing.assert_allclose(prediction.risk([0,0,50], [50,0,0]), expected)

@@ -159,3 +159,44 @@ class ProspectiveHotSpot(predictors.DataTrainer):
                 matrix[y][x] = self._total_weight(time_deltas, events.coords, x, y)
         return predictors.GridPredictionArray(self.grid, self.grid, matrix,
                                               self.region.xmin, self.region.ymin)
+
+
+class ProspectiveHotSpotContinuous(predictors.DataTrainer):
+    """Implements the prospective hotspot algorithm as a kernel density
+    estimation.  A copy of the space/time kernel / weight is laid down over
+    each event and the result is summed.  To allow compatibility with the grid
+    based method, we set a time unit and a grid size, but these are purely used
+    to scale the data appropriately.
+    """
+    def __init__(self, grid_size=50, time_unit=timedelta64(1, "W")):
+        self.grid = grid_size
+        self.time_unit = time_unit
+        self.weight = ClassicWeight()
+
+    def predict(self, cutoff_time, predict_time):
+        """Calculate a continuous prediction.
+
+        :param cutoff_time: Ignore data with a timestamp after this time.
+        :param predict_time: Timestamp of the prediction.  Used to calculate
+        the time difference between events and "now".  Typically the same as
+        `cutoff_time`.
+
+        :return: An instance of :class ContinuousPrediction:
+        """
+        if not cutoff_time <= predict_time:
+            raise ValueError("Data cutoff point should be before prediction time")
+        events = self.data.events_before(cutoff_time)
+        time_deltas = (_np.datetime64(predict_time) - events.timestamps) / self.time_unit
+        coords = _np.array(events.coords)
+
+        def kernel(points):
+            xdeltas = (points[0][:,None] - coords[0][None,:]) / self.grid
+            ydeltas = (points[1][:,None] - coords[1][None,:]) / self.grid
+            distances = _np.sqrt(xdeltas**2 + ydeltas**2)
+            times = time_deltas[None,:]
+            r = _np.sum(self.weight(times, distances), axis=-1)
+            # Return a scalar if input as scalar
+            return r[0] if len(r)==1 else r
+
+        return predictors.KernelRiskPredictor(kernel, cell_width=self.grid,
+                cell_height=self.grid)
