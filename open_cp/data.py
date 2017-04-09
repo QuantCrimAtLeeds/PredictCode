@@ -74,6 +74,8 @@ class RectangularRegion():
         :param cell_width: The width of each cell in the grid.
         :param cell_height: Optional .  The height of each cell in the grid;
         defaults to a square grid where the height is the same as the width.
+
+        :return: (xsize, ysize) of the grid.
         """
         if cell_height is None:
             cell_height = cell_width

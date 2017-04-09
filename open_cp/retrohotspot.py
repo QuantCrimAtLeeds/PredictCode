@@ -103,7 +103,8 @@ class RetroHotSpotGrid(predictors.DataTrainer):
     using :class RetroHotSpot: and then gridding the resulting continuous risk 
     estimate.
 
-    :param region: The rectangular region the grid should cover.
+    :param region: An instance of :RectangularRegion: giving the region the
+    grid should cover.
     :param grid_size: The size of grid to use.
     """
     def __init__(self, region, grid_size=150):
