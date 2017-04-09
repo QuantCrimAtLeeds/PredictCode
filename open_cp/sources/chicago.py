@@ -1,3 +1,19 @@
+"""
+sources.chicago
+~~~~~~~
+
+Reads a CSV file in the format (as of April 2017) of data available from:
+
+- https://catalog.data.gov/dataset/crimes-one-year-prior-to-present-e171f
+- https://catalog.data.gov/dataset/crimes-2001-to-present-398a4
+
+The default data is loaded from a file "chicago.csv" which should be downloaded
+from one of the above links.
+
+The data is partly anonymous in that the address within a block is obscured,
+and the geocoding always returns a coordinate in the middle of a block.
+"""
+
 import csv
 import os.path
 import datetime

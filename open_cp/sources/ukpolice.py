@@ -1,3 +1,20 @@
+"""
+sources.ukpolice
+~~~~~~~
+
+Reads a CSV file in the format (as of April 2017) of data available from:
+
+- https://data.police.uk/data/
+
+The default data is loaded from a file "uk_police.csv" which should be
+downloaded from one of the above links.  Data from more than one month needs to
+be manually joined.
+
+The data is partly anonymous in that the address is a street name (or other
+non-uniquely identifying location) and geocoding resolves to the centre of
+streets.  Most importantly, all timestamps are only to a _monthly_ resolution.
+"""
+
 import csv
 import os.path
 import datetime
