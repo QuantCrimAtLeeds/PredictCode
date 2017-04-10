@@ -130,11 +130,18 @@ def maximisation_corrected(cells, omega, theta, mu, time_duration):
 def _make_cells(region, grid_size, events, times):
     xsize, ysize = region.grid_size(grid_size)
     cells = _np.empty((xsize, ysize), dtype=_np.object)
+    for x in range(xsize):
+        for y in range(ysize):
+            cells[x,y] = []
     xcs = _np.floor((events.xcoords - region.xmin) / grid_size)
     ycs = _np.floor((events.ycoords - region.ymin) / grid_size)
-    # TODO: Does cells[xcs, ycs] = times  work??
+    xcs = xcs.astype(_np.int)
+    ycs = ycs.astype(_np.int)
     for i, time in enumerate(times):
-        cells[xcs[i], ycs[i]] = time
+        cells[xcs[i], ycs[i]].append(time)
+    for x in range(xsize):
+        for y in range(ysize):
+            cells[x,y] = _np.asarray(cells[x,y])
     return cells
 
 class SEPPPredictor(predictors.DataTrainer):
@@ -151,7 +158,7 @@ class SEPPPredictor(predictors.DataTrainer):
 
     def background_rate(self, x, y):
         """Return the background rate in grid cell (x,y)."""
-        return mu[x, y]
+        return self.mu[x, y]
 
     def predict(self, predict_time, cutoff_time=None):
         """Make a prediction at a time, using the data held by this instance.
@@ -201,7 +208,12 @@ class SEPPTrainer(predictors.DataTrainer):
         """
         events = self.data.events_before(cutoff_time)
         cells, time_duration = self._make_cells(events)
-        # TODO: What on Earth do we use for omega, theta, mu as initial estimates??
-        # omega, theta, mu = maximisation(cells, omega, theta, mu, time_duration):
+        theta = 0.5
+        # time unit of minutes, want mean to be a day
+        omega = 1 / (60 * 24)
+        mu = _np.zeros_like(cells) + 1
+        # TODO: Are these initial parameters reasonable?  Is 10 enough iterations?
+        for _ in range(10):
+            omega, theta, mu = maximisation(cells, omega, theta, mu, time_duration)
 
         return SEPPPredictor(self.region, self.grid_size, omega, theta, mu)

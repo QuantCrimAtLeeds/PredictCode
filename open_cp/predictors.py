@@ -8,7 +8,6 @@ and classes which encapsulate a given prediction.
 
 """
 
-import abc as _abc
 import numpy as _np
 from . import data
 
@@ -225,3 +224,21 @@ class KernelRiskPredictor(ContinuousPrediction):
     
     def risk(self, x, y):
         return self._kernel(_np.vstack([x,y]))
+
+
+def grid_prediction_from_kernel(kernel, region, grid_size):
+    """Utility function to convert a space kernel into a grid based prediction.
+    
+    :param kernel: A kernel object taking an array of shape (2,N) of N lots
+    of spatial coordinates, and returning an array of shape (N).
+    :param region: An instance of :class RectangularRegion: giving the
+    region to use.
+    :param grid_size: The size of grid to use.
+    
+    :return: An instance of :class GridPredictionArray:
+    """
+    width, height = region.grid_size(grid_size)
+    cts_predictor = KernelRiskPredictor(kernel, xoffset=region.xmin,
+            yoffset=region.ymin, cell_width=grid_size, cell_height=grid_size)
+    return GridPredictionArray.from_continuous_prediction(cts_predictor,
+            width, height)

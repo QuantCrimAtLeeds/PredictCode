@@ -142,6 +142,21 @@ def test_TimedPoints_events_before_empty():
     tp2 = a_valid_TimedPoints()
     tp = tp2.events_before(dt(2017,3,20,12,0))
     assert( tp.empty )
+    
+def test_TimedPoints_to_time_space_coords():
+    tp = a_valid_TimedPoints()
+    points = tp.to_time_space_coords()
+    np.testing.assert_allclose(points[1], tp.xcoords)
+    np.testing.assert_allclose(points[2], tp.ycoords)
+    np.testing.assert_allclose(points[0], [0, 120.0, 11.5*60])
+
+def test_TimedPoints_times_datetime():
+    tp = a_valid_TimedPoints()
+    dates = tp.times_datetime()
+    assert( dates[0] == dt(2017,3,20,12,30) )
+    assert( dates[1] == dt(2017,3,20,14,30) )
+    assert( dates[2] == dt(2017,3,21,0) )
+
 
 def test_project_from_lon_lat():
     tp = TimedPoints([np.datetime64("2016-12")], [[-1.5],[50]])

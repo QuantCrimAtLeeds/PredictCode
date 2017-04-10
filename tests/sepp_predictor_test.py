@@ -94,10 +94,16 @@ def test_make_kernel():
         return pts[1]
     def tk(pts):
         return pts[2]
+    # Events at (0,2,4) and (1,3,5)
     data = np.array([[0,1], [2,3], [4,5]])
     kernel = testmod.make_kernel(data, bk, tk)
     pts = np.array([[0,5.7,2], [0.1,5.7,2], [1.1,5.7,2]]).T
+    # Event at (0, 5.7, 2) so no triggers
     assert(kernel(pts[:,0]) == pytest.approx(5.7))
-    assert(kernel(pts[:,1]) == pytest.approx(5.7 + 4))
-    assert(kernel(pts[:,2]) == pytest.approx(5.7 + 4 + 5))
-    np.testing.assert_allclose(kernel(pts), [5.7, 9.7, 14.7])
+    # Event at (0.1, 5.7, 2) so trigger (0, 2, 4) with relative position
+    #    (0.1, 3.7, -2)
+    assert(kernel(pts[:,1]) == pytest.approx(5.7 - 2))
+    # Event at (1.1, 5.7, 2) so both events trigger, with relative positions
+    #    (1.1, 3.7, -2) and (0.1, 2.7, -3)
+    assert(kernel(pts[:,2]) == pytest.approx(5.7 - 2 - 3))
+    np.testing.assert_allclose(kernel(pts), [5.7, 3.7, 0.7])

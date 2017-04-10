@@ -1,6 +1,7 @@
 """Encapsulates input data."""
 
 import numpy as _np
+import datetime as _datetime
 
 class Point():
     """A simple 2 dimensional point class."""
@@ -56,11 +57,21 @@ class RectangularRegion():
         return self._max
 
     @property
+    def width(self):
+        """The width of the region: xmax - xmin"""
+        return self.xmax - self.xmin
+
+    @property
+    def height(self):
+        """The height of the region: ymax - ymin"""
+        return self.ymax - self.ymin
+
+    @property
     def aspect_ratio(self):
         """Height divided by width"""
-        if self.xmax == self.xmin:
+        if self.width == 0:
             return _np.nan
-        return (self.ymax - self.ymin) / (self.xmax - self.xmin)
+        return self.height / self.width
 
     def __add__(self, other):
         return RectangularRegion(xmin = self.xmin + other.x,
@@ -171,6 +182,7 @@ class TimedPoints:
     def bounding_box(self):
         """The smallest (space) box containing all the data points.
         
+
         :return: A :class RectangularRegion: instance.
         """
         return RectangularRegion(xmin = _np.min(self.xcoords),
@@ -206,7 +218,14 @@ class TimedPoints:
         different time unit.
         """
         times = self.time_deltas(time_unit)
-        return np.vstack([times, self.xcoords, self.ycoords])
+        return _np.vstack([times, self.xcoords, self.ycoords])
+
+    def times_datetime(self):
+        """Return an array of timestamps using the :class datetime.datetime:
+        standard library class.  Useful for plotting with matplotlib, for
+        example.
+        """
+        return self.timestamps.astype(_datetime.datetime)
 
     @staticmethod
     def from_coords(timestamps, xcoords, ycoords):

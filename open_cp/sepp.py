@@ -160,7 +160,7 @@ def make_kernel(data, background_kernel, trigger_kernel):
         bdata = data_copy[:,mask]
         if bdata.shape[-1] == 0:
             return background_kernel(pt)
-        return background_kernel(pt) + _np.sum(trigger_kernel(bdata))
+        return background_kernel(pt) + _np.sum(trigger_kernel(pt[:,None] - bdata))
     def kernel(points):
         points = _np.asarray(points)
         if len(points.shape) == 1:
@@ -238,11 +238,16 @@ class StocasticDecluster():
         number_events = self.points.shape[-1]
         number_background_events = backgrounds.shape[-1]
         number_triggered_events = number_events - number_background_events
-        norm_tkernel = lambda pts : ( tkernel(pts) * number_triggered_events / number_events )
-        norm_bkernel = lambda pts : ( bkernel(pts) * number_background_events )
-        pnew = p_matrix_fast(self.points, norm_bkernel, norm_tkernel,
+        #norm_tkernel = lambda pts : ( tkernel(pts) * number_triggered_events / number_events )
+        #norm_bkernel = lambda pts : ( bkernel(pts) * number_background_events )
+        #pnew = p_matrix_fast(self.points, norm_bkernel, norm_tkernel,
+        #    time_cutoff = self.time_cutoff, space_cutoff = self.space_cutoff)
+        #return pnew, norm_bkernel, norm_tkernel
+        bkernel.set_scale(number_background_events)
+        tkernel.set_scale(number_triggered_events / number_events)
+        pnew = p_matrix_fast(self.points, bkernel, tkernel,
             time_cutoff = self.time_cutoff, space_cutoff = self.space_cutoff)
-        return pnew, norm_bkernel, norm_tkernel
+        return pnew, bkernel, tkernel
     
     def run_optimisation(self, iterations=20):
         """Runs the optimisation algorithm by taking an initial estimation of
@@ -271,7 +276,7 @@ class OptimisationResult():
 
     :param kernel: the overall estimated intensity kernel.
     :param p: the estimated probability matrix.
-    :param background_kernel: the estimated background event intensity kernel.
+    :param background_kernel: the estimatede background event intensity kernel.
     :param trigger_kernel: the estimated triggered event intensity kernel.
     :param ell2_error: an array of the L^2 differences between successive
     estimates of the probability matrix.  That these decay is a good indication
@@ -283,6 +288,37 @@ class OptimisationResult():
         self.background_kernel = background_kernel
         self.trigger_kernel = trigger_kernel
         self.ell2_error = ell2_error
+
+
+def make_space_kernel(data, background_kernel, trigger_kernel, time):
+    """Produce a kernel object which evaluates the background kernel, and
+    the trigger kernel based on the space locations in the data, always using
+    the fixed time as passed in.
+
+    :param data: An array of shape `(3,N)` giving the space-time locations
+    events.  Used when computing the triggered / aftershock events.
+    :param background_kernel: The kernel object giving the background risk
+    intensity.  We assume this has a method `space_kernel` which gives just
+    the two dimensional spacial kernel.
+    :param trigger_kernel: The kernel object giving the trigger / aftershock
+    risk intensity.
+    :param time: The fixed time coordinate to evaluate at.
+    
+    :return: A kernel object which can be called on arrays of (2 dimensional
+    space) points.
+    """
+    mask = data[0] < time
+    data_copy = _np.array(data[:, mask])
+    def kernel(points):
+        x = _np.asarray(points[0])
+        y = _np.asarray(points[1])
+        times = _np.zeros_like(x) + time
+        back = background_kernel.space_kernel(_np.vstack((x,y)))
+        pt = _np.vstack((times, x, y)) # Shape always (3,N) even if N=1
+        if data_copy.shape[-1] > 0:
+            back += _np.sum(trigger_kernel(pt[:,None] - data_copy))
+        return back
+    return kernel
 
 
 class SEPPPredictor(predictors.DataTrainer):
@@ -297,22 +333,18 @@ class SEPPPredictor(predictors.DataTrainer):
 
     This class also stores information about the optimisation procedure.
     """
-    def __init__(self, result):
+    def __init__(self, result, epoch_start):
         self.result = result
+        # The start time of the _training_ data
+        self.epoch_start = epoch_start
 
     @property
-    def background_kernel():
+    def background_kernel(self):
         return self.result.background_kernel
 
     @property
-    def trigger_kernel():
+    def trigger_kernel(self):
         return self.result.trigger_kernel
-
-    @property
-    def background_kernel_space_only():
-        # Assume the estimate was KNNG1_NDFactors so the kernel is of type KNNG1_NDFactors_Kernel
-        # Duck-typing allows anything which follows this interface, of course
-        return lambda pts : self.background_kernel.first(pts[1:])
 
     def predict(self, predict_time, cutoff_time=None):
         """Make a prediction at a time, using the data held by this instance.
@@ -327,9 +359,11 @@ class SEPPPredictor(predictors.DataTrainer):
         :return: Instance of :class predictors.ContinuousPrediction:
         """
         events = self.data.events_before(cutoff_time)
-        times = (events.timestamps - predict_time) / _np.timedelta64(1, "m")
+        times = (events.timestamps - self.epoch_start) / _np.timedelta64(1, "m")
+        time = (predict_time - self.epoch_start) / _np.timedelta64(1, "m")
         data = _np.vstack((times, events.xcoords, events.ycoords))
-        return make_kernel(data, self.background_kernel_space_only, self.trigger_kernel)
+        return make_space_kernel(data, self.background_kernel,
+                                 self.trigger_kernel, time)
 
 
 class SEPPTrainer(predictors.DataTrainer):
@@ -347,6 +381,15 @@ class SEPPTrainer(predictors.DataTrainer):
     def __init__(self, k_time=100, k_space=15):
         self.k_time = k_time
         self.k_space = k_space
+
+    def as_time_space_points(self, cutoff_time=None):
+        """Return a copy of the input data as an array of shape (3,N) of
+        time/space points (without units), as used by the declustering
+        algorithm.  Useful when trying to understand what the algorithm is
+        doing.
+        """
+        events = self.data.events_before(cutoff_time)
+        return events.to_time_space_coords()
 
     def train(self, cutoff_time=None):
         """Perform the (slow) training step on historical data.  This estimates
@@ -366,7 +409,6 @@ class SEPPTrainer(predictors.DataTrainer):
         # From Rosser, Cheng, suggested 120 days and 500 metres
         decluster.space_cutoff = 500
         decluster.time_cutoff = 120 * 24 * 60 # minutes
-        events = self.data.events_before(cutoff_time)
-        decluster.points = events.to_time_space_coords()
-        kernel = decluster.predict_time_space_intensity(iterations=40)
-        return predictors.KernelRiskPredictor(timed_evaluated_kernel)
+        decluster.points = self.as_time_space_points(cutoff_time)
+        result = decluster.run_optimisation(iterations=40)
+        return SEPPPredictor(result, self.data.timestamps[0])

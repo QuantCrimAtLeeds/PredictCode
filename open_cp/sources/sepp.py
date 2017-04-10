@@ -23,6 +23,7 @@ from . import random
 import abc as _abc
 import numpy as _np
 from numpy import timedelta64
+import itertools as _itertools
 
 class SpaceTimeKernel(kernels.Kernel):
     """To produce a kernel as required by the samplers in this package,
@@ -39,6 +40,9 @@ class SpaceTimeKernel(kernels.Kernel):
     
     def __call__(self, points):
         return self.intensity(points[0], points[1], points[2])
+    
+    def set_scale(self):
+        raise NotImplementedError()
     
     @_abc.abstractmethod
     def kernel_max(self, time_start, time_end):
@@ -92,6 +96,9 @@ class TimeKernel(kernels.Kernel):
         intensity of the kernel over the time range.
         """
         pass
+
+    def set_scale(self):
+        raise NotImplementedError()
 
 
 class HomogeneousPoisson(TimeKernel):
@@ -217,6 +224,20 @@ class GaussianSpaceSampler(SpaceSampler):
         return _np.vstack([x,y])
 
 
+class UniformRegionSampler(SpaceSampler):
+    """Returns space samples chosen uniformly from a rectangular region.
+    
+    :param region: An instance of :class RectangularRegion: giving the region.
+    """
+    def __init__(self, region):
+        self.region = region
+        
+    def __call__(self, length):
+        x = _np.random.random(length) * self.region.width + self.region.xmin
+        y = _np.random.random(length) * self.region.height + self.region.ymin
+        return _np.vstack([x,y])
+
+
 class InhomogeneousPoissonFactors(Sampler):
     """A time/space sampler where the kernel factorises into a time kernel and
     a space kernel.  For efficiency, we use a space sampler.
@@ -274,7 +295,6 @@ class ExponentialDecaySampler(Sampler):
         times = _np.log( 1 / unit_rate_poisson ) / self.exp_rate
         mask = (times >= start_time) & (times < end_time)
         return _np.sort( times[mask] )
-
 
 
 
@@ -339,6 +359,16 @@ class SelfExcitingPointProcess(Sampler):
         return SelfExcitingPointProcess.Sample(_np.asarray(output).T, _np.asarray(background_points),
             _np.asarray(trigger_deltas).T, _np.asarray(trigger_points).T)
 
+def make_time_unit(length_of_time, minimal_time_unit=timedelta64(1,"ms")):
+    """Utility method to create a `time_unit`.
+    
+    :param length_of_time: A time delta object, representing the length of time
+    "one unit" should represent: e.g. an hour, a day, etc.
+    :param minimal_time_unit: The minimal time length the resulting data
+    represents.  Defaults to milli-seconds.
+    """
+    return (timedelta64(length_of_time) / minimal_time_unit) * minimal_time_unit
+
 def scale_to_real_time(points, start_time, time_unit=timedelta64(60, "s")):
     """Transform abstract time/space data to real timestamps.
 
@@ -346,8 +376,67 @@ def scale_to_real_time(points, start_time, time_unit=timedelta64(60, "s")):
     :param start_time: The time to map 0.0 to
     :param time_unit: The duration of unit time, by default 60 seconds
     (so one minute, but giving the resulting data a resolution of seconds).
+    See :function make_time_unit: 
 
     :return: An instance of :class TimedPoints:
     """
     times = [_np.datetime64(start_time) + time_unit * t for t in points[0]]
     return data.TimedPoints.from_coords(times, points[1], points[2])
+
+
+class GridHawkesProcess(Sampler):
+    """Sample from a grid-based, Hawkes type (expoential decay self-excitation
+    kernel) model, as used by Mohler et al, "Randomized Controlled Field Trials
+    of Predictive Policing", 2015.
+    
+    :param background_rates: An array of arbitrary shape, giving the background
+    rate in each "cell".
+    :param theta: The overall "intensity" of trigger / aftershock events.
+    Should be less than 1.
+    :param omega: The rate (or inverse scale) of the exponential kernel.
+    Increase to make aftershock events more localised in time.
+    """
+    def __init__(self, background_rates, theta, omega):
+        self.mus = _np.asarray(background_rates)
+        self.theta = theta
+        self.omega = omega
+
+    def _sample_one_cell(self, mu, theta, omega, start_time, end_time):
+        background_sampler = HomogeneousPoissonSampler(rate=mu)
+        trigger_sampler = ExponentialDecaySampler(intensity=theta, exp_rate=omega)
+        process = SelfExcitingPointProcess(background_sampler, trigger_sampler)
+        return process.sample(start_time, end_time)
+
+    def sample(self, start_time, end_time):
+        """Will return an array of the same shape as that used by the
+        background event, each entry of which is an array of zero or
+        more times of events.
+        """
+        out = _np.empty_like(self.mus, dtype=_np.object)        
+        for index in _itertools.product(*[list(range(i)) for i in self.mus.shape]):
+            out[index] = self._sample_one_cell(self.mus[index], self.theta,
+                           self.omega, start_time, end_time)
+        return out
+    
+    def sample_to_randomised_grid(self, start_time, end_time, grid_size):
+        """Asuming that the background rate is a two-dimensional array,
+        generate (uniformly at random) event locations so when confinded to
+        a grid, the time-stamps agree with simulated data for that grid cell.
+        We treat the input background rate as a matrix, so it has entries
+        [row, col] or [y, x].
+        
+        :return: An array of shape (3,N) of N sampled points
+        """
+        cells = self.sample(start_time, end_time)
+        points = []
+        for row in range(cells.shape[0]):
+            for col in range(cells.shape[1]):
+                times = cells[row, col]
+                if len(times) == 0:
+                    continue
+                xcs = _np.random.random(len(times)) + col
+                ycs = _np.random.random(len(times)) + row
+                for t,x,y in zip(times, xcs, ycs):
+                    points.append((t, x * grid_size, y * grid_size))
+        points.sort(key = lambda triple : triple[0])
+        return _np.asarray(points).T

@@ -64,6 +64,10 @@ class TestKernel(testmod.SpaceTimeKernel):
     def kernel_max(self, start_time, end_time):
         return 2.0
     
+    def set_scale(self):
+        raise NotImplementedError()
+
+    
 @mock.patch("numpy.random.random", helpers.RandomCyclicBuffer([.1,.2,.3]))
 @mock.patch("numpy.random.poisson")
 def test_InhomogeneousPoisson_zero_kernel(poisson_mock):

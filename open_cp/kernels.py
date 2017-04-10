@@ -48,6 +48,13 @@ class Kernel(metaclass=_abc.ABCMeta):
         :return: An array of length N giving the kernel intensity at each point.
         """
         pass
+    
+    @_abc.abstractmethod
+    def set_scale(self, scale=1.0):
+        """The output kernel should be multiplied by this value before being
+        returned.
+        """
+        pass
 
 
 class KernelEstimator(metaclass=_abc.ABCMeta):
@@ -61,6 +68,8 @@ class KernelEstimator(metaclass=_abc.ABCMeta):
         pass
 
 
+# Todo: change the signature of mean and var so we don't need to call
+# transpose.  Wrap into the class GaussianKernel
 def _gaussian_kernel(points, mean, var):
     """pts is array of shape (N,k) where k is the dimension of space.
 
@@ -93,6 +102,29 @@ def _gaussian_kernel(points, mean, var):
     x = _np.exp( - x / var_broad ) / _np.sqrt((_np.pi * var_broad))
     return_array = _np.mean(_np.product(x, axis=2), axis=1)
     return return_array if pts.shape[0] > 1 else return_array[0]
+
+
+class GaussianKernel(Kernel):
+    """A variable bandwidth gaussian kernel.  Each input Gaussian is an
+    uncorrelated k-dimensional Gaussian.  These are summed to produce the
+    kernel.
+    
+    :param means: Array of shape (k,M).  The centre of each Gaussian.
+    :param variances: Array of shape (k,M).  The variances of each Gaussian.
+    :param scale: The overall normalisation factor, defaults to 1.0.
+    """
+    def __init__(self, means, variances, scale=1.0):
+        self.means = means.T
+        self.variances = variances.T
+        self.scale = scale
+    
+    def __call__(self, points):
+        return (_gaussian_kernel(_np.asarray(points).T, self.means, self.variances)
+                * self.scale)
+        
+    def set_scale(self, scale):
+        self.scale = scale
+
 
 def compute_kth_distance(coords, k=15):
     """Find the (Euclidean) distance to the `k`th nearest neighbour.
@@ -174,12 +206,7 @@ def kth_nearest_neighbour_gaussian_kde(coords, k=15):
 
     var = _np.tensordot(distance_to_k, stds, axes=0) ** 2
 
-    def kernel(point):
-        # Allow the "kernel" convention in argument passing
-        # TODO change the call signature of _gaussian_kernel
-        return _gaussian_kernel(_np.asarray(point).T, means, var)
-
-    return kernel
+    return GaussianKernel(means.T, var.T)
 
 def marginal_knng(coords, coord_index=0, k=15):
     """Computes a one-dimensional marginal for the kernel which would be
@@ -236,9 +263,24 @@ class KNNG1_NDFactors(KernelEstimator):
     class KNNG1_NDFactors_Kernel(Kernel):
         def __init__(self, first, rest):
             self.first, self.rest = first, rest
+            self.scale = 1.0
 
         def __call__(self, points):
-            return self.first(points[0]) * self.rest(points[1:])
+            return self.first(points[0]) * self.rest(points[1:]) * self.scale
+        
+        def set_scale(self, scale):
+            self.scale = scale
+            
+        def time_kernel(self, points):
+            """A one-dimensional, _normalised_ kernel giving the time
+            component of the overall kernel.
+            """
+            return self.first(points)
+        
+        def space_kernel(self, points):
+            """The space component of the overall kernel, scaled appropriately.
+            """
+            return self.rest(points) * self.scale
 
     def __call__(self, coords):
         return self.KNNG1_NDFactors_Kernel(self.first(coords), self.rest(coords))
