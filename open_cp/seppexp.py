@@ -128,20 +128,21 @@ def maximisation_corrected(cells, omega, theta, mu, time_duration):
 
 
 def _make_cells(region, grid_size, events, times):
+    # Follow the row/col convention!!
     xsize, ysize = region.grid_size(grid_size)
-    cells = _np.empty((xsize, ysize), dtype=_np.object)
+    cells = _np.empty((ysize, xsize), dtype=_np.object)
     for x in range(xsize):
         for y in range(ysize):
-            cells[x,y] = []
+            cells[y,x] = []
     xcs = _np.floor((events.xcoords - region.xmin) / grid_size)
     ycs = _np.floor((events.ycoords - region.ymin) / grid_size)
     xcs = xcs.astype(_np.int)
     ycs = ycs.astype(_np.int)
     for i, time in enumerate(times):
-        cells[xcs[i], ycs[i]].append(time)
+        cells[ycs[i], xcs[i]].append(time)
     for x in range(xsize):
         for y in range(ysize):
-            cells[x,y] = _np.asarray(cells[x,y])
+            cells[y,x] = _np.asarray(cells[y,x])
     return cells
 
 
@@ -211,8 +212,8 @@ class SEPPTrainer(predictors.DataTrainer):
         cells, time_duration = self._make_cells(events)
         theta = 0.5
         # time unit of minutes, want mean to be a day
-        omega = 1 / (60 * 24)
-        mu = _np.zeros_like(cells) + 1
+        omega = 0.007 # 1 / (60 * 24)
+        mu = _np.zeros_like(cells) + 0.5
         # TODO: Are these initial parameters reasonable?  Is 10 enough iterations?
         for _ in range(iterations):
             omega, theta, mu = maximisation(cells, omega, theta, mu, time_duration)
