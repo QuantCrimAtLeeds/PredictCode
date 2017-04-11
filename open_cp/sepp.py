@@ -171,6 +171,7 @@ def make_kernel(data, background_kernel, trigger_kernel):
         return out
     return kernel
 
+
 class StocasticDecluster():
     """Implements the 'stocastic declustering algorithm' from Mohler et al
     (2011).  This allows estimation of two time-space kernels, one for the
@@ -238,11 +239,6 @@ class StocasticDecluster():
         number_events = self.points.shape[-1]
         number_background_events = backgrounds.shape[-1]
         number_triggered_events = number_events - number_background_events
-        #norm_tkernel = lambda pts : ( tkernel(pts) * number_triggered_events / number_events )
-        #norm_bkernel = lambda pts : ( bkernel(pts) * number_background_events )
-        #pnew = p_matrix_fast(self.points, norm_bkernel, norm_tkernel,
-        #    time_cutoff = self.time_cutoff, space_cutoff = self.space_cutoff)
-        #return pnew, norm_bkernel, norm_tkernel
         bkernel.set_scale(number_background_events)
         tkernel.set_scale(number_triggered_events / number_events)
         pnew = p_matrix_fast(self.points, bkernel, tkernel,
@@ -268,7 +264,8 @@ class StocasticDecluster():
             p = pnew
         kernel = make_kernel(self.points, bkernel, tkernel)
         return OptimisationResult(kernel=kernel, p=p, background_kernel=bkernel,
-            trigger_kernel=tkernel, ell2_error=_np.sqrt(_np.asarray(errors)))
+            trigger_kernel=tkernel, ell2_error=_np.sqrt(_np.asarray(errors)),
+            time_cutoff=self.time_cutoff, space_cutoff=self.space_cutoff)
 
 
 class OptimisationResult():
@@ -281,16 +278,24 @@ class OptimisationResult():
     :param ell2_error: an array of the L^2 differences between successive
     estimates of the probability matrix.  That these decay is a good indication
     of convergence.
+    :param time_cutoff: Optionally specify the maximum time extent of the
+    trigger_kernel used in calculations.
+    :param space_cutoff: Optionally specify the maximum space extent of the
+    trigger_kernel used in calculations.
     """
-    def __init__(self, kernel, p, background_kernel, trigger_kernel, ell2_error):
+    def __init__(self, kernel, p, background_kernel, trigger_kernel, ell2_error,
+            time_cutoff=None, space_cutoff=None):
         self.kernel = kernel
         self.p = p
         self.background_kernel = background_kernel
         self.trigger_kernel = trigger_kernel
         self.ell2_error = ell2_error
+        self.time_cutoff = time_cutoff
+        self.space_cutoff = space_cutoff
 
 
-def make_space_kernel(data, background_kernel, trigger_kernel, time):
+def make_space_kernel(data, background_kernel, trigger_kernel, time,
+        time_cutoff=None, space_cutoff=None):
     """Produce a kernel object which evaluates the background kernel, and
     the trigger kernel based on the space locations in the data, always using
     the fixed time as passed in.
@@ -303,22 +308,75 @@ def make_space_kernel(data, background_kernel, trigger_kernel, time):
     :param trigger_kernel: The kernel object giving the trigger / aftershock
     risk intensity.
     :param time: The fixed time coordinate to evaluate at.
+    :param time_cutoff: Optional; if set, then we assume the trigger_kernel is
+    zero for times greater than this value (to speed up evaluation).
+    :param space_cutoff: Optional; if set, then we assume the trigger_kernel is
+    zero for space distances greater than this value (to speed up evaluation).
     
     :return: A kernel object which can be called on arrays of (2 dimensional
     space) points.
     """
     mask = data[0] < time
+    if time_cutoff is not None:
+        mask = mask & (data[0] > time - time_cutoff)
     data_copy = _np.array(data[:, mask])
     def kernel(points):
-        x = _np.asarray(points[0])
-        y = _np.asarray(points[1])
-        times = _np.zeros_like(x) + time
-        back = background_kernel.space_kernel(_np.vstack((x,y)))
-        pt = _np.vstack((times, x, y)) # Shape always (3,N) even if N=1
+        x = _np.atleast_1d(_np.asarray(points[0]))
+        y = _np.atleast_1d(_np.asarray(points[1]))
+        t = _np.zeros_like(x) + time
+        back = _np.atleast_1d(background_kernel(_np.vstack((t,x,y))))
         if data_copy.shape[-1] > 0:
-            back += _np.sum(trigger_kernel(pt[:,None] - data_copy))
+            # In principle this is quicker, but we end up evaluating `trigger_kernel`
+            # on a large numpy array, and if `trigger_kernel` also manipulates large
+            # arrays (it does, in our case!) you end with a massive array and out of memory.
+            #t = _np.zeros_like(x) + time
+            #p = _np.vstack([t,x,y])
+            #combined = p[...,None] - now_data[:,None,:]
+            #out = trigger_kernel(combined.reshape(3, combined.shape[1] * combined.shape[2]))
+            #out = out.reshape((combined.shape[1], combined.shape[2]))
+            #back += _np.sum(out, axis=1)
+            for i,(xx,yy) in enumerate(zip(x,y)):
+                pts = _np.array([time,xx,yy])[:,None] - data_copy
+                if space_cutoff is not None:
+                    mask = pts[1]**2 + pts[2]**2 < space_cutoff**2
+                    pts = pts[:, mask]
+                    if pts.shape[-1] == 0:
+                        continue
+                back[i] += _np.sum(trigger_kernel(pts))
         return back
     return kernel
+
+
+class AverageTimeAdjustedKernel(kernels.Kernel):
+    """Wraps a :class Kernel: instance, which supports the `space_kernel` and
+    `time_kernel` interface, and builds a new kernel which is constant in time.
+    The time intensity is computed by taking an average of the middle half
+    of the original time kernel.
+
+    :param kernel: The original kernel to delegate to.
+    :param time_end: We assume that the original kernel is roughly correct
+    for times in the range 0 to `time_end`.
+    """
+    def __init__(self, kernel, time_end):
+        self.delegate = kernel
+        self.time_average = self._average_time(kernel, time_end)
+
+    def _average_time(self, kernel, time_end):
+        start = time_end / 4
+        points = _np.random.random(100) * time_end / 2 + start
+        return _np.mean(kernel.time_kernel(points))
+
+    def time_kernel(self, points):
+        return _np.zeros_like(_np.asarray(points)) + self.time_average
+
+    def space_kernel(self, points):
+        return self.delegate.space_kernel(points)
+
+    def __call__(self, points):
+        return self.time_average * self.space_kernel(points[1:])
+
+    def set_scale(self, value):
+        self.delegate.set_scale(value)
 
 
 class SEPPPredictor(predictors.DataTrainer):
@@ -333,17 +391,25 @@ class SEPPPredictor(predictors.DataTrainer):
 
     This class also stores information about the optimisation procedure.
     """
-    def __init__(self, result, epoch_start):
+    def __init__(self, result, epoch_start, epoch_end):
         self.result = result
-        # The start time of the _training_ data
+        time = (epoch_end - epoch_start) / _np.timedelta64(1, "m")
+        self.adjusted_background_kernel = AverageTimeAdjustedKernel(
+            self.result.background_kernel, time)
+        # The start and end time of the _training_ data
         self.epoch_start = epoch_start
+        self.epoch_end = epoch_end
 
     @property
     def background_kernel(self):
+        """The original, non-adjusted background kernel estimated by the
+        training algorithm."""
         return self.result.background_kernel
 
     @property
     def trigger_kernel(self):
+        """The trigger / aftershock kernel estimated by the training
+        algorithm."""
         return self.result.trigger_kernel
 
     def predict(self, predict_time, cutoff_time=None):
@@ -360,10 +426,12 @@ class SEPPPredictor(predictors.DataTrainer):
         """
         events = self.data.events_before(cutoff_time)
         times = (events.timestamps - self.epoch_start) / _np.timedelta64(1, "m")
+        predict_time = _np.datetime64(predict_time)
         time = (predict_time - self.epoch_start) / _np.timedelta64(1, "m")
         data = _np.vstack((times, events.xcoords, events.ycoords))
-        return make_space_kernel(data, self.background_kernel,
-                                 self.trigger_kernel, time)
+        kernel = make_space_kernel(data, self.background_kernel, self.trigger_kernel,
+            time, self.result.time_cutoff, self.result.space_cutoff)
+        return predictors.KernelRiskPredictor(kernel)
 
 
 class SEPPTrainer(predictors.DataTrainer):
@@ -380,7 +448,46 @@ class SEPPTrainer(predictors.DataTrainer):
     """
     def __init__(self, k_time=100, k_space=15):
         self.k_time = k_time
-        self.k_space = k_space
+        self.k_space = k_space # TODO: Shouldn't expose this, as changing it is unpredictable
+        self._space_cutoff = 500
+        self._time_cutoff = 120 * 24 * 60 # minutes
+        self._trigger_kernel_estimator = kernels.KthNearestNeighbourGaussianKDE(self.k_space)
+
+    @property
+    def trigger_kernel_estimator(self):
+        """The kernel estimator to use for triggered events.  Defaults to a kth
+        nearest neighbour variable-bandwidth Gaussian kernel estimator with the
+        value of `k` set in the constructor.
+        """
+        return self._trigger_kernel_estimator
+
+    @trigger_kernel_estimator.setter
+    def trigger_kernel_estimator(self, estimator):
+        self._trigger_kernel_estimator = estimator
+
+    @property
+    def space_cutoff(self):
+        """To speed up optimisation, set this to the minimal distance at which
+        we think the spacial triggering will be effectively zero.  For real
+        data, 500m is a reasonable estimate.
+        """
+        return self._space_cutoff
+
+    @space_cutoff.setter
+    def space_cutoff(self, value):
+        self._space_cutoff = value
+
+    @property
+    def time_cutoff(self):
+        """To speed up optimisation, set this to the minimal time gap at which
+        we think the spacial triggering will be effectively zero.  For real
+        data, 120 days is a reasonable estimate.
+        """
+        return self._time_cutoff * _np.timedelta64(60, "s")
+
+    @time_cutoff.setter
+    def time_cutoff(self, value):
+        self._time_cutoff = _np.timedelta64(value) / _np.timedelta64(1, "m")
 
     def as_time_space_points(self, cutoff_time=None):
         """Return a copy of the input data as an array of shape (3,N) of
@@ -391,7 +498,7 @@ class SEPPTrainer(predictors.DataTrainer):
         events = self.data.events_before(cutoff_time)
         return events.to_time_space_coords()
 
-    def train(self, cutoff_time=None):
+    def train(self, cutoff_time=None, iterations=40):
         """Perform the (slow) training step on historical data.  This estimates
         kernels, and returns an object which can make predictions.
 
@@ -401,14 +508,13 @@ class SEPPTrainer(predictors.DataTrainer):
         :return: A :class SEPPPredictor: instance.
         """
         decluster = StocasticDecluster()
-        decluster.trigger_kernel_estimator = kernels.KthNearestNeighbourGaussianKDE(self.k_space)
+        decluster.trigger_kernel_estimator = self._trigger_kernel_estimator
         decluster.background_kernel_estimator = kernels.KNNG1_NDFactors(self.k_time, self.k_space)
         # From Rosser, Cheng, suggested 0.1 day^{-1} and 50 metres
         decluster.initial_time_bandwidth = 24 * 60 / 10 # minutes
         decluster.initial_space_bandwidth = 50.0
-        # From Rosser, Cheng, suggested 120 days and 500 metres
-        decluster.space_cutoff = 500
-        decluster.time_cutoff = 120 * 24 * 60 # minutes
+        decluster.space_cutoff = self._space_cutoff
+        decluster.time_cutoff = self._time_cutoff
         decluster.points = self.as_time_space_points(cutoff_time)
-        result = decluster.run_optimisation(iterations=40)
-        return SEPPPredictor(result, self.data.timestamps[0])
+        result = decluster.run_optimisation(iterations=iterations)
+        return SEPPPredictor(result, self.data.timestamps[0], self.data.timestamps[-1])

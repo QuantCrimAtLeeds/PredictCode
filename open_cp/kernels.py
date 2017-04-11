@@ -231,6 +231,7 @@ def marginal_knng(coords, coord_index=0, k=15):
         return _gaussian_kernel(_np.asarray(x).T, data, var)
     return kernel
 
+
 class KthNearestNeighbourGaussianKDE(KernelEstimator):
     """A :class KernelEstimator: which applies the algorithm given by
     :function kth_nearest_neighbour_gaussian_kde:
@@ -245,28 +246,70 @@ class KthNearestNeighbourGaussianKDE(KernelEstimator):
         return kth_nearest_neighbour_gaussian_kde(coords, self.k)
 
 
-class KNNG1_NDFactors(KernelEstimator):
-    """A :class KernelEstimator: which applies the
-    :class KthNearestNeighbourGaussianKDE: to first coordinate with one value
-    of k, and then to the remaining coordinates with another value of k, and
-    combines the result.
-    
-    :param k_first: The nearest neighbour to use in the first coordinate,
-    defaults to 100, if N is too small then uses N-1.
-    :param k_rest: The nearest neighbour to use for the remaining coordinates,
-    defaults to 15, if N is too small then uses N-1.
+class ReflectedKernel(Kernel):
+    """A specialisation of :class Kernel: which is for where, along certain
+    axes, we know that the data is concentrated on the positive interval
+    [0, \infty].  We wrap an existing :class Kernel: instance, but reflect
+    about 0 any estimated probability mass on the negative reals.
+
+    :param delegate: The :class Kernel: instance to delegate to.
+    :param reflected_axis: Which axis to reflect about.
     """
-    def __init__(self, k_first=100, k_rest=15):
-        self.k_first = k_first
-        self.k_rest = k_rest
-        
-    class KNNG1_NDFactors_Kernel(Kernel):
+    def __init__(self, delegate, reflected_axis=0):
+        self.delegate = delegate
+        self.reflected_axis = reflected_axis
+
+    def __call__(self, points):
+        points = _np.asarray(points)
+        if len(points.shape) <= 1:
+            reflected = -points
+        else:
+            reflect = _np.zeros(points.shape[0]) + 1
+            reflect[self.reflected_axis] = -1
+            reflected = points * reflect[:,None]
+        return self.delegate(points) + self.delegate(reflected)
+
+    def set_scale(self, value):
+        self.delegate.set_scale(value)
+
+
+class ReflectedKernelEstimator(KernelEstimator):
+    """Wraps an existing :class KernelEstimator: but reflects the estimated
+    kernel about 0 in one axis.  See :class ReflectedKernel:
+
+    :param estimator: The :class KernelEstimator: to delegate to.
+    :param reflected_axis: Which axis to reflect about.
+    """
+    def __init__(self, estimator, reflected_axis=0):
+        self.estimator = estimator
+        self.reflected_axis = reflected_axis
+
+    def __call__(self, points):
+        kernel = self.estimator(points)
+        return ReflectedKernel(kernel, self.reflected_axis)
+
+
+class TimeSpaceFactorsEstimator(KernelEstimator):
+    """A :class KernelEstimator: which applies a one-dimensional kernel
+    estimator to the first (time) coordinate of the data, and another kernel
+    estimator to the remaining (space) coordinates.
+
+    :param time_estimator: A :class KernelEstimator: for the one-dimensional
+    time data.
+    :param space_estimator: A :class KernelEstimator: for the remaining
+    coordinates.
+    """
+    def __init__(self, time_estimator, space_estimator):
+        self.time_estimator = time_estimator
+        self.space_estimator = space_estimator
+
+    class Factors_Kernel(Kernel):
         def __init__(self, first, rest):
             self.first, self.rest = first, rest
             self.scale = 1.0
 
         def __call__(self, points):
-            return self.first(points[0]) * self.rest(points[1:]) * self.scale
+            return self.time_kernel(points[0]) * self.space_kernel(points[1:])
         
         def set_scale(self, scale):
             self.scale = scale
@@ -283,7 +326,7 @@ class KNNG1_NDFactors(KernelEstimator):
             return self.rest(points) * self.scale
 
     def __call__(self, coords):
-        return self.KNNG1_NDFactors_Kernel(self.first(coords), self.rest(coords))
+        return self.Factors_Kernel(self.first(coords), self.rest(coords))
 
     def first(self, coords):
         """Find the kernel estimate for the first coordinate only.
@@ -293,7 +336,7 @@ class KNNG1_NDFactors(KernelEstimator):
         
         :return: A one dimensional kernel.
         """
-        return kth_nearest_neighbour_gaussian_kde(coords[0], self.k_first)
+        return self.time_estimator(coords[0])
 
     def rest(self, coords):
         """Find the kernel estimate for the remaining (n-1) coordinates only.
@@ -302,4 +345,19 @@ class KNNG1_NDFactors(KernelEstimator):
         
         :return: A (n-1) dimensional kernel.
         """
-        return kth_nearest_neighbour_gaussian_kde(coords[1:], self.k_rest)
+        return self.space_estimator(coords[1:])
+
+
+class KNNG1_NDFactors(TimeSpaceFactorsEstimator):
+    """A :class KernelEstimator: which applies the
+    :class KthNearestNeighbourGaussianKDE: to first coordinate with one value
+    of k, and then to the remaining coordinates with another value of k, and
+    combines the result.
+    
+    :param k_first: The nearest neighbour to use in the first coordinate,
+    defaults to 100, if N is too small then uses N-1.
+    :param k_rest: The nearest neighbour to use for the remaining coordinates,
+    defaults to 15, if N is too small then uses N-1.
+    """
+    def __init__(self, k_first=100, k_rest=15):
+        super().__init__(KthNearestNeighbourGaussianKDE(k_first), KthNearestNeighbourGaussianKDE(k_rest))

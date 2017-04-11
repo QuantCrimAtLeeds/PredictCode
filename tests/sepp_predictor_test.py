@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import unittest.mock as mock
 
 import open_cp.sepp as testmod
 
@@ -107,3 +108,47 @@ def test_make_kernel():
     #    (1.1, 3.7, -2) and (0.1, 2.7, -3)
     assert(kernel(pts[:,2]) == pytest.approx(5.7 - 2 - 3))
     np.testing.assert_allclose(kernel(pts), [5.7, 3.7, 0.7])
+
+def test_make_space_kernel():
+    def bk(pts):
+        return pts[2]
+    def tk(pts):
+        return pts[2]
+    # Events at (0,2,4) and (1,3,5)
+    data = np.array([[0,1], [2,3], [4,5]])
+    pts = np.array([[5.7, 2], [2.3, 4], [1, 4.2]]).T
+
+    # Time 0, so no triggers
+    kernel = testmod.make_space_kernel(data, bk, tk, time=0)
+    assert( kernel(pts[:,0]) == pytest.approx(2) )
+    assert( kernel(pts[:,1]) == pytest.approx(4) )
+    assert( kernel(pts[:,2]) == pytest.approx(4.2) )
+    np.testing.assert_allclose(kernel(pts), [2, 4, 4.2])
+
+    # Time 1, so one trigger
+    kernel = testmod.make_space_kernel(data, bk, tk, time=1)
+    assert( kernel(pts[:,0]) == pytest.approx(2 - 2) )
+    assert( kernel(pts[:,1]) == pytest.approx(4 + 0) )
+    assert( kernel(pts[:,2]) == pytest.approx(4.2 + 0.2) )
+    np.testing.assert_allclose(kernel(pts), [0, 4, 4.4])
+    
+    # Time 2 so two triggers
+    kernel = testmod.make_space_kernel(data, bk, tk, time=2)
+    assert( kernel(pts[:,0]) == pytest.approx(2 - 2 - 3) )
+    assert( kernel(pts[:,1]) == pytest.approx(4 + 0 - 1) )
+    assert( kernel(pts[:,2]) == pytest.approx(4.2 + 0.2 - .8) )
+    np.testing.assert_allclose(kernel(pts), [-3, 3, 3.6])
+
+    # Should now only see the 2nd event
+    kernel = testmod.make_space_kernel(data, bk, tk, time=1.5, time_cutoff=1)
+    assert( kernel(pts[:,0]) == pytest.approx(2 - 3) )
+    assert( kernel(pts[:,1]) == pytest.approx(4 - 1) )
+    assert( kernel(pts[:,2]) == pytest.approx(4.2 - .8) )
+    np.testing.assert_allclose(kernel(pts), [-1, 3, 3.4])
+    
+    # Should now only see the background
+    kernel = testmod.make_space_kernel(data, bk, tk, time=1.5, space_cutoff=0.1)
+    assert( kernel(pts[:,0]) == pytest.approx(2) )
+    assert( kernel(pts[:,1]) == pytest.approx(4) )
+    assert( kernel(pts[:,2]) == pytest.approx(4.2) )
+    np.testing.assert_allclose(kernel(pts), [2, 4, 4.2])

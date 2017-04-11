@@ -115,7 +115,7 @@ class GridPredictionArray(GridPrediction):
             matrix, prediction.xoffset, prediction.yoffset)
 
     @staticmethod
-    def from_continuous_prediction_region(prediction, region, cell_width, cell_height):
+    def from_continuous_prediction_region(prediction, region, cell_width, cell_height=None):
         """Construct an instance from an instance of :ContinuousPrediction:
         using the region and passed cell sizes.
 
@@ -123,6 +123,8 @@ class GridPredictionArray(GridPrediction):
         :param cell_width: Width of each cell in the resulting grid
         :param cell_height: Height of each cell in the resulting grid
         """
+        if cell_height is None:
+            cell_height = cell_width
         width = int(_np.rint((region.xmax - region.xmin) / cell_width))
         height = int(_np.rint((region.ymax - region.ymin) / cell_height))
         newpred = prediction.rebase(cell_width, cell_height, region.xmin, region.ymin)

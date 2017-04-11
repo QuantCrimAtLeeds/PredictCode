@@ -401,9 +401,9 @@ class GridHawkesProcess(Sampler):
         self.theta = theta
         self.omega = omega
 
-    def _sample_one_cell(self, mu, theta, omega, start_time, end_time):
+    def _sample_one_cell(self, mu, start_time, end_time):
         background_sampler = HomogeneousPoissonSampler(rate=mu)
-        trigger_sampler = ExponentialDecaySampler(intensity=theta, exp_rate=omega)
+        trigger_sampler = ExponentialDecaySampler(intensity=self.theta, exp_rate=self.omega)
         process = SelfExcitingPointProcess(background_sampler, trigger_sampler)
         return process.sample(start_time, end_time)
 
@@ -414,8 +414,7 @@ class GridHawkesProcess(Sampler):
         """
         out = _np.empty_like(self.mus, dtype=_np.object)        
         for index in _itertools.product(*[list(range(i)) for i in self.mus.shape]):
-            out[index] = self._sample_one_cell(self.mus[index], self.theta,
-                           self.omega, start_time, end_time)
+            out[index] = self._sample_one_cell(self.mus[index], start_time, end_time)
         return out
     
     def sample_to_randomised_grid(self, start_time, end_time, grid_size):

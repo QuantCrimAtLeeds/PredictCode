@@ -181,7 +181,6 @@ class TimedPoints:
     @property
     def bounding_box(self):
         """The smallest (space) box containing all the data points.
-        
 
         :return: A :class RectangularRegion: instance.
         """

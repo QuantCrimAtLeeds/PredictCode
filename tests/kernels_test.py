@@ -2,6 +2,7 @@ import numpy as np
 import scipy.stats as stats
 import pytest
 import open_cp.kernels as testmod
+import unittest.mock as mock
 
 def test_1D_kth_distance():
     coords = [0,1,2,3,6,7,9,15]
@@ -161,3 +162,32 @@ def test_2d_kth_nearest():
             kernel = testmod.kth_nearest_neighbour_gaussian_kde(pts, k=k)
             test_points = np.random.random(size=(space_dim, 10))
             np.testing.assert_allclose( kernel(test_points), expected_kernel(test_points) )
+
+def test_ReflectedKernel():
+    kernel = lambda pt : np.abs(pt)
+    testkernel = testmod.ReflectedKernel(kernel)
+    assert( testkernel(5) == 10 )
+    np.testing.assert_allclose(testkernel([1,2,3]), [2,4,6])
+    
+    # 2 (or 3 etc.) dim kernel only
+    testkernel = testmod.ReflectedKernel(lambda pt : np.abs(pt[0]))
+    np.testing.assert_allclose(testkernel([[1,2,3],[4,5,6]]), [2,4,6])
+    testkernel = testmod.ReflectedKernel(lambda pt : pt[0] * (pt[0]>=0))
+    np.testing.assert_allclose(testkernel([[1,2,3],[4,5,6]]), [1,2,3])
+    testkernel = testmod.ReflectedKernel(lambda pt : pt[0] * (pt[0]>=0), reflected_axis=1)
+    np.testing.assert_allclose(testkernel([[1,2,3],[4,5,6]]), [2,4,6])
+
+def test_ReflectedKernelEstimator():
+    estimator = mock.MagicMock()
+    kernel_mock = mock.MagicMock()
+    estimator.return_value = kernel_mock
+    test = testmod.ReflectedKernelEstimator(estimator)
+    kernel = test([1,2,3,4])
+    estimator.assert_called_with([1,2,3,4])
+    assert(kernel.reflected_axis == 0)
+    assert(kernel.delegate is kernel_mock)
+
+    test = testmod.ReflectedKernelEstimator(estimator, reflected_axis=2)
+    kernel = test([1,2,3,4])
+    assert(kernel.reflected_axis == 2)
+    

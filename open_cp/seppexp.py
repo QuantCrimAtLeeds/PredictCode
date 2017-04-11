@@ -144,6 +144,7 @@ def _make_cells(region, grid_size, events, times):
             cells[x,y] = _np.asarray(cells[x,y])
     return cells
 
+
 class SEPPPredictor(predictors.DataTrainer):
     """Returned by :class SEPPTrainer: encapsulated computed background rates
     and triggering parameters.  This class allows these to be evaluated on
@@ -173,7 +174,7 @@ class SEPPPredictor(predictors.DataTrainer):
         :return: Instance of :class predictors.GridPredictionArray:
         """
         events = self.data.events_before(cutoff_time)
-        times = (events.timestamps - predict_time) / _np.timedelta64(1, "m")
+        times = (events.timestamps - _np.datetime64(predict_time)) / _np.timedelta64(1, "m")
         cells = _make_cells(self.region, self.grid_size, events, times)
         # TODO: Apply the model to make the risk!
 
@@ -197,7 +198,7 @@ class SEPPTrainer(predictors.DataTrainer):
         cells = _make_cells(self.region, self.grid_size, events, times)
         return cells, times[-1]
 
-    def train(self, cutoff_time=None):
+    def train(self, cutoff_time=None, iterations=20):
         """Perform the (slow) training step on historical data.  This estimates
         kernels, and returns an object which can make predictions.
 
@@ -213,7 +214,7 @@ class SEPPTrainer(predictors.DataTrainer):
         omega = 1 / (60 * 24)
         mu = _np.zeros_like(cells) + 1
         # TODO: Are these initial parameters reasonable?  Is 10 enough iterations?
-        for _ in range(10):
+        for _ in range(iterations):
             omega, theta, mu = maximisation(cells, omega, theta, mu, time_duration)
 
         return SEPPPredictor(self.region, self.grid_size, omega, theta, mu)
