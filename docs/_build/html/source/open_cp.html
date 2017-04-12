@@ -1,0 +1,2097 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>open_cp package &#8212; OpenCP 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="open-cp-package">
+<h1>open_cp package<a class="headerlink" href="#open-cp-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="open_cp.sources.html">open_cp.sources package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="open_cp.sources.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="open_cp.sources.html#module-open_cp.sources.chicago">open_cp.sources.chicago module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="open_cp.sources.html#sources-chicago">sources.chicago</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="open_cp.sources.html#module-open_cp.sources.random">open_cp.sources.random module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="open_cp.sources.html#sources-random">sources.random</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="open_cp.sources.html#module-open_cp.sources.sepp">open_cp.sources.sepp module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="open_cp.sources.html#sources-sepp">sources.sepp</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="open_cp.sources.html#module-open_cp.sources.ukpolice">open_cp.sources.ukpolice module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="open_cp.sources.html#sources-ukpolice">sources.ukpolice</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="open_cp.sources.html#module-open_cp.sources">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-open_cp.data">
+<span id="open-cp-data-module"></span><h2>open_cp.data module<a class="headerlink" href="#module-open_cp.data" title="Permalink to this headline">¶</a></h2>
+<p>Encapsulates input data.</p>
+<dl class="class">
+<dt id="open_cp.data.Point">
+<em class="property">class </em><code class="descclassname">open_cp.data.</code><code class="descname">Point</code><span class="sig-paren">(</span><em>x=0</em>, <em>y=0</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.data.Point" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>A simple 2 dimensional point class.</p>
+<dl class="attribute">
+<dt id="open_cp.data.Point.x">
+<code class="descname">x</code><a class="headerlink" href="#open_cp.data.Point.x" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.data.Point.y">
+<code class="descname">y</code><a class="headerlink" href="#open_cp.data.Point.y" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.data.RectangularRegion">
+<em class="property">class </em><code class="descclassname">open_cp.data.</code><code class="descname">RectangularRegion</code><span class="sig-paren">(</span><em>xmin=0</em>, <em>xmax=1</em>, <em>ymin=0</em>, <em>ymax=1</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.data.RectangularRegion" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Stores a rectangular region.</p>
+<dl class="attribute">
+<dt id="open_cp.data.RectangularRegion.aspect_ratio">
+<code class="descname">aspect_ratio</code><a class="headerlink" href="#open_cp.data.RectangularRegion.aspect_ratio" title="Permalink to this definition">¶</a></dt>
+<dd><p>Height divided by width</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.data.RectangularRegion.grid_size">
+<code class="descname">grid_size</code><span class="sig-paren">(</span><em>cell_width</em>, <em>cell_height=None</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.data.RectangularRegion.grid_size" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the size of grid defined by this region.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>cell_width</strong> &#8211; The width of each cell in the grid.</li>
+<li><strong>cell_height</strong> &#8211; Optional .  The height of each cell in the grid;</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>defaults to a square grid where the height is the same as the width.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">(xsize, ysize) of the grid.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.data.RectangularRegion.height">
+<code class="descname">height</code><a class="headerlink" href="#open_cp.data.RectangularRegion.height" title="Permalink to this definition">¶</a></dt>
+<dd><p>The height of the region: ymax - ymin</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.data.RectangularRegion.max">
+<code class="descname">max</code><a class="headerlink" href="#open_cp.data.RectangularRegion.max" title="Permalink to this definition">¶</a></dt>
+<dd><p>The pair (xmax, ymax)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.data.RectangularRegion.min">
+<code class="descname">min</code><a class="headerlink" href="#open_cp.data.RectangularRegion.min" title="Permalink to this definition">¶</a></dt>
+<dd><p>The pair (xmin, ymin)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.data.RectangularRegion.width">
+<code class="descname">width</code><a class="headerlink" href="#open_cp.data.RectangularRegion.width" title="Permalink to this definition">¶</a></dt>
+<dd><p>The width of the region: xmax - xmin</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.data.RectangularRegion.xmax">
+<code class="descname">xmax</code><a class="headerlink" href="#open_cp.data.RectangularRegion.xmax" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.data.RectangularRegion.xmin">
+<code class="descname">xmin</code><a class="headerlink" href="#open_cp.data.RectangularRegion.xmin" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.data.RectangularRegion.ymax">
+<code class="descname">ymax</code><a class="headerlink" href="#open_cp.data.RectangularRegion.ymax" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.data.RectangularRegion.ymin">
+<code class="descname">ymin</code><a class="headerlink" href="#open_cp.data.RectangularRegion.ymin" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.data.TimedPoints">
+<em class="property">class </em><code class="descclassname">open_cp.data.</code><code class="descname">TimedPoints</code><span class="sig-paren">(</span><em>timestamps</em>, <em>coords</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.data.TimedPoints" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Stores a list of timestamped x-y coordinates of events.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>timestamps</strong> &#8211; An array of timestamps (must be convertible to</td>
+</tr>
+</tbody>
+</table>
+<p>:class numpy.datetime64:).
+:param coords: An array of shape (2,n) where <cite>n</cite> must match the number of
+timestamps.</p>
+<dl class="attribute">
+<dt id="open_cp.data.TimedPoints.bounding_box">
+<code class="descname">bounding_box</code><a class="headerlink" href="#open_cp.data.TimedPoints.bounding_box" title="Permalink to this definition">¶</a></dt>
+<dd><p>The smallest (space) box containing all the data points.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A :class RectangularRegion: instance.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.data.TimedPoints.empty">
+<code class="descname">empty</code><a class="headerlink" href="#open_cp.data.TimedPoints.empty" title="Permalink to this definition">¶</a></dt>
+<dd><p>True or False, do we have any events</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.data.TimedPoints.events_before">
+<code class="descname">events_before</code><span class="sig-paren">(</span><em>cutoff_time=None</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.data.TimedPoints.events_before" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns just the events with timestamps before (or equal to) the
+cutoff.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>cutoff_time</strong> &#8211; End of the time period we&#8217;re interested in.</td>
+</tr>
+</tbody>
+</table>
+<p>Default is <cite>None</cite> which means return all the data.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="open_cp.data.TimedPoints.from_coords">
+<em class="property">static </em><code class="descname">from_coords</code><span class="sig-paren">(</span><em>timestamps</em>, <em>xcoords</em>, <em>ycoords</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.data.TimedPoints.from_coords" title="Permalink to this definition">¶</a></dt>
+<dd><p>Static constructor allowing you to pass separate arrays of x and y
+coordinates.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.data.TimedPoints.number_data_points">
+<code class="descname">number_data_points</code><a class="headerlink" href="#open_cp.data.TimedPoints.number_data_points" title="Permalink to this definition">¶</a></dt>
+<dd><p>The number of events</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.data.TimedPoints.time_deltas">
+<code class="descname">time_deltas</code><span class="sig-paren">(</span><em>time_unit=numpy.timedelta64(1</em>, <em>'m')</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.data.TimedPoints.time_deltas" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a numpy array of floats, converted from the timestamps,
+starting from 0, and with the optional unit.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>time_unit</strong> &#8211; The unit to measure time by.  Defaults to 1 minute,</td>
+</tr>
+</tbody>
+</table>
+<p>so timestamps an hour apart will be converted to floats 60.0 apart.
+No rounding occurs, so there is no loss in accuracy by passing a
+different time unit.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.data.TimedPoints.time_range">
+<code class="descname">time_range</code><a class="headerlink" href="#open_cp.data.TimedPoints.time_range" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find the time range.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A pair (start, end) of timestamps.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.data.TimedPoints.times_datetime">
+<code class="descname">times_datetime</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.data.TimedPoints.times_datetime" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an array of timestamps using the :class datetime.datetime:
+standard library class.  Useful for plotting with matplotlib, for
+example.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.data.TimedPoints.to_time_space_coords">
+<code class="descname">to_time_space_coords</code><span class="sig-paren">(</span><em>time_unit=numpy.timedelta64(1</em>, <em>'m')</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.data.TimedPoints.to_time_space_coords" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a single numpy array <cite>[t,x,y]</cite> where the time stamps are
+converted to floats, starting from 0, and with the optional unit.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>time_unit</strong> &#8211; The unit to measure time by.  Defaults to 1 minute,</td>
+</tr>
+</tbody>
+</table>
+<p>so timestamps an hour apart will be converted to floats 60.0 apart.
+No rounding occurs, so there is no loss in accuracy by passing a
+different time unit.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.data.TimedPoints.xcoords">
+<code class="descname">xcoords</code><a class="headerlink" href="#open_cp.data.TimedPoints.xcoords" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.data.TimedPoints.ycoords">
+<code class="descname">ycoords</code><a class="headerlink" href="#open_cp.data.TimedPoints.ycoords" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.data.points_from_lon_lat">
+<code class="descclassname">open_cp.data.</code><code class="descname">points_from_lon_lat</code><span class="sig-paren">(</span><em>points</em>, <em>proj=None</em>, <em>epsg=None</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.data.points_from_lon_lat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts longitude / latitude data into x,y coordinates using a
+projection.  The module <cite>pyproj</cite> must be loaded, otherwise this does
+nothing.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>points</strong> &#8211; A :class TimedPoints: instance of lon/lat data.</li>
+<li><strong>proj</strong> &#8211; Optionally, a <cite>pyproj.Proj</cite> object describing the projection.</li>
+<li><strong>epsg</strong> &#8211; If no <cite>proj</cite> is given, this must be supplied.  A valid EPSG</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>projection reference.  For example, 7405 is suitable for UK data. See
+<a class="reference external" href="http://spatialreference.org/ref/epsg/">http://spatialreference.org/ref/epsg/</a></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A :class TimedPoints: instance of projected data with the same timestamps.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-open_cp.kernels">
+<span id="open-cp-kernels-module"></span><h2>open_cp.kernels module<a class="headerlink" href="#module-open_cp.kernels" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="kernels">
+<h3>kernels<a class="headerlink" href="#kernels" title="Permalink to this headline">¶</a></h3>
+<p>For us, a &#8220;kernel&#8221; is simply a non-normalised probability density function.
+We use kernels extensively to represent (conditional) intensity functions in
+point processes.</p>
+<p>More formally, a kernel is any python object which is callable (e.g. a
+function, or an instance of a class implementing <cite>__call__</cite>).  We follow the
+e.g. scipy convention:</p>
+<ul class="simple">
+<li>A kernel expecting a one dimensional input may take a scalar as input,</li>
+</ul>
+<p>or a one-dimensional numpy array.  It should return, respectively, a scalar
+or a one-dimensional array of the same size.  For example:</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>def gaussian(p):</dt>
+<dd>return np.exp(-p * p)</dd>
+</dl>
+</div></blockquote>
+<p>Here we use <cite>np.exp</cite> to make sure that if <cite>p</cite> is an array, we handle it
+correctly.</p>
+<ul class="simple">
+<li>A kernel expecting a <cite>k</cite> dimensional input may take an array of shape <cite>(k)</cite></li>
+</ul>
+<p>to represent a point, or an array of shape <cite>(k,N)</cite> to represent <cite>N</cite> points.
+The return should be, respectively, a scalar or an array of shape <cite>(N)</cite>.
+We follow this convention to allow e.g. the following:</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>def x_y_sum(p):</dt>
+<dd>return p[0] + p[1]</dd>
+</dl>
+</div></blockquote>
+<p>In the single-point case, <cite>p[0]</cite> is a scalar representing the x coordinate and
+<cite>p[1]</cite> a scalar representing the y coordinate.  In the multiple point case,
+<cite>p[0]</cite> is an array of all the x coordinates.</p>
+<dl class="class">
+<dt id="open_cp.kernels.GaussianKernel">
+<em class="property">class </em><code class="descclassname">open_cp.kernels.</code><code class="descname">GaussianKernel</code><span class="sig-paren">(</span><em>means</em>, <em>variances</em>, <em>scale=1.0</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.GaussianKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.kernels.Kernel" title="open_cp.kernels.Kernel"><code class="xref py py-class docutils literal"><span class="pre">open_cp.kernels.Kernel</span></code></a></p>
+<p>A variable bandwidth gaussian kernel.  Each input Gaussian is an
+uncorrelated k-dimensional Gaussian.  These are summed to produce the
+kernel.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>means</strong> &#8211; Array of shape (k,M).  The centre of each Gaussian.</li>
+<li><strong>variances</strong> &#8211; Array of shape (k,M).  The variances of each Gaussian.</li>
+<li><strong>scale</strong> &#8211; The overall normalisation factor, defaults to 1.0.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="open_cp.kernels.GaussianKernel.set_scale">
+<code class="descname">set_scale</code><span class="sig-paren">(</span><em>scale</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.GaussianKernel.set_scale" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.kernels.KNNG1_NDFactors">
+<em class="property">class </em><code class="descclassname">open_cp.kernels.</code><code class="descname">KNNG1_NDFactors</code><span class="sig-paren">(</span><em>k_first=100</em>, <em>k_rest=15</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.KNNG1_NDFactors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.kernels.TimeSpaceFactorsEstimator" title="open_cp.kernels.TimeSpaceFactorsEstimator"><code class="xref py py-class docutils literal"><span class="pre">open_cp.kernels.TimeSpaceFactorsEstimator</span></code></a></p>
+<p>A :class KernelEstimator: which applies the
+:class KthNearestNeighbourGaussianKDE: to first coordinate with one value
+of k, and then to the remaining coordinates with another value of k, and
+combines the result.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>k_first</strong> &#8211; The nearest neighbour to use in the first coordinate,</td>
+</tr>
+</tbody>
+</table>
+<p>defaults to 100, if N is too small then uses N-1.
+:param k_rest: The nearest neighbour to use for the remaining coordinates,
+defaults to 15, if N is too small then uses N-1.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.kernels.Kernel">
+<em class="property">class </em><code class="descclassname">open_cp.kernels.</code><code class="descname">Kernel</code><a class="headerlink" href="#open_cp.kernels.Kernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="open_cp.kernels.Kernel.set_scale">
+<code class="descname">set_scale</code><span class="sig-paren">(</span><em>scale=1.0</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.Kernel.set_scale" title="Permalink to this definition">¶</a></dt>
+<dd><p>The output kernel should be multiplied by this value before being
+returned.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.kernels.KernelEstimator">
+<em class="property">class </em><code class="descclassname">open_cp.kernels.</code><code class="descname">KernelEstimator</code><a class="headerlink" href="#open_cp.kernels.KernelEstimator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.kernels.KthNearestNeighbourGaussianKDE">
+<em class="property">class </em><code class="descclassname">open_cp.kernels.</code><code class="descname">KthNearestNeighbourGaussianKDE</code><span class="sig-paren">(</span><em>k=15</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.KthNearestNeighbourGaussianKDE" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.kernels.KernelEstimator" title="open_cp.kernels.KernelEstimator"><code class="xref py py-class docutils literal"><span class="pre">open_cp.kernels.KernelEstimator</span></code></a></p>
+<p>A :class KernelEstimator: which applies the algorithm given by
+:function kth_nearest_neighbour_gaussian_kde:</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>k</strong> &#8211; The nearest neighbour to use, defaults to 15, if N is too small</td>
+</tr>
+</tbody>
+</table>
+<p>then uses N-1.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.kernels.ReflectedKernel">
+<em class="property">class </em><code class="descclassname">open_cp.kernels.</code><code class="descname">ReflectedKernel</code><span class="sig-paren">(</span><em>delegate</em>, <em>reflected_axis=0</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.ReflectedKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.kernels.Kernel" title="open_cp.kernels.Kernel"><code class="xref py py-class docutils literal"><span class="pre">open_cp.kernels.Kernel</span></code></a></p>
+<p>A specialisation of :class Kernel: which is for where, along certain
+axes, we know that the data is concentrated on the positive interval
+[0, infty].  We wrap an existing :class Kernel: instance, but reflect
+about 0 any estimated probability mass on the negative reals.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>delegate</strong> &#8211; The :class Kernel: instance to delegate to.</li>
+<li><strong>reflected_axis</strong> &#8211; Which axis to reflect about.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="open_cp.kernels.ReflectedKernel.set_scale">
+<code class="descname">set_scale</code><span class="sig-paren">(</span><em>value</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.ReflectedKernel.set_scale" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.kernels.ReflectedKernelEstimator">
+<em class="property">class </em><code class="descclassname">open_cp.kernels.</code><code class="descname">ReflectedKernelEstimator</code><span class="sig-paren">(</span><em>estimator</em>, <em>reflected_axis=0</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.ReflectedKernelEstimator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.kernels.KernelEstimator" title="open_cp.kernels.KernelEstimator"><code class="xref py py-class docutils literal"><span class="pre">open_cp.kernels.KernelEstimator</span></code></a></p>
+<p>Wraps an existing :class KernelEstimator: but reflects the estimated
+kernel about 0 in one axis.  See :class ReflectedKernel:</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>estimator</strong> &#8211; The :class KernelEstimator: to delegate to.</li>
+<li><strong>reflected_axis</strong> &#8211; Which axis to reflect about.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.kernels.TimeSpaceFactorsEstimator">
+<em class="property">class </em><code class="descclassname">open_cp.kernels.</code><code class="descname">TimeSpaceFactorsEstimator</code><span class="sig-paren">(</span><em>time_estimator</em>, <em>space_estimator</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.TimeSpaceFactorsEstimator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.kernels.KernelEstimator" title="open_cp.kernels.KernelEstimator"><code class="xref py py-class docutils literal"><span class="pre">open_cp.kernels.KernelEstimator</span></code></a></p>
+<p>A :class KernelEstimator: which applies a one-dimensional kernel
+estimator to the first (time) coordinate of the data, and another kernel
+estimator to the remaining (space) coordinates.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>time_estimator</strong> &#8211; A :class KernelEstimator: for the one-dimensional</td>
+</tr>
+</tbody>
+</table>
+<p>time data.
+:param space_estimator: A :class KernelEstimator: for the remaining
+coordinates.</p>
+<dl class="class">
+<dt id="open_cp.kernels.TimeSpaceFactorsEstimator.Factors_Kernel">
+<em class="property">class </em><code class="descname">Factors_Kernel</code><span class="sig-paren">(</span><em>first</em>, <em>rest</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.TimeSpaceFactorsEstimator.Factors_Kernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.kernels.Kernel" title="open_cp.kernels.Kernel"><code class="xref py py-class docutils literal"><span class="pre">open_cp.kernels.Kernel</span></code></a></p>
+<dl class="method">
+<dt id="open_cp.kernels.TimeSpaceFactorsEstimator.Factors_Kernel.set_scale">
+<code class="descname">set_scale</code><span class="sig-paren">(</span><em>scale</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.TimeSpaceFactorsEstimator.Factors_Kernel.set_scale" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="open_cp.kernels.TimeSpaceFactorsEstimator.Factors_Kernel.space_kernel">
+<code class="descname">space_kernel</code><span class="sig-paren">(</span><em>points</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.TimeSpaceFactorsEstimator.Factors_Kernel.space_kernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>The space component of the overall kernel, scaled appropriately.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.kernels.TimeSpaceFactorsEstimator.Factors_Kernel.time_kernel">
+<code class="descname">time_kernel</code><span class="sig-paren">(</span><em>points</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.TimeSpaceFactorsEstimator.Factors_Kernel.time_kernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>A one-dimensional, _normalised_ kernel giving the time
+component of the overall kernel.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.kernels.TimeSpaceFactorsEstimator.first">
+<code class="descclassname">TimeSpaceFactorsEstimator.</code><code class="descname">first</code><span class="sig-paren">(</span><em>coords</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.TimeSpaceFactorsEstimator.first" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find the kernel estimate for the first coordinate only.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>coords</strong> &#8211; All the coordinates; only the 1st coordinate will be</td>
+</tr>
+</tbody>
+</table>
+<p>used.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A one dimensional kernel.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.kernels.TimeSpaceFactorsEstimator.rest">
+<code class="descclassname">TimeSpaceFactorsEstimator.</code><code class="descname">rest</code><span class="sig-paren">(</span><em>coords</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.TimeSpaceFactorsEstimator.rest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find the kernel estimate for the remaining (n-1) coordinates only.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>coords</strong> &#8211; All the coordinates; the 1st coordinate will be ignored.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A (n-1) dimensional kernel.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.kernels.compute_kth_distance">
+<code class="descclassname">open_cp.kernels.</code><code class="descname">compute_kth_distance</code><span class="sig-paren">(</span><em>coords</em>, <em>k=15</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.compute_kth_distance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find the (Euclidean) distance to the <a href="#id1"><span class="problematic" id="id2">`</span></a>k`th nearest neighbour.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>coords</strong> &#8211; An array of shape (n,N) of N points in n dimensional space;</td>
+</tr>
+</tbody>
+</table>
+<p>if n=1 then input is an array of shape (N).
+:param k: The nearest neighbour to use, defaults to 15, if N is too small
+then uses N-1.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">An array of shape (N) where the i-th entry is the distance from</td>
+</tr>
+</tbody>
+</table>
+<p>the i-th point to its k-th nearest neighbour.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.kernels.compute_normalised_kth_distance">
+<code class="descclassname">open_cp.kernels.</code><code class="descname">compute_normalised_kth_distance</code><span class="sig-paren">(</span><em>coords</em>, <em>k=15</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.compute_normalised_kth_distance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find the (Euclidean) distance to the <a href="#id3"><span class="problematic" id="id4">`</span></a>k`th nearest neighbour.
+The input data is first scaled so that each coordinate (independently) has
+unit sample variance.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>coords</strong> &#8211; An array of shape (n,N) of N points in n dimensional space;</td>
+</tr>
+</tbody>
+</table>
+<p>if n=1 then input is an array of shape (N).
+:param k: The nearest neighbour to use, defaults to 15, if N is too small
+then uses N-1.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">An array of shape (N) where the i-th entry is the distance from</td>
+</tr>
+</tbody>
+</table>
+<p>the i-th point to its k-th nearest neighbour.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.kernels.kth_nearest_neighbour_gaussian_kde">
+<code class="descclassname">open_cp.kernels.</code><code class="descname">kth_nearest_neighbour_gaussian_kde</code><span class="sig-paren">(</span><em>coords</em>, <em>k=15</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.kth_nearest_neighbour_gaussian_kde" title="Permalink to this definition">¶</a></dt>
+<dd><p>Estimate a kernel using variable bandwidth with a Gaussian kernel.
+The input data is scaled (independently in each coordinate) to have unit
+variance in each coordinate, and then the distance to the <a href="#id5"><span class="problematic" id="id6">`</span></a>k`th nearest
+neighbour is found.  The returned kernel is normalised, and is the sum
+of Gaussians centred on each data point, where the standard deviation for
+each coordinate is the distance for that point, multiplied by the standard
+deviation for that coordinate.</p>
+<p>See the Appendix of:
+Mohler et al, &#8220;Self-Exciting Point Process Modeling of Crime&#8221;,</p>
+<blockquote>
+<div>Journal of the American Statistical Association, 2011
+DOI: 10.1198/jasa.2011.ap09546</div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>coords</strong> &#8211; An array of shape (n,N) of N points in n dimensional space;</td>
+</tr>
+</tbody>
+</table>
+<p>if n=1 then input is an array of shape (N).
+:param k: The nearest neighbour to use, defaults to 15, if N is too small
+then uses N-1.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A kernel object.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.kernels.marginal_knng">
+<code class="descclassname">open_cp.kernels.</code><code class="descname">marginal_knng</code><span class="sig-paren">(</span><em>coords</em>, <em>coord_index=0</em>, <em>k=15</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.marginal_knng" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes a one-dimensional marginal for the kernel which would be
+returned by :function kth_nearest_neighbour_gaussian_kde: Equivalent to,
+but much faster, than (numerically) integerating out all but one variable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>coords</strong> &#8211; An array of shape (n,N) of N points in n dimensional space;</td>
+</tr>
+</tbody>
+</table>
+<p>if n=1 then input is an array of shape (N).
+:param coord_index: Which coordinate to return the marginal for; defaults
+to 0 so giving the first coordinate.
+:param k: The nearest neighbour to use, defaults to 15, if N is too small
+then uses N-1.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A one-dimensional kernel.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="module-open_cp.predictors">
+<span id="open-cp-predictors-module"></span><h2>open_cp.predictors module<a class="headerlink" href="#module-open_cp.predictors" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="predictors">
+<h3>predictors<a class="headerlink" href="#predictors" title="Permalink to this headline">¶</a></h3>
+<p>Contains base classes and utility functions for classes which make predictions,
+and classes which encapsulate a given prediction.</p>
+<dl class="class">
+<dt id="open_cp.predictors.ContinuousPrediction">
+<em class="property">class </em><code class="descclassname">open_cp.predictors.</code><code class="descname">ContinuousPrediction</code><span class="sig-paren">(</span><em>cell_width=50</em>, <em>cell_height=50</em>, <em>xoffset=0</em>, <em>yoffset=0</em>, <em>samples=50</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.ContinuousPrediction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>A prediction which allows the &#8220;risk&#8221; to be calculated at any point in a
+continuous fashion.  Allows monte-carlo sampling to produce a grid risk.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>cell_width</strong> &#8211; Width of cells to use in producing a grid risk.</li>
+<li><strong>cell_height</strong> &#8211; Height of cells to use in producing a grid risk.</li>
+<li><strong>xoffset</strong> &#8211; The x coordinate of the start of the grid.</li>
+<li><strong>yoffset</strong> &#8211; The y coordinate of the start of the grid.</li>
+<li><strong>samples</strong> &#8211; The number of samples to use when computing the risk in a</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>grid cell.</p>
+<dl class="method">
+<dt id="open_cp.predictors.ContinuousPrediction.grid_risk">
+<code class="descname">grid_risk</code><span class="sig-paren">(</span><em>gx</em>, <em>gy</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.ContinuousPrediction.grid_risk" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an estimate of the average risk in the grid cell</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.predictors.ContinuousPrediction.rebase">
+<code class="descname">rebase</code><span class="sig-paren">(</span><em>cell_width</em>, <em>cell_height</em>, <em>xoffset</em>, <em>yoffset</em>, <em>samples=50</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.ContinuousPrediction.rebase" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a new instance using the same risk but with a different grid
+size and offset</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.predictors.ContinuousPrediction.risk">
+<code class="descname">risk</code><span class="sig-paren">(</span><em>x</em>, <em>y</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.ContinuousPrediction.risk" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the risk at (a) coordinate(s).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>x</strong> &#8211; The x coordinate to evaluate the risk at.  May be a scalar</td>
+</tr>
+</tbody>
+</table>
+<p>or a one-dimensional numpy array.
+:param y: The y coordinate to evaluate the risk at.  Should match <cite>x</cite>
+in being a scalar or a one-dimensional numpy array.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A scalar or numpy array as appropriate.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.predictors.ContinuousPrediction.to_kernel">
+<code class="descname">to_kernel</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.ContinuousPrediction.to_kernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a callable object which when called at <cite>point</cite> gives the
+risk at (point[0], point[1]).  <cite>point</cite> may be an array.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.predictors.DataTrainer">
+<em class="property">class </em><code class="descclassname">open_cp.predictors.</code><code class="descname">DataTrainer</code><a class="headerlink" href="#open_cp.predictors.DataTrainer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Base class for most &#8220;trainers&#8221;: classes which take data and &#8220;train&#8221;
+themselves (fit a statistical model, etc.) to the data.</p>
+<dl class="attribute">
+<dt id="open_cp.predictors.DataTrainer.data">
+<code class="descname">data</code><a class="headerlink" href="#open_cp.predictors.DataTrainer.data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.predictors.GridPrediction">
+<em class="property">class </em><code class="descclassname">open_cp.predictors.</code><code class="descname">GridPrediction</code><span class="sig-paren">(</span><em>xsize</em>, <em>ysize</em>, <em>xoffset=0</em>, <em>yoffset=0</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.GridPrediction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>A prediction based on a grid.  The risk is always computed by finding
+the grid cell the coordinates contained, and then deferring to the abstract
+<cite>grid_risk</cite> method.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>xsize</strong> &#8211; The width of the grid cells.</li>
+<li><strong>ysize</strong> &#8211; The height of the grid cells.</li>
+<li><strong>xoffset</strong> &#8211; How much to offset the input x coordinate by; default 0.</li>
+<li><strong>yoffset</strong> &#8211; How much to offset the input y coordinate by; default 0.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="open_cp.predictors.GridPrediction.grid_risk">
+<code class="descname">grid_risk</code><span class="sig-paren">(</span><em>gridx</em>, <em>gridy</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.GridPrediction.grid_risk" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="open_cp.predictors.GridPrediction.risk">
+<code class="descname">risk</code><span class="sig-paren">(</span><em>x</em>, <em>y</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.GridPrediction.risk" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.predictors.GridPrediction.xsize">
+<code class="descname">xsize</code><a class="headerlink" href="#open_cp.predictors.GridPrediction.xsize" title="Permalink to this definition">¶</a></dt>
+<dd><p>The width of each cell</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.predictors.GridPrediction.ysize">
+<code class="descname">ysize</code><a class="headerlink" href="#open_cp.predictors.GridPrediction.ysize" title="Permalink to this definition">¶</a></dt>
+<dd><p>The height of each cell</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.predictors.GridPredictionArray">
+<em class="property">class </em><code class="descclassname">open_cp.predictors.</code><code class="descname">GridPredictionArray</code><span class="sig-paren">(</span><em>xsize</em>, <em>ysize</em>, <em>matrix</em>, <em>xoffset=0</em>, <em>yoffset=0</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.GridPredictionArray" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.predictors.GridPrediction" title="open_cp.predictors.GridPrediction"><code class="xref py py-class docutils literal"><span class="pre">open_cp.predictors.GridPrediction</span></code></a></p>
+<p>A :class GridPrediction: backed by a numpy array (or other
+two-dimensional list-like object).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>xsize</strong> &#8211; The width of the grid cells.</li>
+<li><strong>ysize</strong> &#8211; The height of the grid cells.</li>
+<li><strong>matrix</strong> &#8211; A two dimensional numpy array (or other object with a</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p><cite>shape</cite> attribute and allowing indexing as <cite>matrix[y][x]</cite>).
+:param xoffset: How much to offset the input x coordinate by; default 0.
+:param yoffset: How much to offset the input y coordinate by; default 0.</p>
+<dl class="staticmethod">
+<dt id="open_cp.predictors.GridPredictionArray.from_continuous_prediction">
+<em class="property">static </em><code class="descname">from_continuous_prediction</code><span class="sig-paren">(</span><em>prediction</em>, <em>width</em>, <em>height</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.GridPredictionArray.from_continuous_prediction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct an instance from an instance of :ContinuousPrediction:
+using the grid size and offset specified in that instance.  This is
+more efficient as we sample each grid cell once and then store the
+result.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>prediction</strong> &#8211; An instance of ContinuousPrediction to sample from</li>
+<li><strong>width</strong> &#8211; Width of the grid, in number of cells</li>
+<li><strong>height</strong> &#8211; Height of the grid, in number of cells</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="open_cp.predictors.GridPredictionArray.from_continuous_prediction_region">
+<em class="property">static </em><code class="descname">from_continuous_prediction_region</code><span class="sig-paren">(</span><em>prediction</em>, <em>region</em>, <em>cell_width</em>, <em>cell_height=None</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.GridPredictionArray.from_continuous_prediction_region" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct an instance from an instance of :ContinuousPrediction:
+using the region and passed cell sizes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>prediction</strong> &#8211; An instance of ContinuousPrediction to sample from</li>
+<li><strong>cell_width</strong> &#8211; Width of each cell in the resulting grid</li>
+<li><strong>cell_height</strong> &#8211; Height of each cell in the resulting grid</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.predictors.GridPredictionArray.grid_risk">
+<code class="descname">grid_risk</code><span class="sig-paren">(</span><em>gx</em>, <em>gy</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.GridPredictionArray.grid_risk" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find the risk in a grid cell.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>gx</strong> &#8211; x coordinate of the cell</li>
+<li><strong>gy</strong> &#8211; y coordinate of the cell</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">The risk in the cell, or 0 if the cell is outside the range</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>of the data we have.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.predictors.GridPredictionArray.intensity_matrix">
+<code class="descname">intensity_matrix</code><a class="headerlink" href="#open_cp.predictors.GridPredictionArray.intensity_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the matrix containing data which we use</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.predictors.GridPredictionArray.mesh_data">
+<code class="descname">mesh_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.GridPredictionArray.mesh_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a pair (xcoords, ycoords) which when paired with
+:method intensity_matrix: is suitable for passing to matplotlib.pcolor
+or pcolormesh.  That is, intensity_matrix[i][j] is the risk intensity
+in the rectangular cell with diagonally opposite vertices
+(xcoords[j], ycoords[i]), (xcoords[j+1], ycoords[i+1]).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.predictors.GridPredictionArray.percentile_matrix">
+<code class="descname">percentile_matrix</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.GridPredictionArray.percentile_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a matrix of the same shape as :method intensity_matrix: but
+with float values giving the percentile of risk, normalised to [0,1].
+So the cell with the highest risk is assigned 1.0.  Ties are rounded up,
+so if three cells share the highest risk, they are all assigned 1.0.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.predictors.KernelRiskPredictor">
+<em class="property">class </em><code class="descclassname">open_cp.predictors.</code><code class="descname">KernelRiskPredictor</code><span class="sig-paren">(</span><em>kernel</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.KernelRiskPredictor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.predictors.ContinuousPrediction" title="open_cp.predictors.ContinuousPrediction"><code class="xref py py-class docutils literal"><span class="pre">open_cp.predictors.ContinuousPrediction</span></code></a></p>
+<p>Wraps a kernel object so as to make a :class ContinuousPrediction:
+instance</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>kernel</strong> &#8211; A callable object with signature <cite>kernel(points)</cite> where</td>
+</tr>
+</tbody>
+</table>
+<p>points may be an array of size 2, for a single point, or an array of shape
+<cite>(2,N)</cite> for <cite>N</cite> points to be computed at once.
+:param kwards: Any constructor arguments which :class ContinuousPrediction:
+takes.</p>
+<dl class="method">
+<dt id="open_cp.predictors.KernelRiskPredictor.risk">
+<code class="descname">risk</code><span class="sig-paren">(</span><em>x</em>, <em>y</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.KernelRiskPredictor.risk" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.predictors.grid_prediction_from_kernel">
+<code class="descclassname">open_cp.predictors.</code><code class="descname">grid_prediction_from_kernel</code><span class="sig-paren">(</span><em>kernel</em>, <em>region</em>, <em>grid_size</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.grid_prediction_from_kernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Utility function to convert a space kernel into a grid based prediction.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>kernel</strong> &#8211; A kernel object taking an array of shape (2,N) of N lots</td>
+</tr>
+</tbody>
+</table>
+<p>of spatial coordinates, and returning an array of shape (N).
+:param region: An instance of :class RectangularRegion: giving the
+region to use.
+:param grid_size: The size of grid to use.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">An instance of :class GridPredictionArray:</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="module-open_cp.prohotspot">
+<span id="open-cp-prohotspot-module"></span><h2>open_cp.prohotspot module<a class="headerlink" href="#module-open_cp.prohotspot" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="prohotspot">
+<h3>prohotspot<a class="headerlink" href="#prohotspot" title="Permalink to this headline">¶</a></h3>
+<p>Implements the &#8220;prospective hotspotting&#8221; technique from:</p>
+<ol class="arabic simple">
+<li>Bowers, Johnson, Pease,
+&#8220;Prospective hot-spotting: The future of crime mapping?&#8221;,
+Brit. J. Criminol. (2004) 44 641&#8211;658.  doi:10.1093/bjc/azh036</li>
+<li>Johnson et al.,
+&#8220;Prospective crime mapping in operational context&#8221;,
+Home Office Online Report 19/07
+[Police online library](<a class="reference external" href="http://library.college.police.uk/docs/hordsolr/rdsolr1907.pdf">http://library.college.police.uk/docs/hordsolr/rdsolr1907.pdf</a>)</li>
+</ol>
+<p>The underlying idea is to start with a kernel / weight defined in space and
+positive time.  This typically has finite extent, and might be related to
+discretised space and/or time.  Weights used in the literature tend to be
+of the form :math 1/(1+d):</p>
+<p>The classical algorithm assigns all events to cells in a gridding of space,
+and a &#8220;grid&#8221; of time (typically the number of whole weeks before the current
+time).  Only events which are close enough in space and time to the grid cell
+of interest are used.  For these, the weight is evaluated on each one, and then
+the sum taken.</p>
+<p>It is important to note the coupling between the grid size used and the weight,
+because it is the distance between grid cells which is used.  Exactly what
+&#8220;distance&#8221; here means is unclear, and we have provided a number of options.</p>
+<p>Alternatively, we can just use the weight / kernel in a continuous kernel
+density estimate scheme.</p>
+<dl class="class">
+<dt id="open_cp.prohotspot.ClassicWeight">
+<em class="property">class </em><code class="descclassname">open_cp.prohotspot.</code><code class="descname">ClassicWeight</code><a class="headerlink" href="#open_cp.prohotspot.ClassicWeight" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.prohotspot.Weight" title="open_cp.prohotspot.Weight"><code class="xref py py-class docutils literal"><span class="pre">open_cp.prohotspot.Weight</span></code></a></p>
+<p>The classical weight, :math (1/(1+d))(1/(1+t)): where :math d: is
+distance and :math t: is time.  Default units are &#8220;grid cells&#8221; and &#8220;weeks&#8221;,
+respectively.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>space_bandwidth</strong> &#8211; Distances greater than or equal to this set the</td>
+</tr>
+</tbody>
+</table>
+<p>weight to 0.
+:param time_bandwidth: Times greater than or equal to this set the weight
+to 0.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.prohotspot.DistanceDiagonalsDifferent">
+<em class="property">class </em><code class="descclassname">open_cp.prohotspot.</code><code class="descname">DistanceDiagonalsDifferent</code><a class="headerlink" href="#open_cp.prohotspot.DistanceDiagonalsDifferent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.prohotspot.GridDistance" title="open_cp.prohotspot.GridDistance"><code class="xref py py-class docutils literal"><span class="pre">open_cp.prohotspot.GridDistance</span></code></a></p>
+<p>Distance in the grid.  Now diagonal distances are two, so (1,1) and
+(2,2) are two grid cells apart.  This equates to using an ell^1 norm.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.prohotspot.DistanceDiagonalsSame">
+<em class="property">class </em><code class="descclassname">open_cp.prohotspot.</code><code class="descname">DistanceDiagonalsSame</code><a class="headerlink" href="#open_cp.prohotspot.DistanceDiagonalsSame" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.prohotspot.GridDistance" title="open_cp.prohotspot.GridDistance"><code class="xref py py-class docutils literal"><span class="pre">open_cp.prohotspot.GridDistance</span></code></a></p>
+<p>Distance in the grid.  Diagonal distances are one, so (1,1) and
+(2,2) are adjacent points.  This equates to using an ell^infty norm.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.prohotspot.GridDistance">
+<em class="property">class </em><code class="descclassname">open_cp.prohotspot.</code><code class="descname">GridDistance</code><a class="headerlink" href="#open_cp.prohotspot.GridDistance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Calculates the distance between grid cells</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.prohotspot.ProspectiveHotSpot">
+<em class="property">class </em><code class="descclassname">open_cp.prohotspot.</code><code class="descname">ProspectiveHotSpot</code><span class="sig-paren">(</span><em>region</em>, <em>grid_size=50</em>, <em>time_unit=numpy.timedelta64(1</em>, <em>'W')</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.prohotspot.ProspectiveHotSpot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.predictors.DataTrainer" title="open_cp.predictors.DataTrainer"><code class="xref py py-class docutils literal"><span class="pre">open_cp.predictors.DataTrainer</span></code></a></p>
+<p>Implements the classical, grid based algorithm.  To calculate distances,
+we consider the grid cell we are computing the risk intensity for, the grid
+cell the event falls into, and then delegate to an instance of :class
+GridDistance: to compute the distance.  To compute time, we look at the
+time difference between the prediction time and the timestamp of the event
+and then divide by the :attribute time_unit:, then round down to the
+nearest whole number.  So 6 days divided by 1 week is 0 whole units.</p>
+<p>Set :attribute distance: to change the computation of distance between
+grid cells.  Set :attribute weight: to change the weight used.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>region</strong> &#8211; The :class data.RectangularRegion: the data is in.</li>
+<li><strong>grid_size</strong> &#8211; The size of the grid to place the data into.</li>
+<li><strong>time_unit</strong> &#8211; A :class numpy.timedelta64: instance giving the time unit.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="open_cp.prohotspot.ProspectiveHotSpot.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>cutoff_time</em>, <em>predict_time</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.prohotspot.ProspectiveHotSpot.predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate a grid based prediction.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>cutoff_time</strong> &#8211; Ignore data with a timestamp after this time.</li>
+<li><strong>predict_time</strong> &#8211; Timestamp of the prediction.  Used to calculate</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>the time difference between events and &#8220;now&#8221;.  Typically the same as
+<cite>cutoff_time</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">An instance of :class GridPredictionArray:</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.prohotspot.ProspectiveHotSpotContinuous">
+<em class="property">class </em><code class="descclassname">open_cp.prohotspot.</code><code class="descname">ProspectiveHotSpotContinuous</code><span class="sig-paren">(</span><em>grid_size=50</em>, <em>time_unit=numpy.timedelta64(1</em>, <em>'W')</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.prohotspot.ProspectiveHotSpotContinuous" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.predictors.DataTrainer" title="open_cp.predictors.DataTrainer"><code class="xref py py-class docutils literal"><span class="pre">open_cp.predictors.DataTrainer</span></code></a></p>
+<p>Implements the prospective hotspot algorithm as a kernel density
+estimation.  A copy of the space/time kernel / weight is laid down over
+each event and the result is summed.  To allow compatibility with the grid
+based method, we set a time unit and a grid size, but these are purely used
+to scale the data appropriately.</p>
+<dl class="method">
+<dt id="open_cp.prohotspot.ProspectiveHotSpotContinuous.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>cutoff_time</em>, <em>predict_time</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.prohotspot.ProspectiveHotSpotContinuous.predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate a continuous prediction.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>cutoff_time</strong> &#8211; Ignore data with a timestamp after this time.</li>
+<li><strong>predict_time</strong> &#8211; Timestamp of the prediction.  Used to calculate</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>the time difference between events and &#8220;now&#8221;.  Typically the same as
+<cite>cutoff_time</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">An instance of :class ContinuousPrediction:</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.prohotspot.Weight">
+<em class="property">class </em><code class="descclassname">open_cp.prohotspot.</code><code class="descname">Weight</code><a class="headerlink" href="#open_cp.prohotspot.Weight" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Base class for weights / kernels.  Classes implementing this algorithm
+are responsible purely for providing weights.  We leave the details of
+possibly discretising data to other classes.</p>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="module-open_cp.retrohotspot">
+<span id="open-cp-retrohotspot-module"></span><h2>open_cp.retrohotspot module<a class="headerlink" href="#module-open_cp.retrohotspot" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="retrohotspot">
+<h3>retrohotspot<a class="headerlink" href="#retrohotspot" title="Permalink to this headline">¶</a></h3>
+<p>This is a traditional hotspotting technique.  A window of past data (values
+around two months seem to be common) is used; the timestamps of the data are
+then ignored.  Around each point we lay down a kernel: typically this is
+localised in space, e.g. a &#8220;quartic&#8221; kernel with a certain bandwidth.  These
+are then summed to arrive at an overall relative risk.</p>
+<p>Traditionally, a grid-based risk is produced, instead of a continuous kernel.
+(It seems likely this is due to limitations of historic technology, and not due
+to any belief in intrinsic superiority of this method).  A grid is laid down,
+and in computing the weight assigned to each grid cell, the distance from the
+mid-point of that cell to each event is used.</p>
+<p>To provide your work kernel / weight, subclass the abstract base class Weight.</p>
+<dl class="class">
+<dt id="open_cp.retrohotspot.Quartic">
+<em class="property">class </em><code class="descclassname">open_cp.retrohotspot.</code><code class="descname">Quartic</code><span class="sig-paren">(</span><em>bandwidth=200</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.retrohotspot.Quartic" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.retrohotspot.Weight" title="open_cp.retrohotspot.Weight"><code class="xref py py-class docutils literal"><span class="pre">open_cp.retrohotspot.Weight</span></code></a></p>
+<p>The classic &#8220;quartic&#8221; weight, which is the function :math (1-d^2)^2:
+for :math <a href="#id10"><span class="problematic" id="id11">|d|</span></a> leq 1:.  In general, we compute the distance from the
+origin and then divide by a bandwidth to create the variable :math d:.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>bandwidth</strong> &#8211; The maximum extend of the kernel.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.retrohotspot.RetroHotSpot">
+<em class="property">class </em><code class="descclassname">open_cp.retrohotspot.</code><code class="descname">RetroHotSpot</code><a class="headerlink" href="#open_cp.retrohotspot.RetroHotSpot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.predictors.DataTrainer" title="open_cp.predictors.DataTrainer"><code class="xref py py-class docutils literal"><span class="pre">open_cp.predictors.DataTrainer</span></code></a></p>
+<p>Implements the retro-spective hotspotting algorithm.  To change the
+weight/kernel used, set the :attribute weight: attribute.</p>
+<dl class="method">
+<dt id="open_cp.retrohotspot.RetroHotSpot.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>start_time=None</em>, <em>end_time=None</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.retrohotspot.RetroHotSpot.predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Produce a continuous risk prediction over the optional time range.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>start_time</strong> &#8211; If given, only use the data with a timestamp after</td>
+</tr>
+</tbody>
+</table>
+<p>this time.
+:param end_time: If given, only use the data with a timestamp before
+this time.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.retrohotspot.RetroHotSpotGrid">
+<em class="property">class </em><code class="descclassname">open_cp.retrohotspot.</code><code class="descname">RetroHotSpotGrid</code><span class="sig-paren">(</span><em>region</em>, <em>grid_size=150</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.retrohotspot.RetroHotSpotGrid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.predictors.DataTrainer" title="open_cp.predictors.DataTrainer"><code class="xref py py-class docutils literal"><span class="pre">open_cp.predictors.DataTrainer</span></code></a></p>
+<p>Applies the grid-based retro-spective hotspotting algorithm.
+To change the weight/kernel used, set the :attribute weight: attribute.</p>
+<p>This applies a grid at the start of the algorithm, and so differs from
+using :class RetroHotSpot: and then gridding the resulting continuous risk 
+estimate.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>region</strong> &#8211; An instance of :RectangularRegion: giving the region the</td>
+</tr>
+</tbody>
+</table>
+<p>grid should cover.
+:param grid_size: The size of grid to use.</p>
+<dl class="method">
+<dt id="open_cp.retrohotspot.RetroHotSpotGrid.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>start_time=None</em>, <em>end_time=None</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.retrohotspot.RetroHotSpotGrid.predict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.retrohotspot.Weight">
+<em class="property">class </em><code class="descclassname">open_cp.retrohotspot.</code><code class="descname">Weight</code><a class="headerlink" href="#open_cp.retrohotspot.Weight" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Base class for kernels / weights for the retrospective hotspotting
+algorithm.</p>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="module-open_cp.sepp">
+<span id="open-cp-sepp-module"></span><h2>open_cp.sepp module<a class="headerlink" href="#module-open_cp.sepp" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="sepp">
+<h3>sepp<a class="headerlink" href="#sepp" title="Permalink to this headline">¶</a></h3>
+<p>Implements the ETAS (Epidemic Type Aftershock-Sequences) model intensity
+estimation scheme outlined in Mohler et al. (2011).</p>
+<p>As this is a statistical model, we separate out the statistical optimisation
+procedure into a separate class, :class StocasticDecluster:  This allows
+testing and exploration of the model without worry about real world issues such
+as time-stamps.</p>
+<p>We can think of this algorithm in terms of a &#8220;machine learning&#8221; workflow, and
+separate a &#8220;training&#8221; stage from a &#8220;prediction&#8221; stage.  The statistical model
+is that we have a &#8220;background&#8221; rate of random events, and then that existing
+events cause a time/space localised increase in risk, described by a &#8220;trigger&#8221;
+kernel.  The trigger kernel does not vary with the time/space location of the
+event (which is perhaps a limit of the model).  As such, both the background
+and trigger kernels should be fairly constant in time, and so if &#8220;trained&#8221;
+on historical data, should be valid to make predictions for, say, the next
+few weeks or months.  (Over long time scales, we should expect the background
+kernel to change.)</p>
+<p>This is also useful in practise, as the training stage is slow, but once
+trained, the kernels can quickly be evaluated to make predictions.</p>
+</div>
+<div class="section" id="references">
+<h3>References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h3>
+<dl class="docutils">
+<dt>Mohler et al, &#8220;Self-Exciting Point Process Modeling of Crime&#8221;,</dt>
+<dd>Journal of the American Statistical Association, 2011
+DOI: 10.1198/jasa.2011.ap09546</dd>
+</dl>
+<p>Rosser, Cheng, &#8220;Improving the Robustness and Accuracy of Crime Prediction with
+the Self-Exciting Point Process Through Isotropic Triggering&#8221;</p>
+<blockquote>
+<div>Appl. Spatial Analysis
+DOI: 10.1007/s12061-016-9198-y</div></blockquote>
+<dl class="class">
+<dt id="open_cp.sepp.AverageTimeAdjustedKernel">
+<em class="property">class </em><code class="descclassname">open_cp.sepp.</code><code class="descname">AverageTimeAdjustedKernel</code><span class="sig-paren">(</span><em>kernel</em>, <em>time_end</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.AverageTimeAdjustedKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.kernels.Kernel" title="open_cp.kernels.Kernel"><code class="xref py py-class docutils literal"><span class="pre">open_cp.kernels.Kernel</span></code></a></p>
+<p>Wraps a :class Kernel: instance, which supports the <cite>space_kernel</cite> and
+<cite>time_kernel</cite> interface, and builds a new kernel which is constant in time.
+The time intensity is computed by taking an average of the middle half
+of the original time kernel.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>kernel</strong> &#8211; The original kernel to delegate to.</li>
+<li><strong>time_end</strong> &#8211; We assume that the original kernel is roughly correct</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>for times in the range 0 to <cite>time_end</cite>.</p>
+<dl class="method">
+<dt id="open_cp.sepp.AverageTimeAdjustedKernel.set_scale">
+<code class="descname">set_scale</code><span class="sig-paren">(</span><em>value</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.AverageTimeAdjustedKernel.set_scale" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="open_cp.sepp.AverageTimeAdjustedKernel.space_kernel">
+<code class="descname">space_kernel</code><span class="sig-paren">(</span><em>points</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.AverageTimeAdjustedKernel.space_kernel" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="open_cp.sepp.AverageTimeAdjustedKernel.time_kernel">
+<code class="descname">time_kernel</code><span class="sig-paren">(</span><em>points</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.AverageTimeAdjustedKernel.time_kernel" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.sepp.OptimisationResult">
+<em class="property">class </em><code class="descclassname">open_cp.sepp.</code><code class="descname">OptimisationResult</code><span class="sig-paren">(</span><em>kernel</em>, <em>p</em>, <em>background_kernel</em>, <em>trigger_kernel</em>, <em>ell2_error</em>, <em>time_cutoff=None</em>, <em>space_cutoff=None</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.OptimisationResult" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Contains results of the optimisation process.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>kernel</strong> &#8211; the overall estimated intensity kernel.</li>
+<li><strong>p</strong> &#8211; the estimated probability matrix.</li>
+<li><strong>background_kernel</strong> &#8211; the estimatede background event intensity kernel.</li>
+<li><strong>trigger_kernel</strong> &#8211; the estimated triggered event intensity kernel.</li>
+<li><strong>ell2_error</strong> &#8211; an array of the L^2 differences between successive</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>estimates of the probability matrix.  That these decay is a good indication
+of convergence.
+:param time_cutoff: Optionally specify the maximum time extent of the
+trigger_kernel used in calculations.
+:param space_cutoff: Optionally specify the maximum space extent of the
+trigger_kernel used in calculations.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.sepp.SEPPPredictor">
+<em class="property">class </em><code class="descclassname">open_cp.sepp.</code><code class="descname">SEPPPredictor</code><span class="sig-paren">(</span><em>result</em>, <em>epoch_start</em>, <em>epoch_end</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.SEPPPredictor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.predictors.DataTrainer" title="open_cp.predictors.DataTrainer"><code class="xref py py-class docutils literal"><span class="pre">open_cp.predictors.DataTrainer</span></code></a></p>
+<p>Returned by :class SEPPTrainer: encapsulated computed background and
+triggering kernels.  This class allows these to be evaluated on potentially
+different data to produce predictions.</p>
+<p>When making a prediction, the <em>time</em> component of the background kernel
+is ignored.  This is allowed, because the kernel estimation used looks
+at time and space separately for the background kernel.  We do this because
+KDE methods don&#8217;t allow us to &#8220;predict&#8221; into the future.</p>
+<p>This class also stores information about the optimisation procedure.</p>
+<dl class="attribute">
+<dt id="open_cp.sepp.SEPPPredictor.background_kernel">
+<code class="descname">background_kernel</code><a class="headerlink" href="#open_cp.sepp.SEPPPredictor.background_kernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>The original, non-adjusted background kernel estimated by the
+training algorithm.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.sepp.SEPPPredictor.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>predict_time</em>, <em>cutoff_time=None</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.SEPPPredictor.predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a prediction at a time, using the data held by this instance.
+That is, evaluate the background kernel plus the trigger kernel at
+events before the prediction time.  Optionally you can limit the data
+used, though this is against the underlying statistical model.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>predict_time</strong> &#8211; Time point to make a prediction at.</li>
+<li><strong>cutoff_time</strong> &#8211; Optionally, limit the input data to only be from</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>before this time.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Instance of :class predictors.ContinuousPrediction:</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.sepp.SEPPPredictor.trigger_kernel">
+<code class="descname">trigger_kernel</code><a class="headerlink" href="#open_cp.sepp.SEPPPredictor.trigger_kernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>The trigger / aftershock kernel estimated by the training
+algorithm.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.sepp.SEPPTrainer">
+<em class="property">class </em><code class="descclassname">open_cp.sepp.</code><code class="descname">SEPPTrainer</code><span class="sig-paren">(</span><em>k_time=100</em>, <em>k_space=15</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.SEPPTrainer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.predictors.DataTrainer" title="open_cp.predictors.DataTrainer"><code class="xref py py-class docutils literal"><span class="pre">open_cp.predictors.DataTrainer</span></code></a></p>
+<p>Use the algorithm described in Mohler et al. 2011.  The kernel
+estimation used is the &#8220;kth nearest neighbour variable bandwidth Gaussian&#8221;
+KDE.  This is a two-step algorithm: this class &#8220;trains&#8221; itself on data,
+and returns a class which can then make predictions, possibly on other
+data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>k_time</strong> &#8211; The kth nearest neighbour to use in the KDE of the time</td>
+</tr>
+</tbody>
+</table>
+<p>kernel; defaults to 100.
+:param k_space: The kth nearest neighbour to use in the KDE of space and
+space/time kernels; defaults to 15.</p>
+<dl class="method">
+<dt id="open_cp.sepp.SEPPTrainer.as_time_space_points">
+<code class="descname">as_time_space_points</code><span class="sig-paren">(</span><em>cutoff_time=None</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.SEPPTrainer.as_time_space_points" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a copy of the input data as an array of shape (3,N) of
+time/space points (without units), as used by the declustering
+algorithm.  Useful when trying to understand what the algorithm is
+doing.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.sepp.SEPPTrainer.space_cutoff">
+<code class="descname">space_cutoff</code><a class="headerlink" href="#open_cp.sepp.SEPPTrainer.space_cutoff" title="Permalink to this definition">¶</a></dt>
+<dd><p>To speed up optimisation, set this to the minimal distance at which
+we think the spacial triggering will be effectively zero.  For real
+data, 500m is a reasonable estimate.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.sepp.SEPPTrainer.time_cutoff">
+<code class="descname">time_cutoff</code><a class="headerlink" href="#open_cp.sepp.SEPPTrainer.time_cutoff" title="Permalink to this definition">¶</a></dt>
+<dd><p>To speed up optimisation, set this to the minimal time gap at which
+we think the spacial triggering will be effectively zero.  For real
+data, 120 days is a reasonable estimate.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.sepp.SEPPTrainer.train">
+<code class="descname">train</code><span class="sig-paren">(</span><em>cutoff_time=None</em>, <em>iterations=40</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.SEPPTrainer.train" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform the (slow) training step on historical data.  This estimates
+kernels, and returns an object which can make predictions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>cutoff_time</strong> &#8211; If specified, then limit the historical data to</td>
+</tr>
+</tbody>
+</table>
+<p>before this time.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A :class SEPPPredictor: instance.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.sepp.SEPPTrainer.trigger_kernel_estimator">
+<code class="descname">trigger_kernel_estimator</code><a class="headerlink" href="#open_cp.sepp.SEPPTrainer.trigger_kernel_estimator" title="Permalink to this definition">¶</a></dt>
+<dd><p>The kernel estimator to use for triggered events.  Defaults to a kth
+nearest neighbour variable-bandwidth Gaussian kernel estimator with the
+value of <cite>k</cite> set in the constructor.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.sepp.StocasticDecluster">
+<em class="property">class </em><code class="descclassname">open_cp.sepp.</code><code class="descname">StocasticDecluster</code><span class="sig-paren">(</span><em>background_kernel_estimator=None</em>, <em>trigger_kernel_estimator=None</em>, <em>initial_time_bandwidth=144.0</em>, <em>initial_space_bandwidth=50.0</em>, <em>space_cutoff=500.0</em>, <em>time_cutoff=172800.0</em>, <em>points=None</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.StocasticDecluster" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Implements the &#8216;stocastic declustering algorithm&#8217; from Mohler et al
+(2011).  This allows estimation of two time-space kernels, one for the
+background events, and one the &#8216;trigger&#8217; kernel which elevates risk
+according to past events.</p>
+<p>This class works with floating-point data, and exposes elements of the
+underlying optimisation algorithm.  It is designed for testing and
+experimentation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>background_kernel_estimator</strong> &#8211; The kernel estimator to use for</td>
+</tr>
+</tbody>
+</table>
+<p>background events.
+:param trigger_kernel_estimator: The kernel estimator to use for triggered
+/ aftershock events.
+:param initial_time_bandwidth: The bandwidth in time to use when making an
+initial classification of data into background or triggered events.  Default
+is 0.1 day**(-1) in units of minutes (so 0.1*24*60).
+:param initial_space_bandwidth: The bandwidth in space to use when making
+an initial classification of data into background or triggered events.
+Default is 50 units.
+:param space_cutoff: The maximum distance we believe the triggered kernel
+will extend to in space.  Decrease this to improve the speed of the
+estimation, at the cost of possibly missing data.  Default is 500 units.
+:param time_cutoff: The maximum distance we believe the triggered kernel
+will extend to in time.  Decrease this to improve the speed of the
+estimation, at the cost of possibly missing data.  Default is 120 days,
+in units of minutes (so 120*24*60).
+:param points: The three dimensional data.  <cite>points[0]</cite> is the times of
+events, and <cite>points[1]</cite> and <cite>points[2]</cite> are the x and y coordinates.</p>
+<dl class="method">
+<dt id="open_cp.sepp.StocasticDecluster.next_iteration">
+<code class="descname">next_iteration</code><span class="sig-paren">(</span><em>p</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.StocasticDecluster.next_iteration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform a single iteration of the optimisation algorithm:
+1. Samples background and triggered events using the p matrix.
+2. Estimates kernels from these samples.
+3. Normalises these kernels.
+4. Computes the new p matrix from these kernels.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>p</strong> &#8211; The matrix of probabilities to sample from.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A triple <cite>(p, bkernel, tkernel)</cite> where <cite>p</cite> is the new</td>
+</tr>
+</tbody>
+</table>
+<p>probability matrix, <cite>bkernel</cite> the kernel for background events used to
+compute <cite>p</cite>, and <cite>tkernel</cite> the kernel for triggered events.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.sepp.StocasticDecluster.run_optimisation">
+<code class="descname">run_optimisation</code><span class="sig-paren">(</span><em>iterations=20</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.StocasticDecluster.run_optimisation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Runs the optimisation algorithm by taking an initial estimation of
+the probability matrix, and then running the optimisation step.  If
+this step ever classifies most events as background, or as triggered,
+then optimisation will fail.  Tuning the initial bandwidth parameters
+may help.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>iterations</strong> &#8211; The number of optimisation steps to perform.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><a class="reference internal" href="#open_cp.sepp.OptimisationResult" title="open_cp.sepp.OptimisationResult"><code class="xref py py-class docutils literal"><span class="pre">OptimisationResult</span></code></a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.sepp.initial_p_matrix">
+<code class="descclassname">open_cp.sepp.</code><code class="descname">initial_p_matrix</code><span class="sig-paren">(</span><em>points</em>, <em>initial_time_bandwidth=0.1</em>, <em>initial_space_bandwidth=50.0</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.initial_p_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an initial estimate of the probability matrix.  Uses a Gaussian
+kernel in space, and an exponential kernel in time, both non-normalised.
+Diagonal (i.e. background &#8220;probabilities&#8221;) are set to 1.  Finally the
+matrix is normalised.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>points</strong> &#8211; The (time, x, y) data.</li>
+<li><strong>initial_time_bandwidth</strong> &#8211; The &#8220;scale&#8221; of the exponential.</li>
+<li><strong>initial_space_bandwidth</strong> &#8211; The standard deviation of the Gaussian.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.sepp.make_kernel">
+<code class="descclassname">open_cp.sepp.</code><code class="descname">make_kernel</code><span class="sig-paren">(</span><em>data</em>, <em>background_kernel</em>, <em>trigger_kernel</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.make_kernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Produce a kernel object which evaluates the background kernel, and
+the trigger kernel based on the space-time locations in the data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>data</strong> &#8211; An array of shape <cite>(3,N)</cite> giving the space-time locations</td>
+</tr>
+</tbody>
+</table>
+<p>events.  Used when computing the triggered / aftershock events.
+:param background_kernel: The kernel object giving the background risk
+intensity.
+:param trigger_kernel: The kernel object giving the trigger / aftershock
+risk intensity.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A kernel object which can be called on arrays on points.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.sepp.make_space_kernel">
+<code class="descclassname">open_cp.sepp.</code><code class="descname">make_space_kernel</code><span class="sig-paren">(</span><em>data</em>, <em>background_kernel</em>, <em>trigger_kernel</em>, <em>time</em>, <em>time_cutoff=None</em>, <em>space_cutoff=None</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.make_space_kernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Produce a kernel object which evaluates the background kernel, and
+the trigger kernel based on the space locations in the data, always using
+the fixed time as passed in.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>data</strong> &#8211; An array of shape <cite>(3,N)</cite> giving the space-time locations</td>
+</tr>
+</tbody>
+</table>
+<p>events.  Used when computing the triggered / aftershock events.
+:param background_kernel: The kernel object giving the background risk
+intensity.  We assume this has a method <cite>space_kernel</cite> which gives just
+the two dimensional spacial kernel.
+:param trigger_kernel: The kernel object giving the trigger / aftershock
+risk intensity.
+:param time: The fixed time coordinate to evaluate at.
+:param time_cutoff: Optional; if set, then we assume the trigger_kernel is
+zero for times greater than this value (to speed up evaluation).
+:param space_cutoff: Optional; if set, then we assume the trigger_kernel is
+zero for space distances greater than this value (to speed up evaluation).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A kernel object which can be called on arrays of (2 dimensional</td>
+</tr>
+</tbody>
+</table>
+<p>space) points.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.sepp.p_matrix">
+<code class="descclassname">open_cp.sepp.</code><code class="descname">p_matrix</code><span class="sig-paren">(</span><em>points</em>, <em>background_kernel</em>, <em>trigger_kernel</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.p_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the probability matrix.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>points</strong> &#8211; The (time, x, y) data</li>
+<li><strong>background_kernel</strong> &#8211; The kernel giving the background event intensity.</li>
+<li><strong>trigger_kernel</strong> &#8211; The kernel giving the triggered event intensity.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A matrix <cite>p</cite> such that <cite>p[i][i]</cite> is the probability event <cite>i</cite> is a</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>background event, and <cite>p[i][j]</cite> is the probability event <cite>j</cite> is triggered
+by event <cite>i</cite>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.sepp.p_matrix_fast">
+<code class="descclassname">open_cp.sepp.</code><code class="descname">p_matrix_fast</code><span class="sig-paren">(</span><em>points</em>, <em>background_kernel</em>, <em>trigger_kernel</em>, <em>time_cutoff=150</em>, <em>space_cutoff=1</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.p_matrix_fast" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the probability matrix.  Offers faster execution speed than
+<a href="#id7"><span class="problematic" id="id8">:function:`p_matrix`</span></a> by, in the calculation of triggered event
+probabilities, ignoring events which are beyond a space or time cutoff.
+These parameters should be set so that the <cite>trigger_kernel</cite> evaluates to
+(very close to) zero outside the cutoff zone.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>points</strong> &#8211; The (time, x, y) data</li>
+<li><strong>background_kernel</strong> &#8211; The kernel giving the background event intensity.</li>
+<li><strong>trigger_kernel</strong> &#8211; The kernel giving the triggered event intensity.</li>
+<li><strong>time_cutoff</strong> &#8211; The maximum time between two events which can be</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>considered in the trigging calculation.
+:param space_cutoff: The maximum (two-dimensional Eucliean) distance
+between two events which can be considered in the trigging calculation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A matrix <cite>p</cite> such that <cite>p[i][i]</cite> is the probability event <cite>i</cite> is a</td>
+</tr>
+</tbody>
+</table>
+<p>background event, and <cite>p[i][j]</cite> is the probability event <cite>j</cite> is triggered
+by event <cite>i</cite>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.sepp.sample_points">
+<code class="descclassname">open_cp.sepp.</code><code class="descname">sample_points</code><span class="sig-paren">(</span><em>points</em>, <em>p</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.sample_points" title="Permalink to this definition">¶</a></dt>
+<dd><p>Using the probability matrix, sample background and triggered points.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>points</strong> &#8211; The (time, x, y) data.</li>
+<li><strong>p</strong> &#8211; The probability matrix.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A pair of <cite>(backgrounds, triggered)</cite> where <cite>backgrounds</cite> is the</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>(time, x, y) data of the points classified as being background events,
+and <cite>triggered</cite> is the (time, x, y) <em>delta</em> of the triggered events.
+That is, <cite>triggered</cite> represents the difference in space and time between
+each triggered event and the event which triggered it, as sampled from the
+probability matrix.</p>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="module-open_cp.seppexp">
+<span id="open-cp-seppexp-module"></span><h2>open_cp.seppexp module<a class="headerlink" href="#module-open_cp.seppexp" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="seppexp">
+<h3>seppexp<a class="headerlink" href="#seppexp" title="Permalink to this headline">¶</a></h3>
+<p>Implements the ETAS (Epidemic Type Aftershock-Sequences) model intensity
+estimation scheme outlined in Mohler et al. (2015).  This model is somewhat
+different, and simplified, from that used in the <cite>sepp</cite> module:</p>
+<ul class="simple">
+<li>This is an explicitly grid based model.  All events are assigned to the grid</li>
+</ul>
+<p>cell in which the occur, and we make no more use of their location.
+- For each cell, we produce an independent estimate of the background rate of
+events.
+- We model &#8220;self-excitation&#8221; only in time, as a simple exponential decay (much
+like the classical Hawkes model in Financial mathematics).  We assume the decay
+parameters are the same across all grid cells.</p>
+</div>
+<div class="section" id="id9">
+<h3>References<a class="headerlink" href="#id9" title="Permalink to this headline">¶</a></h3>
+<dl class="docutils">
+<dt>Mohler et al, &#8220;Randomized Controlled Field Trials of Predictive Policing&#8221;,</dt>
+<dd>Journal of the American Statistical Association (2015)
+DOI:10.1080/01621459.2015.1077710</dd>
+<dt>Lewis, Mohler, &#8220;A Nonparametric EM Algorithm for Multiscale Hawkes Processes&#8221;</dt>
+<dd>in Proceedings of the 2011 Joint Statistical Meetings, pp. 1–16
+<a class="reference external" href="http://math.scu.edu/~gmohler/EM_paper.pdf">http://math.scu.edu/~gmohler/EM_paper.pdf</a></dd>
+</dl>
+<dl class="class">
+<dt id="open_cp.seppexp.SEPPPredictor">
+<em class="property">class </em><code class="descclassname">open_cp.seppexp.</code><code class="descname">SEPPPredictor</code><span class="sig-paren">(</span><em>region</em>, <em>grid_size</em>, <em>omega</em>, <em>theta</em>, <em>mu</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.seppexp.SEPPPredictor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.predictors.DataTrainer" title="open_cp.predictors.DataTrainer"><code class="xref py py-class docutils literal"><span class="pre">open_cp.predictors.DataTrainer</span></code></a></p>
+<p>Returned by :class SEPPTrainer: encapsulated computed background rates
+and triggering parameters.  This class allows these to be evaluated on
+potentially different data to produce predictions.</p>
+<dl class="method">
+<dt id="open_cp.seppexp.SEPPPredictor.background_prediction">
+<code class="descname">background_prediction</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.seppexp.SEPPPredictor.background_prediction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a &#8220;prediction&#8221; just using the background rate.  Useful as it
+allows a direct comparison with the output of :method predict:</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Instance of :class predictors.GridPredictionArray:</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.seppexp.SEPPPredictor.background_rate">
+<code class="descname">background_rate</code><span class="sig-paren">(</span><em>x</em>, <em>y</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.seppexp.SEPPPredictor.background_rate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the background rate in grid cell (x,y).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.seppexp.SEPPPredictor.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>predict_time</em>, <em>cutoff_time=None</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.seppexp.SEPPPredictor.predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a prediction at a time, using the data held by this instance.
+That is, evaluate the background rate plus the trigger kernel at
+events before the prediction time.  Optionally you can limit the data
+used, though this is against the underlying statistical model.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>predict_time</strong> &#8211; Time point to make a prediction at.</li>
+<li><strong>cutoff_time</strong> &#8211; Optionally, limit the input data to only be from</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>before this time.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Instance of :class predictors.GridPredictionArray:</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.seppexp.SEPPTrainer">
+<em class="property">class </em><code class="descclassname">open_cp.seppexp.</code><code class="descname">SEPPTrainer</code><span class="sig-paren">(</span><em>region</em>, <em>grid_size=50</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.seppexp.SEPPTrainer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.predictors.DataTrainer" title="open_cp.predictors.DataTrainer"><code class="xref py py-class docutils literal"><span class="pre">open_cp.predictors.DataTrainer</span></code></a></p>
+<p>Use the algorithm described in Mohler et al. 2015.  The input data is
+placed into grid cells, and background rates estimated for each cell.  The
+parameters for the exponential decay model of self-excitation are also
+estimated.  The returned object can be used to make predictions of risk
+from other data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>region</strong> &#8211; The rectangular region the grid should cover.</li>
+<li><strong>grid_size</strong> &#8211; The size of grid to use.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="open_cp.seppexp.SEPPTrainer.train">
+<code class="descname">train</code><span class="sig-paren">(</span><em>cutoff_time=None</em>, <em>iterations=20</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.seppexp.SEPPTrainer.train" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform the (slow) training step on historical data.  This estimates
+kernels, and returns an object which can make predictions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>cutoff_time</strong> &#8211; If specified, then limit the historical data to</td>
+</tr>
+</tbody>
+</table>
+<p>before this time.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A :class SEPPPredictor: instance.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.seppexp.maximisation">
+<code class="descclassname">open_cp.seppexp.</code><code class="descname">maximisation</code><span class="sig-paren">(</span><em>cells</em>, <em>omega</em>, <em>theta</em>, <em>mu</em>, <em>time_duration</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.seppexp.maximisation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform an iteration of the EM algorithm.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>cells</strong> &#8211; An array (of any shape) each entry of which is an array of</td>
+</tr>
+</tbody>
+</table>
+<p>times of events, in increasing order.
+:param mu: An array, of the same shape as <cite>cells</cite>, giving the background
+rate in each cell.
+:param time_duration: The total time range of the data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Triple (omega, theta, mu) of new estimates.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.seppexp.maximisation_corrected">
+<code class="descclassname">open_cp.seppexp.</code><code class="descname">maximisation_corrected</code><span class="sig-paren">(</span><em>cells</em>, <em>omega</em>, <em>theta</em>, <em>mu</em>, <em>time_duration</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.seppexp.maximisation_corrected" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform an iteration of the EM algorithm.  This version applies &#8220;edge
+corrections&#8221; (see Lewis, Mohler) which take account of the fact that by
+looking at a finite time window, we ignore aftershocks which occur after
+the end of the time window.  This leads to better parameter estimation
+when <cite>omega</cite> is small.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>cells</strong> &#8211; An array (of any shape) each entry of which is an array of</td>
+</tr>
+</tbody>
+</table>
+<p>times of events, in increasing order.
+:param mu: An array, of the same shape as <cite>cells</cite>, giving the background
+rate in each cell.
+:param time_duration: The total time range of the data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Triple (omega, theta, mu) of new estimates.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.seppexp.p_matrix">
+<code class="descclassname">open_cp.seppexp.</code><code class="descname">p_matrix</code><span class="sig-paren">(</span><em>points</em>, <em>omega</em>, <em>theta</em>, <em>mu</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.seppexp.p_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the probability matrix.  Diagonal entries are the background
+rate, and entry [i,j] is <cite>g(points[j] - points[i])</cite> for i&lt;j, where
+:math g(t) =        heta omega e^{-omega t}:  Finally we normalise the matrix
+to have columns which sum to 1.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>points</strong> &#8211; A one-dimensional array of the times of events, in</td>
+</tr>
+</tbody>
+</table>
+<p>increasing order.
+:param omega: The scale of the &#8220;triggering&#8221; exponential distribution
+:param theta: The rate of the &#8220;triggering&#8221; intensity
+:param mu: The background Poisson process rate.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">The normalised probability matrix.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="module-open_cp">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-open_cp" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">open_cp package</a><ul>
+<li><a class="reference internal" href="#subpackages">Subpackages</a></li>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-open_cp.data">open_cp.data module</a></li>
+<li><a class="reference internal" href="#module-open_cp.kernels">open_cp.kernels module</a><ul>
+<li><a class="reference internal" href="#kernels">kernels</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-open_cp.predictors">open_cp.predictors module</a><ul>
+<li><a class="reference internal" href="#predictors">predictors</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-open_cp.prohotspot">open_cp.prohotspot module</a><ul>
+<li><a class="reference internal" href="#prohotspot">prohotspot</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-open_cp.retrohotspot">open_cp.retrohotspot module</a><ul>
+<li><a class="reference internal" href="#retrohotspot">retrohotspot</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-open_cp.sepp">open_cp.sepp module</a><ul>
+<li><a class="reference internal" href="#sepp">sepp</a></li>
+<li><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-open_cp.seppexp">open_cp.seppexp module</a><ul>
+<li><a class="reference internal" href="#seppexp">seppexp</a></li>
+<li><a class="reference internal" href="#id9">References</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-open_cp">Module contents</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/source/open_cp.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, University of Leeds.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+      |
+      <a href="../_sources/source/open_cp.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

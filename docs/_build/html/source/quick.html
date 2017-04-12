@@ -1,0 +1,176 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Quick start &#8212; OpenCP 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="open_cp.data" href="data.html" />
+    <link rel="prev" title="Welcome to OpenCP’s documentation" href="../index.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="quick-start">
+<h1>Quick start<a class="headerlink" href="#quick-start" title="Permalink to this headline">¶</a></h1>
+<p>As a work in progress, the <a class="reference internal" href="open_cp.html"><span class="doc">open_cp package</span></a> module cannot be installed, but can simply be imported.  This is a Python 3 module.
+It relies upon <cite>numpy</cite> only, for core functionality.</p>
+<ol class="arabic simple">
+<li>The recommended Python distribution is <a class="reference external" href="https://www.continuum.io/downloads">Anaconda</a></li>
+<li>Fork or download <a class="reference external" href="https://github.com/QuantCrimAtLeeds/PredictCode">the repository</a> from github.</li>
+<li>Unpack on your computer and in the main directory run <cite>jupyter notebook</cite>.</li>
+<li>Navigate to the <a class="reference external" href="https://github.com/QuantCrimAtLeeds/PredictCode/tree/master/examples">examples</a> directory
+and look at the example notebooks.</li>
+</ol>
+<div class="section" id="data-input">
+<h2>Data input<a class="headerlink" href="#data-input" title="Permalink to this headline">¶</a></h2>
+<p>Input data is encapsulated in a <a class="reference internal" href="data.html#open_cp.data.TimedPoints" title="open_cp.data.TimedPoints"><code class="xref any py py-class docutils literal"><span class="pre">TimedPoints</span></code></a> class.
+We assume that these are &#8220;homogeneous&#8221;, in that they represent a flat geometry.  That is, data in units of meters, feet, miles etc. is allowed;
+data as longitude / latitude won&#8217;t function correctly.</p>
+<p>We provide converters from various other formats:</p>
+<ul class="simple">
+<li>Using <a class="reference external" href="https://github.com/jswhit/pyproj">pyproj</a> we support conversion from longitude / latitude data given a map projection.</li>
+</ul>
+<p>See the <a class="reference internal" href="data.html#module-open_cp.data" title="open_cp.data"><code class="xref any py py-mod docutils literal"><span class="pre">open_cp.data</span></code></a> module.</p>
+</div>
+<div class="section" id="prediction">
+<h2>Prediction<a class="headerlink" href="#prediction" title="Permalink to this headline">¶</a></h2>
+<p>Prediction algorithms seek to give an estimate of &#8220;risk intensity&#8221;, which we can think of as:</p>
+<blockquote>
+<div>Pick a point <cite>(x,y)</cite> and a small region <cite>A</cite> around the point with area <cite>|A|</cite>.  The risk intensity <cite>f(x,y)</cite> is the expected number of events to occur <cite>A</cite> in the next time window,
+divided by the area <cite>A</cite> times the size of the time window.</div></blockquote>
+<p>(Mathematically, <span class="math">\(f(x,y)\)</span> is the <em>limit</em> as both <span class="math">\(|A|\)</span> and the time window become very small.)  Point process algorithms may estimate <span class="math">\(f\)</span>
+as a continuously varying kernel, while grid based techniques will divide space into a grid, and estimate <span class="math">\(f\)</span> as a constant value in each grid cell.</p>
+<p>Once the relative risk intensity has been estimated, it is common to sample the risk intensity to a grid (if the prediction method was continuous)
+and then to select the top 1%, 5%, 10% etc. grid cells by risk.  These can then form the basis for targeted &#8220;guardian&#8221; action.  For historic data, when
+&#8220;scoring&#8221; the prediction method, it is common to calculate the fraction of actual crime which occurred in these highest risk grid cells to get a &#8220;hit rate&#8221;.</p>
+<p>The module <a class="reference internal" href="open_cp.html#module-open_cp.predictors" title="open_cp.predictors"><code class="xref any py py-mod docutils literal"><span class="pre">open_cp.predictors</span></code></a> contains base classes and utility methods.</p>
+</div>
+<div class="section" id="data-sources">
+<h2>Data sources<a class="headerlink" href="#data-sources" title="Permalink to this headline">¶</a></h2>
+<p>The ability to load some external open data sources is provided (with instructions for downloading the actual data!) and some, currently simple,
+&#8220;synthetic data&#8221; producers are provided.  See the <a class="reference internal" href="open_cp.sources.html"><span class="doc">open_cp.sources package</span></a> sub-package.</p>
+</div>
+<div class="section" id="algorithms">
+<h2>Algorithms<a class="headerlink" href="#algorithms" title="Permalink to this headline">¶</a></h2>
+<p>See the <a class="reference external" href="https://github.com/QuantCrimAtLeeds/PredictCode/tree/master/examples">examples</a> notebooks for reviews of
+the literature, implementation details, and examples, for each of these algorithms.</p>
+<ul class="simple">
+<li>The <code class="xref any docutils literal"><span class="pre">retrohotspot.py</span></code> module implements the &#8220;retrospective hotspotting&#8221; algorithm.</li>
+<li>The <code class="xref any docutils literal"><span class="pre">prohotspot.py</span></code> module implements the &#8220;prospective hotspotting&#8221; algorithm.</li>
+<li>The <code class="xref any docutils literal"><span class="pre">sepp.py</span></code> module implements the &#8220;epidemic-type aftershock model&#8221; (ETAS) algorithm, with a variable bandwidth kernel density estimator.</li>
+<li>The <code class="xref any docutils literal"><span class="pre">seppexp.py</span></code> module implements a grid based parametric ETAS model.</li>
+</ul>
+</div>
+<div class="section" id="other-modules">
+<h2>Other modules<a class="headerlink" href="#other-modules" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>The <a class="reference internal" href="open_cp.html#module-open_cp.kernels" title="open_cp.kernels"><code class="xref any py py-mod docutils literal"><span class="pre">open_cp.kernels</span></code></a> module provides base classes for &#8220;kernels&#8221; (probability density functions, or risk intensity functions)
+along with some kernel density estimation algorithms.</li>
+</ul>
+</div>
+<div class="section" id="testing">
+<h2>Testing<a class="headerlink" href="#testing" title="Permalink to this headline">¶</a></h2>
+<p>The code has fairly good unit test coverage.  See the <a class="reference external" href="https://github.com/QuantCrimAtLeeds/PredictCode/tree/master/tests">tests</a> directory which
+contains <a class="reference external" href="https://docs.pytest.org/en/latest/">pytest</a> tests.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Quick start</a><ul>
+<li><a class="reference internal" href="#data-input">Data input</a></li>
+<li><a class="reference internal" href="#prediction">Prediction</a></li>
+<li><a class="reference internal" href="#data-sources">Data sources</a></li>
+<li><a class="reference internal" href="#algorithms">Algorithms</a></li>
+<li><a class="reference internal" href="#other-modules">Other modules</a></li>
+<li><a class="reference internal" href="#testing">Testing</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../index.html" title="previous chapter">Welcome to OpenCP&#8217;s documentation</a></li>
+      <li>Next: <a href="data.html" title="next chapter">open_cp.data</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/source/quick.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, University of Leeds.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+      |
+      <a href="../_sources/source/quick.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
