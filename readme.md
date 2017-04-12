@@ -9,4 +9,4 @@ algorithms from published sources.
 - [Example Jupyter notebooks](tree/master/examples) showing the different algorithms in action, together with
   discussion of the literature and implementation details.
 - [Notebooks](tree/master/notebooks) giving more technical details
-- TODO: Link to github pages for this repo showing Sphinx docs.
+- [Documentation](https://quantcrimatleeds.github.io/PredictCode/) extracted from the doc strings in the Python code.
