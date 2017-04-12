@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/QuantCrimAtLeeds/PredictCode.svg?branch=master)](https://travis-ci.org/QuantCrimAtLeeds/PredictCode)
+
 # Predictive algorithms for crime
 
 Python based implementations of algorithms to predict crime (which has a strong spatial
