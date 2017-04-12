@@ -61,7 +61,9 @@ def p_matrix(points, background_kernel, trigger_kernel):
     for j in range(1, number_data_points):
         d = points[:, j][:,None] - points[:, :j]
         p[0:j, j] = trigger_kernel(d)
-    p += _np.diag(background_kernel(points))
+    b = background_kernel(points)
+    for i in range(number_data_points):
+        p[i, i] = b[i]
     return _normalise_matrix(p)
 
 def p_matrix_fast(points, background_kernel, trigger_kernel, time_cutoff=150, space_cutoff=1):

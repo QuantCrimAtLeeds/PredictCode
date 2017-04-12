@@ -33,8 +33,15 @@ def _normalise_matrix(p):
     column_sums = _np.sum(p, axis=0)
     return p / column_sums[None,:]
 
+def _iter_array(a):
+    """Returns an iterable which yields tuples of indexes into the array `a`."""
+    return _itertools.product(*[list(range(i)) for i in a.shape])
+
 def p_matrix(points, omega, theta, mu):
-    """Computes the probability matrix.
+    """Computes the probability matrix.  Diagonal entries are the background
+    rate, and entry [i,j] is `g(points[j] - points[i])` for i<j, where
+    :math g(t) = \theta \omega e^{-\omega t}:  Finally we normalise the matrix
+    to have columns which sum to 1.
 
     :param points: A one-dimensional array of the times of events, in
     increasing order.
@@ -53,6 +60,27 @@ def p_matrix(points, omega, theta, mu):
         p[j, j] = mu
     return _normalise_matrix(p)
 
+def _slow_maximisation(cells, omega, theta, mu, time_duration):
+    """Pure Python implementation of :function maximisation: for testing."""
+    cells, mu = _np.asarray(cells), _np.asarray(mu)
+    new_mu = []
+    omega_1, omega_2, count = 0, 0, 0
+    for cell, m in zip(cells.ravel(), mu.ravel()):
+        p = p_matrix(cell, omega, theta, m)
+        diag = 0
+        for j in range(len(cell)):
+            for i in range(j):
+                omega_1 += p[i, j]
+                omega_2 += p[i, j] * (cell[j] - cell[i])
+            count += 1
+            diag += p[j, j]
+        new_mu.append(diag / time_duration)
+
+    omega = omega_1 / omega_2
+    theta = omega_1 / count
+    mu = _np.asarray(new_mu).reshape(mu.shape)
+    return (omega, theta, mu)
+
 def maximisation(cells, omega, theta, mu, time_duration):
     """Perform an iteration of the EM algorithm.
 
@@ -70,7 +98,7 @@ def maximisation(cells, omega, theta, mu, time_duration):
     diagonal_sums = _np.zeros_like(mu)
     event_counts = _np.zeros_like(mu)
     
-    for index in _itertools.product(*[list(range(i)) for i in cells.shape]):
+    for index in _iter_array(cells):
         times = cells[index]
         p = p_matrix(times, omega, theta, mu[index])
         diag_sum = _np.sum(_np.diag(p))
@@ -84,6 +112,37 @@ def maximisation(cells, omega, theta, mu, time_duration):
     theta = _np.sum(upper_trianglar_sums) / _np.sum(event_counts)
     mu = diagonal_sums / time_duration
 
+    return (omega, theta, mu)
+
+def _slow_maximisation_corrected(cells, omega, theta, mu, time_duration):
+    """Pure Python implementation of :function maximisation_corrected:
+    for testing.
+    """
+    cells, mu = _np.asarray(cells), _np.asarray(mu)
+    new_mu = []
+    omega_1, omega_2, count = 0, 0, 0
+    for cell, m in zip(cells.ravel(), mu.ravel()):
+        p = p_matrix(cell, omega, theta, m)
+        diag = 0
+        for j in range(len(cell)):
+            for i in range(j):
+                omega_1 += p[i, j]
+                omega_2 += p[i, j] * (cell[j] - cell[i])
+            count += 1
+            diag += p[j, j]
+        ctheta, comega = 0, 0
+        for t in cell:
+            c = time_duration - t
+            ce = _np.exp(-omega * c)
+            ctheta += ce
+            comega += c * ce
+        count -= ctheta
+        omega_2 += comega * theta
+        new_mu.append(diag / time_duration)
+
+    omega = omega_1 / omega_2
+    theta = omega_1 / count
+    mu = _np.asarray(new_mu).reshape(mu.shape)
     return (omega, theta, mu)
 
 def maximisation_corrected(cells, omega, theta, mu, time_duration):
@@ -126,9 +185,7 @@ def maximisation_corrected(cells, omega, theta, mu, time_duration):
 
     return (omega, theta, mu)
 
-
 def _make_cells(region, grid_size, events, times):
-    # Follow the row/col convention!!
     xsize, ysize = region.grid_size(grid_size)
     cells = _np.empty((ysize, xsize), dtype=_np.object)
     for x in range(xsize):
@@ -160,7 +217,17 @@ class SEPPPredictor(predictors.DataTrainer):
 
     def background_rate(self, x, y):
         """Return the background rate in grid cell (x,y)."""
-        return self.mu[x, y]
+        return self.mu[y, x]
+
+    def background_prediction(self):
+        """Make a "prediction" just using the background rate.  Useful as it
+        allows a direct comparison with the output of :method predict:
+        
+        :return: Instance of :class predictors.GridPredictionArray:
+        """
+        matrix = _np.array(self.mu, dtype=_np.float)
+        return predictors.GridPredictionArray(self.grid_size, self.grid_size,
+            matrix, self.region.xmin, self.region.ymin)
 
     def predict(self, predict_time, cutoff_time=None):
         """Make a prediction at a time, using the data held by this instance.
@@ -175,9 +242,20 @@ class SEPPPredictor(predictors.DataTrainer):
         :return: Instance of :class predictors.GridPredictionArray:
         """
         events = self.data.events_before(cutoff_time)
-        times = (events.timestamps - _np.datetime64(predict_time)) / _np.timedelta64(1, "m")
+        times = (_np.datetime64(predict_time) - events.timestamps) / _np.timedelta64(1, "m")
         cells = _make_cells(self.region, self.grid_size, events, times)
-        # TODO: Apply the model to make the risk!
+        if cells.shape != self.mu.shape:
+            raise ValueError("Background rate on grid sized {} but this region"
+                "gives grid of size {}".format(self.mu.shape, cells.shape))
+
+        matrix = _np.empty_like(cells, dtype=_np.float)
+        for index in _iter_array(cells):
+            dt = cells[index]
+            dt = dt[dt>0]
+            matrix[index] = _np.sum(self.theta * self.omega * _np.exp(-self.omega * dt))
+        matrix += self.mu
+        return predictors.GridPredictionArray(self.grid_size, self.grid_size,
+            matrix, self.region.xmin, self.region.ymin)
 
 
 class SEPPTrainer(predictors.DataTrainer):
@@ -212,9 +290,8 @@ class SEPPTrainer(predictors.DataTrainer):
         cells, time_duration = self._make_cells(events)
         theta = 0.5
         # time unit of minutes, want mean to be a day
-        omega = 0.007 # 1 / (60 * 24)
-        mu = _np.zeros_like(cells) + 0.5
-        # TODO: Are these initial parameters reasonable?  Is 10 enough iterations?
+        omega = 1 / (60 * 24)
+        mu = _np.zeros_like(cells, dtype=_np.float) + 0.5
         for _ in range(iterations):
             omega, theta, mu = maximisation(cells, omega, theta, mu, time_duration)
 
