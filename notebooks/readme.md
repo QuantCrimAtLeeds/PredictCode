@@ -8,3 +8,5 @@ These are notebooks using our code to verify that we can come to the same conclu
 
 - [Self-excited point process](sepp_testbed.ipynb): Using the "stocastic declustering algorithm" to recreate the appendix from Mohler et al (2011)
 - [Self-excited point process 2](sepp_2_testbed.ipynb): Using an Expectation Maximisation algorithm to recreate the first part of Lewis and Mohler (2011)
+- [Self-excited point process 2a](sepp_2a_testbed.ipynb): Further exploration of the EM algorithm, focusing on sample size and parameter range
+- [Kernel estimation](kernel_estimation.ipynb): A look at some of the kernel estimation techniques we need
