@@ -1,0 +1,406 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>open_cp.predictors &#8212; OpenCP 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="open_cp.retrohotspot" href="retrohotspot.html" />
+    <link rel="prev" title="open_cp.kernels" href="kernels.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-open_cp.predictors">
+<span id="open-cp-predictors"></span><h1>open_cp.predictors<a class="headerlink" href="#module-open_cp.predictors" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="predictors">
+<h2>predictors<a class="headerlink" href="#predictors" title="Permalink to this headline">¶</a></h2>
+<p>Contains base classes and utility functions for classes which make predictions,
+and classes which encapsulate a given prediction.</p>
+<dl class="class">
+<dt id="open_cp.predictors.ContinuousPrediction">
+<em class="property">class </em><code class="descclassname">open_cp.predictors.</code><code class="descname">ContinuousPrediction</code><span class="sig-paren">(</span><em>cell_width=50</em>, <em>cell_height=50</em>, <em>xoffset=0</em>, <em>yoffset=0</em>, <em>samples=50</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.ContinuousPrediction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>A prediction which allows the &#8220;risk&#8221; to be calculated at any point in a
+continuous fashion.  Allows monte-carlo sampling to produce a grid risk.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>cell_width</strong> &#8211; Width of cells to use in producing a grid risk.</li>
+<li><strong>cell_height</strong> &#8211; Height of cells to use in producing a grid risk.</li>
+<li><strong>xoffset</strong> &#8211; The x coordinate of the start of the grid.</li>
+<li><strong>yoffset</strong> &#8211; The y coordinate of the start of the grid.</li>
+<li><strong>samples</strong> &#8211; The number of samples to use when computing the risk in a</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>grid cell.</p>
+<dl class="method">
+<dt id="open_cp.predictors.ContinuousPrediction.grid_risk">
+<code class="descname">grid_risk</code><span class="sig-paren">(</span><em>gx</em>, <em>gy</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.ContinuousPrediction.grid_risk" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an estimate of the average risk in the grid cell</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.predictors.ContinuousPrediction.rebase">
+<code class="descname">rebase</code><span class="sig-paren">(</span><em>cell_width</em>, <em>cell_height</em>, <em>xoffset</em>, <em>yoffset</em>, <em>samples=50</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.ContinuousPrediction.rebase" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a new instance using the same risk but with a different grid
+size and offset</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.predictors.ContinuousPrediction.risk">
+<code class="descname">risk</code><span class="sig-paren">(</span><em>x</em>, <em>y</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.ContinuousPrediction.risk" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the risk at (a) coordinate(s).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>x</strong> &#8211; The x coordinate to evaluate the risk at.  May be a scalar</td>
+</tr>
+</tbody>
+</table>
+<p>or a one-dimensional numpy array.
+:param y: The y coordinate to evaluate the risk at.  Should match <cite>x</cite>
+in being a scalar or a one-dimensional numpy array.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A scalar or numpy array as appropriate.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.predictors.ContinuousPrediction.to_kernel">
+<code class="descname">to_kernel</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.ContinuousPrediction.to_kernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a callable object which when called at <cite>point</cite> gives the
+risk at (point[0], point[1]).  <cite>point</cite> may be an array.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.predictors.DataTrainer">
+<em class="property">class </em><code class="descclassname">open_cp.predictors.</code><code class="descname">DataTrainer</code><a class="headerlink" href="#open_cp.predictors.DataTrainer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Base class for most &#8220;trainers&#8221;: classes which take data and &#8220;train&#8221;
+themselves (fit a statistical model, etc.) to the data.</p>
+<dl class="attribute">
+<dt id="open_cp.predictors.DataTrainer.data">
+<code class="descname">data</code><a class="headerlink" href="#open_cp.predictors.DataTrainer.data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.predictors.GridPrediction">
+<em class="property">class </em><code class="descclassname">open_cp.predictors.</code><code class="descname">GridPrediction</code><span class="sig-paren">(</span><em>xsize</em>, <em>ysize</em>, <em>xoffset=0</em>, <em>yoffset=0</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.GridPrediction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>A prediction based on a grid.  The risk is always computed by finding
+the grid cell the coordinates contained, and then deferring to the abstract
+<cite>grid_risk</cite> method.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>xsize</strong> &#8211; The width of the grid cells.</li>
+<li><strong>ysize</strong> &#8211; The height of the grid cells.</li>
+<li><strong>xoffset</strong> &#8211; How much to offset the input x coordinate by; default 0.</li>
+<li><strong>yoffset</strong> &#8211; How much to offset the input y coordinate by; default 0.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="open_cp.predictors.GridPrediction.grid_risk">
+<code class="descname">grid_risk</code><span class="sig-paren">(</span><em>gridx</em>, <em>gridy</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.GridPrediction.grid_risk" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="open_cp.predictors.GridPrediction.risk">
+<code class="descname">risk</code><span class="sig-paren">(</span><em>x</em>, <em>y</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.GridPrediction.risk" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.predictors.GridPrediction.xsize">
+<code class="descname">xsize</code><a class="headerlink" href="#open_cp.predictors.GridPrediction.xsize" title="Permalink to this definition">¶</a></dt>
+<dd><p>The width of each cell</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.predictors.GridPrediction.ysize">
+<code class="descname">ysize</code><a class="headerlink" href="#open_cp.predictors.GridPrediction.ysize" title="Permalink to this definition">¶</a></dt>
+<dd><p>The height of each cell</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.predictors.GridPredictionArray">
+<em class="property">class </em><code class="descclassname">open_cp.predictors.</code><code class="descname">GridPredictionArray</code><span class="sig-paren">(</span><em>xsize</em>, <em>ysize</em>, <em>matrix</em>, <em>xoffset=0</em>, <em>yoffset=0</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.GridPredictionArray" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.predictors.GridPrediction" title="open_cp.predictors.GridPrediction"><code class="xref py py-class docutils literal"><span class="pre">open_cp.predictors.GridPrediction</span></code></a></p>
+<p>A :class GridPrediction: backed by a numpy array (or other
+two-dimensional list-like object).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>xsize</strong> &#8211; The width of the grid cells.</li>
+<li><strong>ysize</strong> &#8211; The height of the grid cells.</li>
+<li><strong>matrix</strong> &#8211; A two dimensional numpy array (or other object with a</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p><cite>shape</cite> attribute and allowing indexing as <cite>matrix[y][x]</cite>).
+:param xoffset: How much to offset the input x coordinate by; default 0.
+:param yoffset: How much to offset the input y coordinate by; default 0.</p>
+<dl class="staticmethod">
+<dt id="open_cp.predictors.GridPredictionArray.from_continuous_prediction">
+<em class="property">static </em><code class="descname">from_continuous_prediction</code><span class="sig-paren">(</span><em>prediction</em>, <em>width</em>, <em>height</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.GridPredictionArray.from_continuous_prediction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct an instance from an instance of :ContinuousPrediction:
+using the grid size and offset specified in that instance.  This is
+more efficient as we sample each grid cell once and then store the
+result.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>prediction</strong> &#8211; An instance of ContinuousPrediction to sample from</li>
+<li><strong>width</strong> &#8211; Width of the grid, in number of cells</li>
+<li><strong>height</strong> &#8211; Height of the grid, in number of cells</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="open_cp.predictors.GridPredictionArray.from_continuous_prediction_region">
+<em class="property">static </em><code class="descname">from_continuous_prediction_region</code><span class="sig-paren">(</span><em>prediction</em>, <em>region</em>, <em>cell_width</em>, <em>cell_height=None</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.GridPredictionArray.from_continuous_prediction_region" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct an instance from an instance of :ContinuousPrediction:
+using the region and passed cell sizes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>prediction</strong> &#8211; An instance of ContinuousPrediction to sample from</li>
+<li><strong>cell_width</strong> &#8211; Width of each cell in the resulting grid</li>
+<li><strong>cell_height</strong> &#8211; Height of each cell in the resulting grid</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.predictors.GridPredictionArray.grid_risk">
+<code class="descname">grid_risk</code><span class="sig-paren">(</span><em>gx</em>, <em>gy</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.GridPredictionArray.grid_risk" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find the risk in a grid cell.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>gx</strong> &#8211; x coordinate of the cell</li>
+<li><strong>gy</strong> &#8211; y coordinate of the cell</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">The risk in the cell, or 0 if the cell is outside the range</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>of the data we have.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.predictors.GridPredictionArray.intensity_matrix">
+<code class="descname">intensity_matrix</code><a class="headerlink" href="#open_cp.predictors.GridPredictionArray.intensity_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the matrix containing data which we use</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.predictors.GridPredictionArray.mesh_data">
+<code class="descname">mesh_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.GridPredictionArray.mesh_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a pair (xcoords, ycoords) which when paired with
+:method intensity_matrix: is suitable for passing to matplotlib.pcolor
+or pcolormesh.  That is, intensity_matrix[i][j] is the risk intensity
+in the rectangular cell with diagonally opposite vertices
+(xcoords[j], ycoords[i]), (xcoords[j+1], ycoords[i+1]).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.predictors.GridPredictionArray.percentile_matrix">
+<code class="descname">percentile_matrix</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.GridPredictionArray.percentile_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a matrix of the same shape as :method intensity_matrix: but
+with float values giving the percentile of risk, normalised to [0,1].
+So the cell with the highest risk is assigned 1.0.  Ties are rounded up,
+so if three cells share the highest risk, they are all assigned 1.0.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.predictors.KernelRiskPredictor">
+<em class="property">class </em><code class="descclassname">open_cp.predictors.</code><code class="descname">KernelRiskPredictor</code><span class="sig-paren">(</span><em>kernel</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.KernelRiskPredictor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.predictors.ContinuousPrediction" title="open_cp.predictors.ContinuousPrediction"><code class="xref py py-class docutils literal"><span class="pre">open_cp.predictors.ContinuousPrediction</span></code></a></p>
+<p>Wraps a kernel object so as to make a :class ContinuousPrediction:
+instance</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>kernel</strong> &#8211; A callable object with signature <cite>kernel(points)</cite> where</td>
+</tr>
+</tbody>
+</table>
+<p>points may be an array of size 2, for a single point, or an array of shape
+<cite>(2,N)</cite> for <cite>N</cite> points to be computed at once.
+:param kwards: Any constructor arguments which :class ContinuousPrediction:
+takes.</p>
+<dl class="method">
+<dt id="open_cp.predictors.KernelRiskPredictor.risk">
+<code class="descname">risk</code><span class="sig-paren">(</span><em>x</em>, <em>y</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.KernelRiskPredictor.risk" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.predictors.grid_prediction_from_kernel">
+<code class="descclassname">open_cp.predictors.</code><code class="descname">grid_prediction_from_kernel</code><span class="sig-paren">(</span><em>kernel</em>, <em>region</em>, <em>grid_size</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.predictors.grid_prediction_from_kernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Utility function to convert a space kernel into a grid based prediction.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>kernel</strong> &#8211; A kernel object taking an array of shape (2,N) of N lots</td>
+</tr>
+</tbody>
+</table>
+<p>of spatial coordinates, and returning an array of shape (N).
+:param region: An instance of :class RectangularRegion: giving the
+region to use.
+:param grid_size: The size of grid to use.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">An instance of :class GridPredictionArray:</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">open_cp.predictors</a><ul>
+<li><a class="reference internal" href="#predictors">predictors</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="kernels.html" title="previous chapter">open_cp.kernels</a></li>
+      <li>Next: <a href="retrohotspot.html" title="next chapter">open_cp.retrohotspot</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/source/predictors.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, University of Leeds.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+      |
+      <a href="../_sources/source/predictors.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

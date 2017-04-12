@@ -1,0 +1,284 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>open_cp.prohotspot &#8212; OpenCP 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="open_cp.sepp" href="sepp.html" />
+    <link rel="prev" title="open_cp.retrohotspot" href="retrohotspot.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-open_cp.prohotspot">
+<span id="open-cp-prohotspot"></span><h1>open_cp.prohotspot<a class="headerlink" href="#module-open_cp.prohotspot" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="prohotspot">
+<h2>prohotspot<a class="headerlink" href="#prohotspot" title="Permalink to this headline">¶</a></h2>
+<p>Implements the &#8220;prospective hotspotting&#8221; technique from:</p>
+<ol class="arabic simple">
+<li>Bowers, Johnson, Pease,
+&#8220;Prospective hot-spotting: The future of crime mapping?&#8221;,
+Brit. J. Criminol. (2004) 44 641&#8211;658.  doi:10.1093/bjc/azh036</li>
+<li>Johnson et al.,
+&#8220;Prospective crime mapping in operational context&#8221;,
+Home Office Online Report 19/07
+[Police online library](<a class="reference external" href="http://library.college.police.uk/docs/hordsolr/rdsolr1907.pdf">http://library.college.police.uk/docs/hordsolr/rdsolr1907.pdf</a>)</li>
+</ol>
+<p>The underlying idea is to start with a kernel / weight defined in space and
+positive time.  This typically has finite extent, and might be related to
+discretised space and/or time.  Weights used in the literature tend to be
+of the form :math 1/(1+d):</p>
+<p>The classical algorithm assigns all events to cells in a gridding of space,
+and a &#8220;grid&#8221; of time (typically the number of whole weeks before the current
+time).  Only events which are close enough in space and time to the grid cell
+of interest are used.  For these, the weight is evaluated on each one, and then
+the sum taken.</p>
+<p>It is important to note the coupling between the grid size used and the weight,
+because it is the distance between grid cells which is used.  Exactly what
+&#8220;distance&#8221; here means is unclear, and we have provided a number of options.</p>
+<p>Alternatively, we can just use the weight / kernel in a continuous kernel
+density estimate scheme.</p>
+<dl class="class">
+<dt id="open_cp.prohotspot.ClassicWeight">
+<em class="property">class </em><code class="descclassname">open_cp.prohotspot.</code><code class="descname">ClassicWeight</code><a class="headerlink" href="#open_cp.prohotspot.ClassicWeight" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.prohotspot.Weight" title="open_cp.prohotspot.Weight"><code class="xref py py-class docutils literal"><span class="pre">open_cp.prohotspot.Weight</span></code></a></p>
+<p>The classical weight, :math (1/(1+d))(1/(1+t)): where :math d: is
+distance and :math t: is time.  Default units are &#8220;grid cells&#8221; and &#8220;weeks&#8221;,
+respectively.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>space_bandwidth</strong> &#8211; Distances greater than or equal to this set the</td>
+</tr>
+</tbody>
+</table>
+<p>weight to 0.
+:param time_bandwidth: Times greater than or equal to this set the weight
+to 0.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.prohotspot.DistanceDiagonalsDifferent">
+<em class="property">class </em><code class="descclassname">open_cp.prohotspot.</code><code class="descname">DistanceDiagonalsDifferent</code><a class="headerlink" href="#open_cp.prohotspot.DistanceDiagonalsDifferent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.prohotspot.GridDistance" title="open_cp.prohotspot.GridDistance"><code class="xref py py-class docutils literal"><span class="pre">open_cp.prohotspot.GridDistance</span></code></a></p>
+<p>Distance in the grid.  Now diagonal distances are two, so (1,1) and
+(2,2) are two grid cells apart.  This equates to using an ell^1 norm.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.prohotspot.DistanceDiagonalsSame">
+<em class="property">class </em><code class="descclassname">open_cp.prohotspot.</code><code class="descname">DistanceDiagonalsSame</code><a class="headerlink" href="#open_cp.prohotspot.DistanceDiagonalsSame" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#open_cp.prohotspot.GridDistance" title="open_cp.prohotspot.GridDistance"><code class="xref py py-class docutils literal"><span class="pre">open_cp.prohotspot.GridDistance</span></code></a></p>
+<p>Distance in the grid.  Diagonal distances are one, so (1,1) and
+(2,2) are adjacent points.  This equates to using an ell^infty norm.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.prohotspot.GridDistance">
+<em class="property">class </em><code class="descclassname">open_cp.prohotspot.</code><code class="descname">GridDistance</code><a class="headerlink" href="#open_cp.prohotspot.GridDistance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Calculates the distance between grid cells</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.prohotspot.ProspectiveHotSpot">
+<em class="property">class </em><code class="descclassname">open_cp.prohotspot.</code><code class="descname">ProspectiveHotSpot</code><span class="sig-paren">(</span><em>region</em>, <em>grid_size=50</em>, <em>time_unit=numpy.timedelta64(1</em>, <em>'W')</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.prohotspot.ProspectiveHotSpot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="predictors.html#open_cp.predictors.DataTrainer" title="open_cp.predictors.DataTrainer"><code class="xref py py-class docutils literal"><span class="pre">open_cp.predictors.DataTrainer</span></code></a></p>
+<p>Implements the classical, grid based algorithm.  To calculate distances,
+we consider the grid cell we are computing the risk intensity for, the grid
+cell the event falls into, and then delegate to an instance of :class
+GridDistance: to compute the distance.  To compute time, we look at the
+time difference between the prediction time and the timestamp of the event
+and then divide by the :attribute time_unit:, then round down to the
+nearest whole number.  So 6 days divided by 1 week is 0 whole units.</p>
+<p>Set :attribute distance: to change the computation of distance between
+grid cells.  Set :attribute weight: to change the weight used.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>region</strong> &#8211; The :class data.RectangularRegion: the data is in.</li>
+<li><strong>grid_size</strong> &#8211; The size of the grid to place the data into.</li>
+<li><strong>time_unit</strong> &#8211; A :class numpy.timedelta64: instance giving the time unit.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="open_cp.prohotspot.ProspectiveHotSpot.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>cutoff_time</em>, <em>predict_time</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.prohotspot.ProspectiveHotSpot.predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate a grid based prediction.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>cutoff_time</strong> &#8211; Ignore data with a timestamp after this time.</li>
+<li><strong>predict_time</strong> &#8211; Timestamp of the prediction.  Used to calculate</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>the time difference between events and &#8220;now&#8221;.  Typically the same as
+<cite>cutoff_time</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">An instance of :class GridPredictionArray:</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.prohotspot.ProspectiveHotSpotContinuous">
+<em class="property">class </em><code class="descclassname">open_cp.prohotspot.</code><code class="descname">ProspectiveHotSpotContinuous</code><span class="sig-paren">(</span><em>grid_size=50</em>, <em>time_unit=numpy.timedelta64(1</em>, <em>'W')</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.prohotspot.ProspectiveHotSpotContinuous" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="predictors.html#open_cp.predictors.DataTrainer" title="open_cp.predictors.DataTrainer"><code class="xref py py-class docutils literal"><span class="pre">open_cp.predictors.DataTrainer</span></code></a></p>
+<p>Implements the prospective hotspot algorithm as a kernel density
+estimation.  A copy of the space/time kernel / weight is laid down over
+each event and the result is summed.  To allow compatibility with the grid
+based method, we set a time unit and a grid size, but these are purely used
+to scale the data appropriately.</p>
+<dl class="method">
+<dt id="open_cp.prohotspot.ProspectiveHotSpotContinuous.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>cutoff_time</em>, <em>predict_time</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.prohotspot.ProspectiveHotSpotContinuous.predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate a continuous prediction.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>cutoff_time</strong> &#8211; Ignore data with a timestamp after this time.</li>
+<li><strong>predict_time</strong> &#8211; Timestamp of the prediction.  Used to calculate</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>the time difference between events and &#8220;now&#8221;.  Typically the same as
+<cite>cutoff_time</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">An instance of :class ContinuousPrediction:</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.prohotspot.Weight">
+<em class="property">class </em><code class="descclassname">open_cp.prohotspot.</code><code class="descname">Weight</code><a class="headerlink" href="#open_cp.prohotspot.Weight" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Base class for weights / kernels.  Classes implementing this algorithm
+are responsible purely for providing weights.  We leave the details of
+possibly discretising data to other classes.</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">open_cp.prohotspot</a><ul>
+<li><a class="reference internal" href="#prohotspot">prohotspot</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="retrohotspot.html" title="previous chapter">open_cp.retrohotspot</a></li>
+      <li>Next: <a href="sepp.html" title="next chapter">open_cp.sepp</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/source/prohotspot.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, University of Leeds.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+      |
+      <a href="../_sources/source/prohotspot.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

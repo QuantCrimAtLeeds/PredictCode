@@ -1,0 +1,602 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>open_cp.sepp &#8212; OpenCP 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="open_cp.seppexp" href="seppexp.html" />
+    <link rel="prev" title="open_cp.prohotspot" href="prohotspot.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-open_cp.sepp">
+<span id="open-cp-sepp"></span><h1>open_cp.sepp<a class="headerlink" href="#module-open_cp.sepp" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="sepp">
+<h2>sepp<a class="headerlink" href="#sepp" title="Permalink to this headline">¶</a></h2>
+<p>Implements the ETAS (Epidemic Type Aftershock-Sequences) model intensity
+estimation scheme outlined in Mohler et al. (2011).</p>
+<p>As this is a statistical model, we separate out the statistical optimisation
+procedure into a separate class, :class StocasticDecluster:  This allows
+testing and exploration of the model without worry about real world issues such
+as time-stamps.</p>
+<p>We can think of this algorithm in terms of a &#8220;machine learning&#8221; workflow, and
+separate a &#8220;training&#8221; stage from a &#8220;prediction&#8221; stage.  The statistical model
+is that we have a &#8220;background&#8221; rate of random events, and then that existing
+events cause a time/space localised increase in risk, described by a &#8220;trigger&#8221;
+kernel.  The trigger kernel does not vary with the time/space location of the
+event (which is perhaps a limit of the model).  As such, both the background
+and trigger kernels should be fairly constant in time, and so if &#8220;trained&#8221;
+on historical data, should be valid to make predictions for, say, the next
+few weeks or months.  (Over long time scales, we should expect the background
+kernel to change.)</p>
+<p>This is also useful in practise, as the training stage is slow, but once
+trained, the kernels can quickly be evaluated to make predictions.</p>
+</div>
+<div class="section" id="references">
+<h2>References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h2>
+<dl class="docutils">
+<dt>Mohler et al, &#8220;Self-Exciting Point Process Modeling of Crime&#8221;,</dt>
+<dd>Journal of the American Statistical Association, 2011
+DOI: 10.1198/jasa.2011.ap09546</dd>
+</dl>
+<p>Rosser, Cheng, &#8220;Improving the Robustness and Accuracy of Crime Prediction with
+the Self-Exciting Point Process Through Isotropic Triggering&#8221;</p>
+<blockquote>
+<div>Appl. Spatial Analysis
+DOI: 10.1007/s12061-016-9198-y</div></blockquote>
+<dl class="class">
+<dt id="open_cp.sepp.AverageTimeAdjustedKernel">
+<em class="property">class </em><code class="descclassname">open_cp.sepp.</code><code class="descname">AverageTimeAdjustedKernel</code><span class="sig-paren">(</span><em>kernel</em>, <em>time_end</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.AverageTimeAdjustedKernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="kernels.html#open_cp.kernels.Kernel" title="open_cp.kernels.Kernel"><code class="xref py py-class docutils literal"><span class="pre">open_cp.kernels.Kernel</span></code></a></p>
+<p>Wraps a :class Kernel: instance, which supports the <cite>space_kernel</cite> and
+<cite>time_kernel</cite> interface, and builds a new kernel which is constant in time.
+The time intensity is computed by taking an average of the middle half
+of the original time kernel.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>kernel</strong> &#8211; The original kernel to delegate to.</li>
+<li><strong>time_end</strong> &#8211; We assume that the original kernel is roughly correct</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>for times in the range 0 to <cite>time_end</cite>.</p>
+<dl class="method">
+<dt id="open_cp.sepp.AverageTimeAdjustedKernel.set_scale">
+<code class="descname">set_scale</code><span class="sig-paren">(</span><em>value</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.AverageTimeAdjustedKernel.set_scale" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="open_cp.sepp.AverageTimeAdjustedKernel.space_kernel">
+<code class="descname">space_kernel</code><span class="sig-paren">(</span><em>points</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.AverageTimeAdjustedKernel.space_kernel" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="open_cp.sepp.AverageTimeAdjustedKernel.time_kernel">
+<code class="descname">time_kernel</code><span class="sig-paren">(</span><em>points</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.AverageTimeAdjustedKernel.time_kernel" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.sepp.OptimisationResult">
+<em class="property">class </em><code class="descclassname">open_cp.sepp.</code><code class="descname">OptimisationResult</code><span class="sig-paren">(</span><em>kernel</em>, <em>p</em>, <em>background_kernel</em>, <em>trigger_kernel</em>, <em>ell2_error</em>, <em>time_cutoff=None</em>, <em>space_cutoff=None</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.OptimisationResult" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Contains results of the optimisation process.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>kernel</strong> &#8211; the overall estimated intensity kernel.</li>
+<li><strong>p</strong> &#8211; the estimated probability matrix.</li>
+<li><strong>background_kernel</strong> &#8211; the estimatede background event intensity kernel.</li>
+<li><strong>trigger_kernel</strong> &#8211; the estimated triggered event intensity kernel.</li>
+<li><strong>ell2_error</strong> &#8211; an array of the L^2 differences between successive</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>estimates of the probability matrix.  That these decay is a good indication
+of convergence.
+:param time_cutoff: Optionally specify the maximum time extent of the
+trigger_kernel used in calculations.
+:param space_cutoff: Optionally specify the maximum space extent of the
+trigger_kernel used in calculations.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.sepp.SEPPPredictor">
+<em class="property">class </em><code class="descclassname">open_cp.sepp.</code><code class="descname">SEPPPredictor</code><span class="sig-paren">(</span><em>result</em>, <em>epoch_start</em>, <em>epoch_end</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.SEPPPredictor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="predictors.html#open_cp.predictors.DataTrainer" title="open_cp.predictors.DataTrainer"><code class="xref py py-class docutils literal"><span class="pre">open_cp.predictors.DataTrainer</span></code></a></p>
+<p>Returned by :class SEPPTrainer: encapsulated computed background and
+triggering kernels.  This class allows these to be evaluated on potentially
+different data to produce predictions.</p>
+<p>When making a prediction, the <em>time</em> component of the background kernel
+is ignored.  This is allowed, because the kernel estimation used looks
+at time and space separately for the background kernel.  We do this because
+KDE methods don&#8217;t allow us to &#8220;predict&#8221; into the future.</p>
+<p>This class also stores information about the optimisation procedure.</p>
+<dl class="attribute">
+<dt id="open_cp.sepp.SEPPPredictor.background_kernel">
+<code class="descname">background_kernel</code><a class="headerlink" href="#open_cp.sepp.SEPPPredictor.background_kernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>The original, non-adjusted background kernel estimated by the
+training algorithm.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.sepp.SEPPPredictor.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>predict_time</em>, <em>cutoff_time=None</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.SEPPPredictor.predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a prediction at a time, using the data held by this instance.
+That is, evaluate the background kernel plus the trigger kernel at
+events before the prediction time.  Optionally you can limit the data
+used, though this is against the underlying statistical model.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>predict_time</strong> &#8211; Time point to make a prediction at.</li>
+<li><strong>cutoff_time</strong> &#8211; Optionally, limit the input data to only be from</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>before this time.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Instance of :class predictors.ContinuousPrediction:</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.sepp.SEPPPredictor.trigger_kernel">
+<code class="descname">trigger_kernel</code><a class="headerlink" href="#open_cp.sepp.SEPPPredictor.trigger_kernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>The trigger / aftershock kernel estimated by the training
+algorithm.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.sepp.SEPPTrainer">
+<em class="property">class </em><code class="descclassname">open_cp.sepp.</code><code class="descname">SEPPTrainer</code><span class="sig-paren">(</span><em>k_time=100</em>, <em>k_space=15</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.SEPPTrainer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="predictors.html#open_cp.predictors.DataTrainer" title="open_cp.predictors.DataTrainer"><code class="xref py py-class docutils literal"><span class="pre">open_cp.predictors.DataTrainer</span></code></a></p>
+<p>Use the algorithm described in Mohler et al. 2011.  The kernel
+estimation used is the &#8220;kth nearest neighbour variable bandwidth Gaussian&#8221;
+KDE.  This is a two-step algorithm: this class &#8220;trains&#8221; itself on data,
+and returns a class which can then make predictions, possibly on other
+data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>k_time</strong> &#8211; The kth nearest neighbour to use in the KDE of the time</td>
+</tr>
+</tbody>
+</table>
+<p>kernel; defaults to 100.
+:param k_space: The kth nearest neighbour to use in the KDE of space and
+space/time kernels; defaults to 15.</p>
+<dl class="method">
+<dt id="open_cp.sepp.SEPPTrainer.as_time_space_points">
+<code class="descname">as_time_space_points</code><span class="sig-paren">(</span><em>cutoff_time=None</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.SEPPTrainer.as_time_space_points" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a copy of the input data as an array of shape (3,N) of
+time/space points (without units), as used by the declustering
+algorithm.  Useful when trying to understand what the algorithm is
+doing.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.sepp.SEPPTrainer.space_cutoff">
+<code class="descname">space_cutoff</code><a class="headerlink" href="#open_cp.sepp.SEPPTrainer.space_cutoff" title="Permalink to this definition">¶</a></dt>
+<dd><p>To speed up optimisation, set this to the minimal distance at which
+we think the spacial triggering will be effectively zero.  For real
+data, 500m is a reasonable estimate.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.sepp.SEPPTrainer.time_cutoff">
+<code class="descname">time_cutoff</code><a class="headerlink" href="#open_cp.sepp.SEPPTrainer.time_cutoff" title="Permalink to this definition">¶</a></dt>
+<dd><p>To speed up optimisation, set this to the minimal time gap at which
+we think the spacial triggering will be effectively zero.  For real
+data, 120 days is a reasonable estimate.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.sepp.SEPPTrainer.train">
+<code class="descname">train</code><span class="sig-paren">(</span><em>cutoff_time=None</em>, <em>iterations=40</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.SEPPTrainer.train" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform the (slow) training step on historical data.  This estimates
+kernels, and returns an object which can make predictions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>cutoff_time</strong> &#8211; If specified, then limit the historical data to</td>
+</tr>
+</tbody>
+</table>
+<p>before this time.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A :class SEPPPredictor: instance.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="open_cp.sepp.SEPPTrainer.trigger_kernel_estimator">
+<code class="descname">trigger_kernel_estimator</code><a class="headerlink" href="#open_cp.sepp.SEPPTrainer.trigger_kernel_estimator" title="Permalink to this definition">¶</a></dt>
+<dd><p>The kernel estimator to use for triggered events.  Defaults to a kth
+nearest neighbour variable-bandwidth Gaussian kernel estimator with the
+value of <cite>k</cite> set in the constructor.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.sepp.StocasticDecluster">
+<em class="property">class </em><code class="descclassname">open_cp.sepp.</code><code class="descname">StocasticDecluster</code><span class="sig-paren">(</span><em>background_kernel_estimator=None</em>, <em>trigger_kernel_estimator=None</em>, <em>initial_time_bandwidth=144.0</em>, <em>initial_space_bandwidth=50.0</em>, <em>space_cutoff=500.0</em>, <em>time_cutoff=172800.0</em>, <em>points=None</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.StocasticDecluster" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Implements the &#8216;stocastic declustering algorithm&#8217; from Mohler et al
+(2011).  This allows estimation of two time-space kernels, one for the
+background events, and one the &#8216;trigger&#8217; kernel which elevates risk
+according to past events.</p>
+<p>This class works with floating-point data, and exposes elements of the
+underlying optimisation algorithm.  It is designed for testing and
+experimentation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>background_kernel_estimator</strong> &#8211; The kernel estimator to use for</td>
+</tr>
+</tbody>
+</table>
+<p>background events.
+:param trigger_kernel_estimator: The kernel estimator to use for triggered
+/ aftershock events.
+:param initial_time_bandwidth: The bandwidth in time to use when making an
+initial classification of data into background or triggered events.  Default
+is 0.1 day**(-1) in units of minutes (so 0.1*24*60).
+:param initial_space_bandwidth: The bandwidth in space to use when making
+an initial classification of data into background or triggered events.
+Default is 50 units.
+:param space_cutoff: The maximum distance we believe the triggered kernel
+will extend to in space.  Decrease this to improve the speed of the
+estimation, at the cost of possibly missing data.  Default is 500 units.
+:param time_cutoff: The maximum distance we believe the triggered kernel
+will extend to in time.  Decrease this to improve the speed of the
+estimation, at the cost of possibly missing data.  Default is 120 days,
+in units of minutes (so 120*24*60).
+:param points: The three dimensional data.  <cite>points[0]</cite> is the times of
+events, and <cite>points[1]</cite> and <cite>points[2]</cite> are the x and y coordinates.</p>
+<dl class="method">
+<dt id="open_cp.sepp.StocasticDecluster.next_iteration">
+<code class="descname">next_iteration</code><span class="sig-paren">(</span><em>p</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.StocasticDecluster.next_iteration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform a single iteration of the optimisation algorithm:
+1. Samples background and triggered events using the p matrix.
+2. Estimates kernels from these samples.
+3. Normalises these kernels.
+4. Computes the new p matrix from these kernels.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>p</strong> &#8211; The matrix of probabilities to sample from.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A triple <cite>(p, bkernel, tkernel)</cite> where <cite>p</cite> is the new</td>
+</tr>
+</tbody>
+</table>
+<p>probability matrix, <cite>bkernel</cite> the kernel for background events used to
+compute <cite>p</cite>, and <cite>tkernel</cite> the kernel for triggered events.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.sepp.StocasticDecluster.run_optimisation">
+<code class="descname">run_optimisation</code><span class="sig-paren">(</span><em>iterations=20</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.StocasticDecluster.run_optimisation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Runs the optimisation algorithm by taking an initial estimation of
+the probability matrix, and then running the optimisation step.  If
+this step ever classifies most events as background, or as triggered,
+then optimisation will fail.  Tuning the initial bandwidth parameters
+may help.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>iterations</strong> &#8211; The number of optimisation steps to perform.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><a class="reference internal" href="#open_cp.sepp.OptimisationResult" title="open_cp.sepp.OptimisationResult"><code class="xref py py-class docutils literal"><span class="pre">OptimisationResult</span></code></a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.sepp.initial_p_matrix">
+<code class="descclassname">open_cp.sepp.</code><code class="descname">initial_p_matrix</code><span class="sig-paren">(</span><em>points</em>, <em>initial_time_bandwidth=0.1</em>, <em>initial_space_bandwidth=50.0</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.initial_p_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns an initial estimate of the probability matrix.  Uses a Gaussian
+kernel in space, and an exponential kernel in time, both non-normalised.
+Diagonal (i.e. background &#8220;probabilities&#8221;) are set to 1.  Finally the
+matrix is normalised.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>points</strong> &#8211; The (time, x, y) data.</li>
+<li><strong>initial_time_bandwidth</strong> &#8211; The &#8220;scale&#8221; of the exponential.</li>
+<li><strong>initial_space_bandwidth</strong> &#8211; The standard deviation of the Gaussian.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.sepp.make_kernel">
+<code class="descclassname">open_cp.sepp.</code><code class="descname">make_kernel</code><span class="sig-paren">(</span><em>data</em>, <em>background_kernel</em>, <em>trigger_kernel</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.make_kernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Produce a kernel object which evaluates the background kernel, and
+the trigger kernel based on the space-time locations in the data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>data</strong> &#8211; An array of shape <cite>(3,N)</cite> giving the space-time locations</td>
+</tr>
+</tbody>
+</table>
+<p>events.  Used when computing the triggered / aftershock events.
+:param background_kernel: The kernel object giving the background risk
+intensity.
+:param trigger_kernel: The kernel object giving the trigger / aftershock
+risk intensity.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A kernel object which can be called on arrays on points.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.sepp.make_space_kernel">
+<code class="descclassname">open_cp.sepp.</code><code class="descname">make_space_kernel</code><span class="sig-paren">(</span><em>data</em>, <em>background_kernel</em>, <em>trigger_kernel</em>, <em>time</em>, <em>time_cutoff=None</em>, <em>space_cutoff=None</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.make_space_kernel" title="Permalink to this definition">¶</a></dt>
+<dd><p>Produce a kernel object which evaluates the background kernel, and
+the trigger kernel based on the space locations in the data, always using
+the fixed time as passed in.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>data</strong> &#8211; An array of shape <cite>(3,N)</cite> giving the space-time locations</td>
+</tr>
+</tbody>
+</table>
+<p>events.  Used when computing the triggered / aftershock events.
+:param background_kernel: The kernel object giving the background risk
+intensity.  We assume this has a method <cite>space_kernel</cite> which gives just
+the two dimensional spacial kernel.
+:param trigger_kernel: The kernel object giving the trigger / aftershock
+risk intensity.
+:param time: The fixed time coordinate to evaluate at.
+:param time_cutoff: Optional; if set, then we assume the trigger_kernel is
+zero for times greater than this value (to speed up evaluation).
+:param space_cutoff: Optional; if set, then we assume the trigger_kernel is
+zero for space distances greater than this value (to speed up evaluation).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A kernel object which can be called on arrays of (2 dimensional</td>
+</tr>
+</tbody>
+</table>
+<p>space) points.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.sepp.p_matrix">
+<code class="descclassname">open_cp.sepp.</code><code class="descname">p_matrix</code><span class="sig-paren">(</span><em>points</em>, <em>background_kernel</em>, <em>trigger_kernel</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.p_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the probability matrix.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>points</strong> &#8211; The (time, x, y) data</li>
+<li><strong>background_kernel</strong> &#8211; The kernel giving the background event intensity.</li>
+<li><strong>trigger_kernel</strong> &#8211; The kernel giving the triggered event intensity.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A matrix <cite>p</cite> such that <cite>p[i][i]</cite> is the probability event <cite>i</cite> is a</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>background event, and <cite>p[i][j]</cite> is the probability event <cite>j</cite> is triggered
+by event <cite>i</cite>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.sepp.p_matrix_fast">
+<code class="descclassname">open_cp.sepp.</code><code class="descname">p_matrix_fast</code><span class="sig-paren">(</span><em>points</em>, <em>background_kernel</em>, <em>trigger_kernel</em>, <em>time_cutoff=150</em>, <em>space_cutoff=1</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.p_matrix_fast" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the probability matrix.  Offers faster execution speed than
+<a href="#id1"><span class="problematic" id="id2">:function:`p_matrix`</span></a> by, in the calculation of triggered event
+probabilities, ignoring events which are beyond a space or time cutoff.
+These parameters should be set so that the <cite>trigger_kernel</cite> evaluates to
+(very close to) zero outside the cutoff zone.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>points</strong> &#8211; The (time, x, y) data</li>
+<li><strong>background_kernel</strong> &#8211; The kernel giving the background event intensity.</li>
+<li><strong>trigger_kernel</strong> &#8211; The kernel giving the triggered event intensity.</li>
+<li><strong>time_cutoff</strong> &#8211; The maximum time between two events which can be</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>considered in the trigging calculation.
+:param space_cutoff: The maximum (two-dimensional Eucliean) distance
+between two events which can be considered in the trigging calculation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A matrix <cite>p</cite> such that <cite>p[i][i]</cite> is the probability event <cite>i</cite> is a</td>
+</tr>
+</tbody>
+</table>
+<p>background event, and <cite>p[i][j]</cite> is the probability event <cite>j</cite> is triggered
+by event <cite>i</cite>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.sepp.sample_points">
+<code class="descclassname">open_cp.sepp.</code><code class="descname">sample_points</code><span class="sig-paren">(</span><em>points</em>, <em>p</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sepp.sample_points" title="Permalink to this definition">¶</a></dt>
+<dd><p>Using the probability matrix, sample background and triggered points.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>points</strong> &#8211; The (time, x, y) data.</li>
+<li><strong>p</strong> &#8211; The probability matrix.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A pair of <cite>(backgrounds, triggered)</cite> where <cite>backgrounds</cite> is the</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>(time, x, y) data of the points classified as being background events,
+and <cite>triggered</cite> is the (time, x, y) <em>delta</em> of the triggered events.
+That is, <cite>triggered</cite> represents the difference in space and time between
+each triggered event and the event which triggered it, as sampled from the
+probability matrix.</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">open_cp.sepp</a><ul>
+<li><a class="reference internal" href="#sepp">sepp</a></li>
+<li><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="prohotspot.html" title="previous chapter">open_cp.prohotspot</a></li>
+      <li>Next: <a href="seppexp.html" title="next chapter">open_cp.seppexp</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/source/sepp.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, University of Leeds.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+      |
+      <a href="../_sources/source/sepp.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

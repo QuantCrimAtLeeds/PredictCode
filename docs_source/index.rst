@@ -22,6 +22,11 @@ algorithms from published sources.
 
    source/data
    source/kernels
+   source/predictors
+   source/retrohotspot
+   source/prohotspot
+   source/sepp
+   source/seppexp
    source/open_cp.sources
 
 

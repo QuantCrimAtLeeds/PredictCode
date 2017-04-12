@@ -1,0 +1,329 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>open_cp.seppexp &#8212; OpenCP 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="open_cp.sources package" href="open_cp.sources.html" />
+    <link rel="prev" title="open_cp.sepp" href="sepp.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-open_cp.seppexp">
+<span id="open-cp-seppexp"></span><h1>open_cp.seppexp<a class="headerlink" href="#module-open_cp.seppexp" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="seppexp">
+<h2>seppexp<a class="headerlink" href="#seppexp" title="Permalink to this headline">¶</a></h2>
+<p>Implements the ETAS (Epidemic Type Aftershock-Sequences) model intensity
+estimation scheme outlined in Mohler et al. (2015).  This model is somewhat
+different, and simplified, from that used in the <cite>sepp</cite> module:</p>
+<ul class="simple">
+<li>This is an explicitly grid based model.  All events are assigned to the grid</li>
+</ul>
+<p>cell in which the occur, and we make no more use of their location.
+- For each cell, we produce an independent estimate of the background rate of
+events.
+- We model &#8220;self-excitation&#8221; only in time, as a simple exponential decay (much
+like the classical Hawkes model in Financial mathematics).  We assume the decay
+parameters are the same across all grid cells.</p>
+</div>
+<div class="section" id="references">
+<h2>References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h2>
+<dl class="docutils">
+<dt>Mohler et al, &#8220;Randomized Controlled Field Trials of Predictive Policing&#8221;,</dt>
+<dd>Journal of the American Statistical Association (2015)
+DOI:10.1080/01621459.2015.1077710</dd>
+<dt>Lewis, Mohler, &#8220;A Nonparametric EM Algorithm for Multiscale Hawkes Processes&#8221;</dt>
+<dd>in Proceedings of the 2011 Joint Statistical Meetings, pp. 1–16
+<a class="reference external" href="http://math.scu.edu/~gmohler/EM_paper.pdf">http://math.scu.edu/~gmohler/EM_paper.pdf</a></dd>
+</dl>
+<dl class="class">
+<dt id="open_cp.seppexp.SEPPPredictor">
+<em class="property">class </em><code class="descclassname">open_cp.seppexp.</code><code class="descname">SEPPPredictor</code><span class="sig-paren">(</span><em>region</em>, <em>grid_size</em>, <em>omega</em>, <em>theta</em>, <em>mu</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.seppexp.SEPPPredictor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="predictors.html#open_cp.predictors.DataTrainer" title="open_cp.predictors.DataTrainer"><code class="xref py py-class docutils literal"><span class="pre">open_cp.predictors.DataTrainer</span></code></a></p>
+<p>Returned by :class SEPPTrainer: encapsulated computed background rates
+and triggering parameters.  This class allows these to be evaluated on
+potentially different data to produce predictions.</p>
+<dl class="method">
+<dt id="open_cp.seppexp.SEPPPredictor.background_prediction">
+<code class="descname">background_prediction</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.seppexp.SEPPPredictor.background_prediction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a &#8220;prediction&#8221; just using the background rate.  Useful as it
+allows a direct comparison with the output of :method predict:</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Instance of :class predictors.GridPredictionArray:</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.seppexp.SEPPPredictor.background_rate">
+<code class="descname">background_rate</code><span class="sig-paren">(</span><em>x</em>, <em>y</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.seppexp.SEPPPredictor.background_rate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the background rate in grid cell (x,y).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="open_cp.seppexp.SEPPPredictor.predict">
+<code class="descname">predict</code><span class="sig-paren">(</span><em>predict_time</em>, <em>cutoff_time=None</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.seppexp.SEPPPredictor.predict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make a prediction at a time, using the data held by this instance.
+That is, evaluate the background rate plus the trigger kernel at
+events before the prediction time.  Optionally you can limit the data
+used, though this is against the underlying statistical model.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>predict_time</strong> &#8211; Time point to make a prediction at.</li>
+<li><strong>cutoff_time</strong> &#8211; Optionally, limit the input data to only be from</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>before this time.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Instance of :class predictors.GridPredictionArray:</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="open_cp.seppexp.SEPPTrainer">
+<em class="property">class </em><code class="descclassname">open_cp.seppexp.</code><code class="descname">SEPPTrainer</code><span class="sig-paren">(</span><em>region</em>, <em>grid_size=50</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.seppexp.SEPPTrainer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="predictors.html#open_cp.predictors.DataTrainer" title="open_cp.predictors.DataTrainer"><code class="xref py py-class docutils literal"><span class="pre">open_cp.predictors.DataTrainer</span></code></a></p>
+<p>Use the algorithm described in Mohler et al. 2015.  The input data is
+placed into grid cells, and background rates estimated for each cell.  The
+parameters for the exponential decay model of self-excitation are also
+estimated.  The returned object can be used to make predictions of risk
+from other data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>region</strong> &#8211; The rectangular region the grid should cover.</li>
+<li><strong>grid_size</strong> &#8211; The size of grid to use.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="open_cp.seppexp.SEPPTrainer.train">
+<code class="descname">train</code><span class="sig-paren">(</span><em>cutoff_time=None</em>, <em>iterations=20</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.seppexp.SEPPTrainer.train" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform the (slow) training step on historical data.  This estimates
+kernels, and returns an object which can make predictions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>cutoff_time</strong> &#8211; If specified, then limit the historical data to</td>
+</tr>
+</tbody>
+</table>
+<p>before this time.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A :class SEPPPredictor: instance.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.seppexp.maximisation">
+<code class="descclassname">open_cp.seppexp.</code><code class="descname">maximisation</code><span class="sig-paren">(</span><em>cells</em>, <em>omega</em>, <em>theta</em>, <em>mu</em>, <em>time_duration</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.seppexp.maximisation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform an iteration of the EM algorithm.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>cells</strong> &#8211; An array (of any shape) each entry of which is an array of</td>
+</tr>
+</tbody>
+</table>
+<p>times of events, in increasing order.
+:param mu: An array, of the same shape as <cite>cells</cite>, giving the background
+rate in each cell.
+:param time_duration: The total time range of the data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Triple (omega, theta, mu) of new estimates.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.seppexp.maximisation_corrected">
+<code class="descclassname">open_cp.seppexp.</code><code class="descname">maximisation_corrected</code><span class="sig-paren">(</span><em>cells</em>, <em>omega</em>, <em>theta</em>, <em>mu</em>, <em>time_duration</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.seppexp.maximisation_corrected" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform an iteration of the EM algorithm.  This version applies &#8220;edge
+corrections&#8221; (see Lewis, Mohler) which take account of the fact that by
+looking at a finite time window, we ignore aftershocks which occur after
+the end of the time window.  This leads to better parameter estimation
+when <cite>omega</cite> is small.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>cells</strong> &#8211; An array (of any shape) each entry of which is an array of</td>
+</tr>
+</tbody>
+</table>
+<p>times of events, in increasing order.
+:param mu: An array, of the same shape as <cite>cells</cite>, giving the background
+rate in each cell.
+:param time_duration: The total time range of the data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Triple (omega, theta, mu) of new estimates.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="open_cp.seppexp.p_matrix">
+<code class="descclassname">open_cp.seppexp.</code><code class="descname">p_matrix</code><span class="sig-paren">(</span><em>points</em>, <em>omega</em>, <em>theta</em>, <em>mu</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.seppexp.p_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the probability matrix.  Diagonal entries are the background
+rate, and entry [i,j] is <cite>g(points[j] - points[i])</cite> for i&lt;j, where
+:math g(t) =        heta omega e^{-omega t}:  Finally we normalise the matrix
+to have columns which sum to 1.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>points</strong> &#8211; A one-dimensional array of the times of events, in</td>
+</tr>
+</tbody>
+</table>
+<p>increasing order.
+:param omega: The scale of the &#8220;triggering&#8221; exponential distribution
+:param theta: The rate of the &#8220;triggering&#8221; intensity
+:param mu: The background Poisson process rate.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">The normalised probability matrix.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">open_cp.seppexp</a><ul>
+<li><a class="reference internal" href="#seppexp">seppexp</a></li>
+<li><a class="reference internal" href="#references">References</a></li>
+</ul>
+</li>
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="sepp.html" title="previous chapter">open_cp.sepp</a></li>
+      <li>Next: <a href="open_cp.sources.html" title="next chapter">open_cp.sources package</a></li>
+  </ul></li>
+</ul>
+</div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/source/seppexp.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, University of Leeds.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+      |
+      <a href="../_sources/source/seppexp.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
