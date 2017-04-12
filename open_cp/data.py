@@ -239,7 +239,7 @@ class TimedPoints:
 
 try:
     import pyproj as _proj
-except ModuleNotFoundError:
+except ImportError:
     import sys
     print("Package 'pyproj' not found: projection methods will not be supported.", file=sys.stderr)
     _proj = None

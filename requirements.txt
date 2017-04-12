@@ -1,5 +1,7 @@
-pytest
 numpy
 scipy
+pyproj
+
+pytest
 codecov
 pytest-cov
