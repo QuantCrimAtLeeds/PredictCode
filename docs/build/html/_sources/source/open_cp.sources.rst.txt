@@ -1,8 +1,11 @@
 open_cp.sources package
 =======================
 
-Submodules
-----------
+- :mod:`open_cp.sources.chicago`
+- :mod:`open_cp.sources.random`
+- :mod:`open_cp.sources.sepp`
+- :mod:`open_cp.sources.ukpolice`
+
 
 open_cp.sources.chicago module
 ------------------------------

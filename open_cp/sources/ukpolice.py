@@ -1,6 +1,6 @@
 """
 sources.ukpolice
-~~~~~~~
+================
 
 Reads a CSV file in the format (as of April 2017) of data available from:
 
@@ -40,12 +40,25 @@ def _convert_header(header):
     return lookup
 
 def default_burglary_data():
+    """Load the default data, if available.
+
+    :return: An instance of :class:`open_cp.data.TimedPoints` or `None`.
+    """
     try:
         return load(_default_filename, {"Burglary"})
     except Exception:
         return None
 
 def load(filename, primary_description_names):
+    """Load data from a CSV file in the expected format.
+
+    :param filename: Name of the CSV file load.
+    :param primary_description_names: Set of names to search for in the
+      "primary description field". E.g. pass `{"Burglary"}` to return only the
+      "burglary" crime type.
+
+    :return: An instance of :class:`open_cp.data.TimedPoints` or `None`.
+    """
     data = []
 
     with open(filename) as file:

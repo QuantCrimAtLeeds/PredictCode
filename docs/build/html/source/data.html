@@ -8,7 +8,7 @@
     
     <title>open_cp.data &#8212; OpenCP 1.0 documentation</title>
     
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/haiku.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     
     <script type="text/javascript">
@@ -28,22 +28,27 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="open_cp.kernels" href="kernels.html" />
-    <link rel="prev" title="Quick start" href="quick.html" />
-   
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
-  
-  
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
-
+    <link rel="prev" title="Quick start" href="quick.html" /> 
   </head>
   <body role="document">
-  
+      <div class="header" role="banner"><h1 class="heading"><a href="../index.html">
+          <span>OpenCP 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>open_cp.data</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="quick.html">Quick start</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="kernels.html">open_cp.kernels</a>&#160;&#160;»
+        </p>
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          <div class="body" role="main">
-            
+      </div>
+      <div class="content">
+        
+        
   <div class="section" id="module-open_cp.data">
 <span id="open-cp-data"></span><h1>open_cp.data<a class="headerlink" href="#module-open_cp.data" title="Permalink to this headline">¶</a></h1>
 <p>Encapsulates input data.</p>
@@ -55,12 +60,14 @@
 <dl class="attribute">
 <dt id="open_cp.data.Point.x">
 <code class="descname">x</code><a class="headerlink" href="#open_cp.data.Point.x" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>The x coordinate.</p>
+</dd></dl>
 
 <dl class="attribute">
 <dt id="open_cp.data.Point.y">
 <code class="descname">y</code><a class="headerlink" href="#open_cp.data.Point.y" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>The y coordinate.</p>
+</dd></dl>
 
 </dd></dl>
 
@@ -83,20 +90,15 @@
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>cell_width</strong> &#8211; The width of each cell in the grid.</li>
-<li><strong>cell_height</strong> &#8211; Optional .  The height of each cell in the grid;</li>
+<li><strong>cell_height</strong> &#8211; Optional.  The height of each cell in the grid;
+defaults to a square grid where the height is the same as the width.</li>
 </ul>
 </td>
 </tr>
-</tbody>
-</table>
-<p>defaults to a square grid where the height is the same as the width.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">(xsize, ysize) of the grid.</td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">(xsize, ysize) of the grid.</p>
+</td>
 </tr>
 </tbody>
 </table>
@@ -157,13 +159,16 @@
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>timestamps</strong> &#8211; An array of timestamps (must be convertible to</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>timestamps</strong> &#8211; An array of timestamps (must be convertible to
+<code class="xref py py-class docutils literal"><span class="pre">numpy.datetime64</span></code>).</li>
+<li><strong>coords</strong> &#8211; An array of shape (2,n) where <cite>n</cite> must match the number of
+timestamps.</li>
+</ul>
+</td>
 </tr>
 </tbody>
 </table>
-<p>:class numpy.datetime64:).
-:param coords: An array of shape (2,n) where <cite>n</cite> must match the number of
-timestamps.</p>
 <dl class="attribute">
 <dt id="open_cp.data.TimedPoints.bounding_box">
 <code class="descname">bounding_box</code><a class="headerlink" href="#open_cp.data.TimedPoints.bounding_box" title="Permalink to this definition">¶</a></dt>
@@ -172,7 +177,7 @@ timestamps.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A :class RectangularRegion: instance.</td>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A <a class="reference internal" href="#open_cp.data.RectangularRegion" title="open_cp.data.RectangularRegion"><code class="xref py py-class docutils literal"><span class="pre">RectangularRegion</span></code></a> instance.</td>
 </tr>
 </tbody>
 </table>
@@ -193,11 +198,11 @@ cutoff.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>cutoff_time</strong> &#8211; End of the time period we&#8217;re interested in.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>cutoff_time</strong> &#8211; End of the time period we&#8217;re interested in.
+Default is <cite>None</cite> which means return all the data.</td>
 </tr>
 </tbody>
 </table>
-<p>Default is <cite>None</cite> which means return all the data.</p>
 </dd></dl>
 
 <dl class="staticmethod">
@@ -222,13 +227,13 @@ starting from 0, and with the optional unit.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>time_unit</strong> &#8211; The unit to measure time by.  Defaults to 1 minute,</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>time_unit</strong> &#8211; The unit to measure time by.  Defaults to 1 minute,
+so timestamps an hour apart will be converted to floats 60.0 apart.
+No rounding occurs, so there is no loss in accuracy by passing a
+different time unit.</td>
 </tr>
 </tbody>
 </table>
-<p>so timestamps an hour apart will be converted to floats 60.0 apart.
-No rounding occurs, so there is no loss in accuracy by passing a
-different time unit.</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -248,7 +253,7 @@ different time unit.</p>
 <dl class="method">
 <dt id="open_cp.data.TimedPoints.times_datetime">
 <code class="descname">times_datetime</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.data.TimedPoints.times_datetime" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return an array of timestamps using the :class datetime.datetime:
+<dd><p>Return an array of timestamps using the <code class="xref py py-class docutils literal"><span class="pre">datetime.datetime</span></code>
 standard library class.  Useful for plotting with matplotlib, for
 example.</p>
 </dd></dl>
@@ -262,24 +267,26 @@ converted to floats, starting from 0, and with the optional unit.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>time_unit</strong> &#8211; The unit to measure time by.  Defaults to 1 minute,</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>time_unit</strong> &#8211; The unit to measure time by.  Defaults to 1 minute,
+so timestamps an hour apart will be converted to floats 60.0 apart.
+No rounding occurs, so there is no loss in accuracy by passing a
+different time unit.</td>
 </tr>
 </tbody>
 </table>
-<p>so timestamps an hour apart will be converted to floats 60.0 apart.
-No rounding occurs, so there is no loss in accuracy by passing a
-different time unit.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="open_cp.data.TimedPoints.xcoords">
 <code class="descname">xcoords</code><a class="headerlink" href="#open_cp.data.TimedPoints.xcoords" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>A one dimensional array representing the x coordinates of events.</p>
+</dd></dl>
 
 <dl class="attribute">
 <dt id="open_cp.data.TimedPoints.ycoords">
 <code class="descname">ycoords</code><a class="headerlink" href="#open_cp.data.TimedPoints.ycoords" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>A one dimensional array representing the y coordinates of events.</p>
+</dd></dl>
 
 </dd></dl>
 
@@ -293,22 +300,18 @@ nothing.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>points</strong> &#8211; A :class TimedPoints: instance of lon/lat data.</li>
-<li><strong>proj</strong> &#8211; Optionally, a <cite>pyproj.Proj</cite> object describing the projection.</li>
-<li><strong>epsg</strong> &#8211; If no <cite>proj</cite> is given, this must be supplied.  A valid EPSG</li>
+<li><strong>proj</strong> &#8211; Optionally, a <code class="xref py py-class docutils literal"><span class="pre">pyproj.Proj</span></code> instance describing the
+projection.</li>
+<li><strong>epsg</strong> &#8211; If no <cite>proj</cite> is given, this must be supplied.  A valid EPSG
+projection reference.  For example, 7405 is suitable for UK data. See
+<a class="reference external" href="http://spatialreference.org/ref/epsg/">http://spatialreference.org/ref/epsg/</a></li>
 </ul>
 </td>
 </tr>
-</tbody>
-</table>
-<p>projection reference.  For example, 7405 is suitable for UK data. See
-<a class="reference external" href="http://spatialreference.org/ref/epsg/">http://spatialreference.org/ref/epsg/</a></p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A :class TimedPoints: instance of projected data with the same timestamps.</td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A <a class="reference internal" href="#open_cp.data.TimedPoints" title="open_cp.data.TimedPoints"><code class="xref py py-class docutils literal"><span class="pre">TimedPoints</span></code></a> instance of projected data with the same timestamps.</p>
+</td>
 </tr>
 </tbody>
 </table>
@@ -317,54 +320,22 @@ nothing.</p>
 </div>
 
 
-          </div>
-        </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper"><div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="quick.html" title="previous chapter">Quick start</a></li>
-      <li>Next: <a href="kernels.html" title="next chapter">open_cp.kernels</a></li>
-  </ul></li>
-</ul>
-</div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/source/data.rst.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <form class="search" action="../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
-        </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="quick.html">Quick start</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="kernels.html">open_cp.kernels</a>&#160;&#160;»
+        </p>
+
       </div>
-      <div class="clearer"></div>
-    </div>
-    <div class="footer">
-      &copy;2017, University of Leeds.
-      
-      |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
-      
-      |
-      <a href="../_sources/source/data.rst.txt"
-          rel="nofollow">Page source</a>
-    </div>
 
-    
-
-    
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, University of Leeds.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
+    </div>
   </body>
 </html>

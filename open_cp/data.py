@@ -11,10 +11,12 @@ class Point():
 
     @property
     def x(self):
+        """The x coordinate."""
         return self._x
 
     @property
     def y(self):
+        """The y coordinate."""
         return self._y
 
     def __add__(self, other):
@@ -83,8 +85,8 @@ class RectangularRegion():
         """Return the size of grid defined by this region.
 
         :param cell_width: The width of each cell in the grid.
-        :param cell_height: Optional .  The height of each cell in the grid;
-        defaults to a square grid where the height is the same as the width.
+        :param cell_height: Optional.  The height of each cell in the grid;
+         defaults to a square grid where the height is the same as the width.
 
         :return: (xsize, ysize) of the grid.
         """
@@ -103,9 +105,9 @@ class TimedPoints:
     """Stores a list of timestamped x-y coordinates of events.
     
     :param timestamps: An array of timestamps (must be convertible to
-    :class numpy.datetime64:).
+      :class:`numpy.datetime64`).
     :param coords: An array of shape (2,n) where `n` must match the number of
-    timestamps.
+      timestamps.
     """
     def __init__(self, timestamps, coords):
         self._assert_times_ordered(timestamps)
@@ -134,10 +136,12 @@ class TimedPoints:
 
     @property
     def xcoords(self):
+        """A one dimensional array representing the x coordinates of events."""
         return self.coords[0]
 
     @property
     def ycoords(self):
+        """A one dimensional array representing the y coordinates of events."""
         return self.coords[1]
         
     def __getitem__(self, index):
@@ -161,11 +165,11 @@ class TimedPoints:
         cutoff.
 
         :param cutoff_time: End of the time period we're interested in.
-        Default is `None` which means return all the data.
+          Default is `None` which means return all the data.
         """
         if cutoff_time is None:
             return self
-        mask = self.timestamps <= cutoff_time
+        mask = self.timestamps <= _np.datetime64(cutoff_time)
         return TimedPoints(self.timestamps[mask], self.coords[:,mask])
 
     @property
@@ -182,7 +186,7 @@ class TimedPoints:
     def bounding_box(self):
         """The smallest (space) box containing all the data points.
 
-        :return: A :class RectangularRegion: instance.
+        :return: A :class:`RectangularRegion` instance.
         """
         return RectangularRegion(xmin = _np.min(self.xcoords),
             xmax = _np.max(self.xcoords), ymin = _np.min(self.ycoords),
@@ -201,9 +205,9 @@ class TimedPoints:
         starting from 0, and with the optional unit.
 
         :param time_unit: The unit to measure time by.  Defaults to 1 minute,
-        so timestamps an hour apart will be converted to floats 60.0 apart.
-        No rounding occurs, so there is no loss in accuracy by passing a
-        different time unit.
+          so timestamps an hour apart will be converted to floats 60.0 apart.
+          No rounding occurs, so there is no loss in accuracy by passing a
+          different time unit.
         """
         return ( self.timestamps - self.timestamps[0] ) / time_unit
 
@@ -212,15 +216,15 @@ class TimedPoints:
         converted to floats, starting from 0, and with the optional unit.
 
         :param time_unit: The unit to measure time by.  Defaults to 1 minute,
-        so timestamps an hour apart will be converted to floats 60.0 apart.
-        No rounding occurs, so there is no loss in accuracy by passing a
-        different time unit.
+          so timestamps an hour apart will be converted to floats 60.0 apart.
+          No rounding occurs, so there is no loss in accuracy by passing a
+          different time unit.
         """
         times = self.time_deltas(time_unit)
         return _np.vstack([times, self.xcoords, self.ycoords])
 
     def times_datetime(self):
-        """Return an array of timestamps using the :class datetime.datetime:
+        """Return an array of timestamps using the :class:`datetime.datetime`
         standard library class.  Useful for plotting with matplotlib, for
         example.
         """
@@ -250,12 +254,13 @@ def points_from_lon_lat(points, proj=None, epsg=None):
     nothing.
 
     :param points: A :class TimedPoints: instance of lon/lat data.
-    :param proj: Optionally, a `pyproj.Proj` object describing the projection.
+    :param proj: Optionally, a :class:`pyproj.Proj` instance describing the
+      projection.
     :param epsg: If no `proj` is given, this must be supplied.  A valid EPSG
-    projection reference.  For example, 7405 is suitable for UK data. See
-    http://spatialreference.org/ref/epsg/
+      projection reference.  For example, 7405 is suitable for UK data. See
+      http://spatialreference.org/ref/epsg/
 
-    :return: A :class TimedPoints: instance of projected data with the same timestamps.
+    :return: A :class:`TimedPoints` instance of projected data with the same timestamps.
     """
     if not _proj:
         return points

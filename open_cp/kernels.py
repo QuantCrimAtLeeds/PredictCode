@@ -11,26 +11,26 @@ function, or an instance of a class implementing `__call__`).  We follow the
 e.g. scipy convention:
 
 - A kernel expecting a one dimensional input may take a scalar as input,
-or a one-dimensional numpy array.  It should return, respectively, a scalar
-or a one-dimensional array of the same size.  For example:
+  or a one-dimensional numpy array.  It should return, respectively, a scalar
+  or a one-dimensional array of the same size.  For example::
 
     def gaussian(p):
         return np.exp(-p * p)
 
-Here we use `np.exp` to make sure that if `p` is an array, we handle it
-correctly.
+  Here we use `np.exp` to make sure that if `p` is an array, we handle it
+  correctly.
 
 - A kernel expecting a `k` dimensional input may take an array of shape `(k)`
-to represent a point, or an array of shape `(k,N)` to represent `N` points.
-The return should be, respectively, a scalar or an array of shape `(N)`.
-We follow this convention to allow e.g. the following:
+  to represent a point, or an array of shape `(k,N)` to represent `N` points.
+  The return should be, respectively, a scalar or an array of shape `(N)`.
+  We follow this convention to allow e.g. the following::
 
    def x_y_sum(p):
        return p[0] + p[1]
 
-In the single-point case, `p[0]` is a scalar representing the x coordinate and
-`p[1]` a scalar representing the y coordinate.  In the multiple point case,
-`p[0]` is an array of all the x coordinates.
+  In the single-point case, `p[0]` is a scalar representing the x coordinate and
+  `p[1]` a scalar representing the y coordinate.  In the multiple point case,
+  `p[0]` is an array of all the x coordinates.
 """
 
 
@@ -40,10 +40,13 @@ import abc as _abc
 
 
 class Kernel(metaclass=_abc.ABCMeta):
+    """Abstract base class for classes implementing kernels.  You are not
+    required to extend this class, but you should implement the interface.
+    """
     @_abc.abstractmethod
     def __call__(self, points):
         """:param points: N coordinates in n dimensional space.  When n>1, the
-        input should be an array of shape (n,N).
+          input should be an array of shape (n,N).
         
         :return: An array of length N giving the kernel intensity at each point.
         """
@@ -58,10 +61,13 @@ class Kernel(metaclass=_abc.ABCMeta):
 
 
 class KernelEstimator(metaclass=_abc.ABCMeta):
+    """Abstract base class for classes implementing kernel estimators.  You are
+    not required to extend this class, but you should implement the interface.
+    """
     @_abc.abstractmethod
     def __call__(self, coords):
         """:param coords: N coordinates in n dimensional space.  When n>1, the
-        input should be an array of shape (n,N).
+          input should be an array of shape (n,N).
         
         :return: A kernel, probably an instance of Kernel.
         """
@@ -127,15 +133,15 @@ class GaussianKernel(Kernel):
 
 
 def compute_kth_distance(coords, k=15):
-    """Find the (Euclidean) distance to the `k`th nearest neighbour.
+    """Find the (Euclidean) distance to the `k` th nearest neighbour.
 
     :param coords: An array of shape (n,N) of N points in n dimensional space;
-    if n=1 then input is an array of shape (N).
+      if n=1 then input is an array of shape (N).
     :param k: The nearest neighbour to use, defaults to 15, if N is too small
-    then uses N-1.
+      then uses N-1.
     
     :return: An array of shape (N) where the i-th entry is the distance from
-    the i-th point to its k-th nearest neighbour."""
+      the i-th point to its k-th nearest neighbour."""
     points = _np.asarray(coords)
     k = min(k, points.shape[-1] - 1)
 
@@ -154,17 +160,18 @@ def compute_kth_distance(coords, k=15):
     return distance_to_k
 
 def compute_normalised_kth_distance(coords, k=15):
-    """Find the (Euclidean) distance to the `k`th nearest neighbour.
+    """Find the (Euclidean) distance to the `k` th nearest neighbour.
     The input data is first scaled so that each coordinate (independently) has
     unit sample variance.
 
     :param coords: An array of shape (n,N) of N points in n dimensional space;
-    if n=1 then input is an array of shape (N).
+      if n=1 then input is an array of shape (N).
     :param k: The nearest neighbour to use, defaults to 15, if N is too small
-    then uses N-1.
+      then uses N-1.
     
     :return: An array of shape (N) where the i-th entry is the distance from
-    the i-th point to its k-th nearest neighbour."""
+      the i-th point to its k-th nearest neighbour.
+    """
     coords = _np.asarray(coords)
     if len(coords.shape) == 1:
         points = coords / _np.std(coords, ddof=1)
@@ -175,7 +182,7 @@ def compute_normalised_kth_distance(coords, k=15):
 def kth_nearest_neighbour_gaussian_kde(coords, k=15):
     """Estimate a kernel using variable bandwidth with a Gaussian kernel.
     The input data is scaled (independently in each coordinate) to have unit
-    variance in each coordinate, and then the distance to the `k`th nearest
+    variance in each coordinate, and then the distance to the `k` th nearest
     neighbour is found.  The returned kernel is normalised, and is the sum
     of Gaussians centred on each data point, where the standard deviation for
     each coordinate is the distance for that point, multiplied by the standard
@@ -183,13 +190,13 @@ def kth_nearest_neighbour_gaussian_kde(coords, k=15):
 
     See the Appendix of:
     Mohler et al, "Self-Exciting Point Process Modeling of Crime",
-       Journal of the American Statistical Association, 2011
-       DOI: 10.1198/jasa.2011.ap09546
+    Journal of the American Statistical Association, 2011
+    DOI: 10.1198/jasa.2011.ap09546
 
     :param coords: An array of shape (n,N) of N points in n dimensional space;
-    if n=1 then input is an array of shape (N).
+      if n=1 then input is an array of shape (N).
     :param k: The nearest neighbour to use, defaults to 15, if N is too small
-    then uses N-1.
+      then uses N-1.
     
     :return: A kernel object.
     """
@@ -214,11 +221,11 @@ def marginal_knng(coords, coord_index=0, k=15):
     but much faster, than (numerically) integerating out all but one variable.
     
     :param coords: An array of shape (n,N) of N points in n dimensional space;
-    if n=1 then input is an array of shape (N).
+      if n=1 then input is an array of shape (N).
     :param coord_index: Which coordinate to return the marginal for; defaults
-    to 0 so giving the first coordinate.
+      to 0 so giving the first coordinate.
     :param k: The nearest neighbour to use, defaults to 15, if N is too small
-    then uses N-1.
+      then uses N-1.
     
     :return: A one-dimensional kernel.
     """
@@ -233,11 +240,11 @@ def marginal_knng(coords, coord_index=0, k=15):
 
 
 class KthNearestNeighbourGaussianKDE(KernelEstimator):
-    """A :class KernelEstimator: which applies the algorithm given by
-    :function kth_nearest_neighbour_gaussian_kde:
+    """A :class:`KernelEstimator` which applies the algorithm given by
+    :func:`kth_nearest_neighbour_gaussian_kde`
 
     :param k: The nearest neighbour to use, defaults to 15, if N is too small
-    then uses N-1.
+      then uses N-1.
     """
     def __init__(self, k=15):
         self.k = k
@@ -247,12 +254,12 @@ class KthNearestNeighbourGaussianKDE(KernelEstimator):
 
 
 class ReflectedKernel(Kernel):
-    """A specialisation of :class Kernel: which is for where, along certain
+    """A specialisation of :class:`Kernel` which is for where, along certain
     axes, we know that the data is concentrated on the positive interval
-    [0, \infty].  We wrap an existing :class Kernel: instance, but reflect
+    [0, \infty].  We wrap an existing :class:`Kernel` instance, but reflect
     about 0 any estimated probability mass on the negative reals.
 
-    :param delegate: The :class Kernel: instance to delegate to.
+    :param delegate: The :class:`Kernel` instance to delegate to.
     :param reflected_axis: Which axis to reflect about.
     """
     def __init__(self, delegate, reflected_axis=0):
@@ -275,9 +282,9 @@ class ReflectedKernel(Kernel):
 
 class ReflectedKernelEstimator(KernelEstimator):
     """Wraps an existing :class KernelEstimator: but reflects the estimated
-    kernel about 0 in one axis.  See :class ReflectedKernel:
+    kernel about 0 in one axis.  See :class:`ReflectedKernel`
 
-    :param estimator: The :class KernelEstimator: to delegate to.
+    :param estimator: The :class:`KernelEstimator` to delegate to.
     :param reflected_axis: Which axis to reflect about.
     """
     def __init__(self, estimator, reflected_axis=0):
@@ -290,14 +297,14 @@ class ReflectedKernelEstimator(KernelEstimator):
 
 
 class TimeSpaceFactorsEstimator(KernelEstimator):
-    """A :class KernelEstimator: which applies a one-dimensional kernel
+    """A :class:`KernelEstimator` which applies a one-dimensional kernel
     estimator to the first (time) coordinate of the data, and another kernel
     estimator to the remaining (space) coordinates.
 
-    :param time_estimator: A :class KernelEstimator: for the one-dimensional
-    time data.
-    :param space_estimator: A :class KernelEstimator: for the remaining
-    coordinates.
+    :param time_estimator: A :class:`KernelEstimator` for the one-dimensional
+      time data.
+    :param space_estimator: A :class:`KernelEstimator` for the remaining
+      coordinates.
     """
     def __init__(self, time_estimator, space_estimator):
         self.time_estimator = time_estimator
@@ -315,7 +322,7 @@ class TimeSpaceFactorsEstimator(KernelEstimator):
             self.scale = scale
             
         def time_kernel(self, points):
-            """A one-dimensional, _normalised_ kernel giving the time
+            """A one-dimensional, *normalised* kernel giving the time
             component of the overall kernel.
             """
             return self.first(points)
@@ -332,7 +339,7 @@ class TimeSpaceFactorsEstimator(KernelEstimator):
         """Find the kernel estimate for the first coordinate only.
         
         :param coords: All the coordinates; only the 1st coordinate will be
-        used.
+          used.
         
         :return: A one dimensional kernel.
         """
@@ -349,15 +356,15 @@ class TimeSpaceFactorsEstimator(KernelEstimator):
 
 
 class KNNG1_NDFactors(TimeSpaceFactorsEstimator):
-    """A :class KernelEstimator: which applies the
-    :class KthNearestNeighbourGaussianKDE: to first coordinate with one value
+    """A :class:`KernelEstimator` which applies the
+    :class:`KthNearestNeighbourGaussianKDE` to first coordinate with one value
     of k, and then to the remaining coordinates with another value of k, and
     combines the result.
     
     :param k_first: The nearest neighbour to use in the first coordinate,
-    defaults to 100, if N is too small then uses N-1.
+      defaults to 100, if N is too small then uses N-1.
     :param k_rest: The nearest neighbour to use for the remaining coordinates,
-    defaults to 15, if N is too small then uses N-1.
+      defaults to 15, if N is too small then uses N-1.
     """
     def __init__(self, k_first=100, k_rest=15):
         super().__init__(KthNearestNeighbourGaussianKDE(k_first), KthNearestNeighbourGaussianKDE(k_rest))

@@ -1,8 +1,3 @@
-.. OpenCP documentation master file, created by
-   sphinx-quickstart on Wed Apr 12 13:16:40 2017.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 OpenCP
 ======
 
@@ -18,7 +13,7 @@ algorithms from published sources.
 
 .. toctree::
    :maxdepth: 1
-   :caption: Python modules
+   :caption: Python modules:
 
    source/data
    source/kernels

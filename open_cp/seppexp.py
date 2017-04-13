@@ -4,23 +4,23 @@ seppexp
 
 Implements the ETAS (Epidemic Type Aftershock-Sequences) model intensity
 estimation scheme outlined in Mohler et al. (2015).  This model is somewhat
-different, and simplified, from that used in the `sepp` module:
+different, and simplified, from that used in the :mod:`open_cp.sepp` module:
 
 - This is an explicitly grid based model.  All events are assigned to the grid
-cell in which the occur, and we make no more use of their location.
+  cell in which the occur, and we make no more use of their location.
 - For each cell, we produce an independent estimate of the background rate of
-events.
+  events.
 - We model "self-excitation" only in time, as a simple exponential decay (much
-like the classical Hawkes model in Financial mathematics).  We assume the decay
-parameters are the same across all grid cells.
+  like the classical Hawkes model in Financial mathematics).  We assume the decay
+  parameters are the same across all grid cells.
 
 References
 ~~~~~~~~~~
-Mohler et al, "Randomized Controlled Field Trials of Predictive Policing",
+1. Mohler et al, "Randomized Controlled Field Trials of Predictive Policing",
    Journal of the American Statistical Association (2015)
    DOI:10.1080/01621459.2015.1077710
 
-Lewis, Mohler, "A Nonparametric EM Algorithm for Multiscale Hawkes Processes"
+2. Lewis, Mohler, "A Nonparametric EM Algorithm for Multiscale Hawkes Processes"
    in Proceedings of the 2011 Joint Statistical Meetings, pp. 1–16
    http://math.scu.edu/~gmohler/EM_paper.pdf
 """
@@ -39,12 +39,12 @@ def _iter_array(a):
 
 def p_matrix(points, omega, theta, mu):
     """Computes the probability matrix.  Diagonal entries are the background
-    rate, and entry [i,j] is `g(points[j] - points[i])` for i<j, where
-    :math g(t) = \theta \omega e^{-\omega t}:  Finally we normalise the matrix
+    rate, and entry [i,j] is `g(points[j] - points[i])` for `i<j`, where
+    :math:`g(t) = \theta \omega e^{-\omega t}`.  Finally we normalise the matrix
     to have columns which sum to 1.
 
     :param points: A one-dimensional array of the times of events, in
-    increasing order.
+      increasing order.
     :param omega: The scale of the "triggering" exponential distribution
     :param theta: The rate of the "triggering" intensity
     :param mu: The background Poisson process rate.
@@ -61,7 +61,7 @@ def p_matrix(points, omega, theta, mu):
     return _normalise_matrix(p)
 
 def _slow_maximisation(cells, omega, theta, mu, time_duration):
-    """Pure Python implementation of :function maximisation: for testing."""
+    """Pure Python implementation of :func:`maximisation` for testing."""
     cells, mu = _np.asarray(cells), _np.asarray(mu)
     new_mu = []
     omega_1, omega_2, count = 0, 0, 0
@@ -85,12 +85,12 @@ def maximisation(cells, omega, theta, mu, time_duration):
     """Perform an iteration of the EM algorithm.
 
     :param cells: An array (of any shape) each entry of which is an array of
-    times of events, in increasing order.
+      times of events, in increasing order.
     :param mu: An array, of the same shape as `cells`, giving the background
-    rate in each cell.
+      rate in each cell.
     :param time_duration: The total time range of the data.
 
-    :return: Triple (omega, theta, mu) of new estimates.
+    :return: Triple `(omega, theta, mu)` of new estimates.
     """
     cells, mu = _np.asarray(cells), _np.asarray(mu)
     upper_trianglar_sums = _np.zeros_like(mu)
@@ -115,7 +115,7 @@ def maximisation(cells, omega, theta, mu, time_duration):
     return (omega, theta, mu)
 
 def _slow_maximisation_corrected(cells, omega, theta, mu, time_duration):
-    """Pure Python implementation of :function maximisation_corrected:
+    """Pure Python implementation of :func:`maximisation_corrected`
     for testing.
     """
     cells, mu = _np.asarray(cells), _np.asarray(mu)
@@ -153,12 +153,12 @@ def maximisation_corrected(cells, omega, theta, mu, time_duration):
     when `omega` is small.
 
     :param cells: An array (of any shape) each entry of which is an array of
-    times of events, in increasing order.
+      times of events, in increasing order.
     :param mu: An array, of the same shape as `cells`, giving the background
-    rate in each cell.
+      rate in each cell.
     :param time_duration: The total time range of the data.
 
-    :return: Triple (omega, theta, mu) of new estimates.
+    :return: Triple `(omega, theta, mu)` of new estimates.
     """
     cells, mu = _np.asarray(cells), _np.asarray(mu)
     upper_trianglar_sums = _np.zeros_like(mu)
@@ -204,7 +204,7 @@ def _make_cells(region, grid_size, events, times):
 
 
 class SEPPPredictor(predictors.DataTrainer):
-    """Returned by :class SEPPTrainer: encapsulated computed background rates
+    """Returned by :class:`SEPPTrainer` encapsulated computed background rates
     and triggering parameters.  This class allows these to be evaluated on
     potentially different data to produce predictions.
     """
@@ -216,14 +216,14 @@ class SEPPPredictor(predictors.DataTrainer):
         self.grid_size = grid_size
 
     def background_rate(self, x, y):
-        """Return the background rate in grid cell (x,y)."""
+        """Return the background rate in grid cell `(x,y)`."""
         return self.mu[y, x]
 
     def background_prediction(self):
         """Make a "prediction" just using the background rate.  Useful as it
-        allows a direct comparison with the output of :method predict:
+        allows a direct comparison with the output of :meth:`predict`.
         
-        :return: Instance of :class predictors.GridPredictionArray:
+        :return: Instance of :class:`open_cp.predictors.GridPredictionArray`
         """
         matrix = _np.array(self.mu, dtype=_np.float)
         return predictors.GridPredictionArray(self.grid_size, self.grid_size,
@@ -237,9 +237,9 @@ class SEPPPredictor(predictors.DataTrainer):
 
         :param predict_time: Time point to make a prediction at.
         :param cutoff_time: Optionally, limit the input data to only be from
-        before this time.
+          before this time.
 
-        :return: Instance of :class predictors.GridPredictionArray:
+        :return: Instance of :class:`open_cp.predictors.GridPredictionArray`
         """
         events = self.data.events_before(cutoff_time)
         times = (_np.datetime64(predict_time) - events.timestamps) / _np.timedelta64(1, "m")
@@ -282,9 +282,9 @@ class SEPPTrainer(predictors.DataTrainer):
         kernels, and returns an object which can make predictions.
 
         :param cutoff_time: If specified, then limit the historical data to
-        before this time.
+          before this time.
         
-        :return: A :class SEPPPredictor: instance.
+        :return: A :class:`SEPPPredictor` instance.
         """
         events = self.data.events_before(cutoff_time)
         cells, time_duration = self._make_cells(events)

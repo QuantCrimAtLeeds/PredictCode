@@ -8,7 +8,7 @@
     
     <title>open_cp.retrohotspot &#8212; OpenCP 1.0 documentation</title>
     
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/haiku.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     
     <script type="text/javascript">
@@ -28,22 +28,27 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="open_cp.prohotspot" href="prohotspot.html" />
-    <link rel="prev" title="open_cp.predictors" href="predictors.html" />
-   
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
-  
-  
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
-
+    <link rel="prev" title="open_cp.predictors" href="predictors.html" /> 
   </head>
   <body role="document">
-  
+      <div class="header" role="banner"><h1 class="heading"><a href="../index.html">
+          <span>OpenCP 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>open_cp.retrohotspot</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="predictors.html">open_cp.predictors</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="prohotspot.html">open_cp.prohotspot</a>&#160;&#160;»
+        </p>
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          <div class="body" role="main">
-            
+      </div>
+      <div class="content">
+        
+        
   <div class="section" id="module-open_cp.retrohotspot">
 <span id="open-cp-retrohotspot"></span><h1>open_cp.retrohotspot<a class="headerlink" href="#module-open_cp.retrohotspot" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="retrohotspot">
@@ -58,14 +63,15 @@ are then summed to arrive at an overall relative risk.</p>
 to any belief in intrinsic superiority of this method).  A grid is laid down,
 and in computing the weight assigned to each grid cell, the distance from the
 mid-point of that cell to each event is used.</p>
-<p>To provide your work kernel / weight, subclass the abstract base class Weight.</p>
+<p>To provide your work kernel / weight, subclass the abstract base class
+<a class="reference internal" href="#open_cp.retrohotspot.Weight" title="open_cp.retrohotspot.Weight"><code class="xref py py-class docutils literal"><span class="pre">Weight</span></code></a>.</p>
 <dl class="class">
 <dt id="open_cp.retrohotspot.Quartic">
 <em class="property">class </em><code class="descclassname">open_cp.retrohotspot.</code><code class="descname">Quartic</code><span class="sig-paren">(</span><em>bandwidth=200</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.retrohotspot.Quartic" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#open_cp.retrohotspot.Weight" title="open_cp.retrohotspot.Weight"><code class="xref py py-class docutils literal"><span class="pre">open_cp.retrohotspot.Weight</span></code></a></p>
-<p>The classic &#8220;quartic&#8221; weight, which is the function :math (1-d^2)^2:
-for :math <a href="#id1"><span class="problematic" id="id2">|d|</span></a> leq 1:.  In general, we compute the distance from the
-origin and then divide by a bandwidth to create the variable :math d:.</p>
+<p>The classic &#8220;quartic&#8221; weight, which is the function <span class="math">\((1-d^2)^2\)</span>
+for <span class="math">\(|d| \leq 1\)</span>.  In general, we compute the distance from the
+origin and then divide by a bandwidth to create the variable <span class="math">\(d\)</span>.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -81,7 +87,7 @@ origin and then divide by a bandwidth to create the variable :math d:.</p>
 <em class="property">class </em><code class="descclassname">open_cp.retrohotspot.</code><code class="descname">RetroHotSpot</code><a class="headerlink" href="#open_cp.retrohotspot.RetroHotSpot" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="predictors.html#open_cp.predictors.DataTrainer" title="open_cp.predictors.DataTrainer"><code class="xref py py-class docutils literal"><span class="pre">open_cp.predictors.DataTrainer</span></code></a></p>
 <p>Implements the retro-spective hotspotting algorithm.  To change the
-weight/kernel used, set the :attribute weight: attribute.</p>
+weight/kernel used, set the <code class="xref py py-attr docutils literal"><span class="pre">weight</span></code> attribute.</p>
 <dl class="method">
 <dt id="open_cp.retrohotspot.RetroHotSpot.predict">
 <code class="descname">predict</code><span class="sig-paren">(</span><em>start_time=None</em>, <em>end_time=None</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.retrohotspot.RetroHotSpot.predict" title="Permalink to this definition">¶</a></dt>
@@ -90,13 +96,16 @@ weight/kernel used, set the :attribute weight: attribute.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>start_time</strong> &#8211; If given, only use the data with a timestamp after</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>start_time</strong> &#8211; If given, only use the data with a timestamp after
+this time.</li>
+<li><strong>end_time</strong> &#8211; If given, only use the data with a timestamp before
+this time.</li>
+</ul>
+</td>
 </tr>
 </tbody>
 </table>
-<p>this time.
-:param end_time: If given, only use the data with a timestamp before
-this time.</p>
 </dd></dl>
 
 </dd></dl>
@@ -106,24 +115,42 @@ this time.</p>
 <em class="property">class </em><code class="descclassname">open_cp.retrohotspot.</code><code class="descname">RetroHotSpotGrid</code><span class="sig-paren">(</span><em>region</em>, <em>grid_size=150</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.retrohotspot.RetroHotSpotGrid" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="predictors.html#open_cp.predictors.DataTrainer" title="open_cp.predictors.DataTrainer"><code class="xref py py-class docutils literal"><span class="pre">open_cp.predictors.DataTrainer</span></code></a></p>
 <p>Applies the grid-based retro-spective hotspotting algorithm.
-To change the weight/kernel used, set the :attribute weight: attribute.</p>
+To change the weight/kernel used, set the <code class="xref py py-attr docutils literal"><span class="pre">weight</span></code> attribute.</p>
 <p>This applies a grid at the start of the algorithm, and so differs from
-using :class RetroHotSpot: and then gridding the resulting continuous risk 
+using <a class="reference internal" href="#open_cp.retrohotspot.RetroHotSpot" title="open_cp.retrohotspot.RetroHotSpot"><code class="xref py py-class docutils literal"><span class="pre">RetroHotSpot</span></code></a> and then gridding the resulting continuous risk 
 estimate.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>region</strong> &#8211; An instance of :RectangularRegion: giving the region the</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>region</strong> &#8211; An instance of :RectangularRegion: giving the region the
+grid should cover.</li>
+<li><strong>grid_size</strong> &#8211; The size of grid to use.</li>
+</ul>
+</td>
 </tr>
 </tbody>
 </table>
-<p>grid should cover.
-:param grid_size: The size of grid to use.</p>
 <dl class="method">
 <dt id="open_cp.retrohotspot.RetroHotSpotGrid.predict">
 <code class="descname">predict</code><span class="sig-paren">(</span><em>start_time=None</em>, <em>end_time=None</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.retrohotspot.RetroHotSpotGrid.predict" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Produce a grid-based risk prediction over the optional time range.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>start_time</strong> &#8211; If given, only use the data with a timestamp after
+this time.</li>
+<li><strong>end_time</strong> &#8211; If given, only use the data with a timestamp before
+this time.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 </dd></dl>
 
@@ -139,62 +166,22 @@ algorithm.</p>
 </div>
 
 
-          </div>
-        </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
-  <ul>
-<li><a class="reference internal" href="#">open_cp.retrohotspot</a><ul>
-<li><a class="reference internal" href="#retrohotspot">retrohotspot</a></li>
-</ul>
-</li>
-</ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="predictors.html" title="previous chapter">open_cp.predictors</a></li>
-      <li>Next: <a href="prohotspot.html" title="next chapter">open_cp.prohotspot</a></li>
-  </ul></li>
-</ul>
-</div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/source/retrohotspot.rst.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <form class="search" action="../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
-        </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="predictors.html">open_cp.predictors</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="prohotspot.html">open_cp.prohotspot</a>&#160;&#160;»
+        </p>
+
       </div>
-      <div class="clearer"></div>
-    </div>
-    <div class="footer">
-      &copy;2017, University of Leeds.
-      
-      |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
-      
-      |
-      <a href="../_sources/source/retrohotspot.rst.txt"
-          rel="nofollow">Page source</a>
-    </div>
 
-    
-
-    
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, University of Leeds.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
+    </div>
   </body>
 </html>

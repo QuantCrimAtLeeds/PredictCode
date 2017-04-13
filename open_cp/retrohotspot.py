@@ -14,7 +14,8 @@ to any belief in intrinsic superiority of this method).  A grid is laid down,
 and in computing the weight assigned to each grid cell, the distance from the
 mid-point of that cell to each event is used.
 
-To provide your work kernel / weight, subclass the abstract base class Weight.
+To provide your work kernel / weight, subclass the abstract base class
+:class:`Weight`.
 """
 
 from . import predictors
@@ -33,8 +34,8 @@ class Weight(metaclass=_abc.ABCMeta):
         for any input.  If the input is out of the support of the kernel,
         return 0.
 
-        :param x: A scalar and one-dimensional array of x coordinates.
-        :param y: A scalar and one-dimensional array of y coordinates.
+        :param x: A scalar or one-dimensional array of x coordinates.
+        :param y: A scalar or one-dimensional array of y coordinates.
 
         :return: A scalar or one-dimensional array as appropriate.
         """
@@ -42,9 +43,9 @@ class Weight(metaclass=_abc.ABCMeta):
 
 
 class Quartic(Weight):
-    """The classic "quartic" weight, which is the function :math (1-d^2)^2:
-    for :math |d| \leq 1:.  In general, we compute the distance from the
-    origin and then divide by a bandwidth to create the variable :math d:.
+    """The classic "quartic" weight, which is the function :math:`(1-d^2)^2`
+    for :math:`|d| \leq 1`.  In general, we compute the distance from the
+    origin and then divide by a bandwidth to create the variable :math:`d`.
 
     :param bandwidth: The maximum extend of the kernel.
     """
@@ -69,7 +70,7 @@ def _clip_data(data, start_time, end_time):
         
 class RetroHotSpot(predictors.DataTrainer):
     """Implements the retro-spective hotspotting algorithm.  To change the
-    weight/kernel used, set the :attribute weight: attribute.
+    weight/kernel used, set the :attr:`weight` attribute.
     """
     def __init__(self):
         self.weight = Quartic()
@@ -78,9 +79,9 @@ class RetroHotSpot(predictors.DataTrainer):
         """Produce a continuous risk prediction over the optional time range.
 
         :param start_time: If given, only use the data with a timestamp after
-        this time.
+          this time.
         :param end_time: If given, only use the data with a timestamp before
-        this time.
+          this time.
         """
         coords = _clip_data(self.data, start_time, end_time)
         if coords.shape[1] == 0:
@@ -97,14 +98,14 @@ class RetroHotSpot(predictors.DataTrainer):
 
 class RetroHotSpotGrid(predictors.DataTrainer):
     """Applies the grid-based retro-spective hotspotting algorithm.
-    To change the weight/kernel used, set the :attribute weight: attribute.
+    To change the weight/kernel used, set the :attr:`weight` attribute.
 
     This applies a grid at the start of the algorithm, and so differs from
-    using :class RetroHotSpot: and then gridding the resulting continuous risk 
+    using :class:`RetroHotSpot` and then gridding the resulting continuous risk 
     estimate.
 
     :param region: An instance of :RectangularRegion: giving the region the
-    grid should cover.
+      grid should cover.
     :param grid_size: The size of grid to use.
     """
     def __init__(self, region, grid_size=150):
@@ -113,6 +114,13 @@ class RetroHotSpotGrid(predictors.DataTrainer):
         self.weight = Quartic()
 
     def predict(self, start_time=None, end_time=None):
+        """Produce a grid-based risk prediction over the optional time range.
+
+        :param start_time: If given, only use the data with a timestamp after
+          this time.
+        :param end_time: If given, only use the data with a timestamp before
+          this time.
+        """
         coords = _clip_data(self.data, start_time, end_time)
         xsize, ysize = self.region.grid_size(self.grid_size)
         matrix = _np.empty((ysize, xsize))

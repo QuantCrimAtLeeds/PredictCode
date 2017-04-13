@@ -1,7 +1,7 @@
 Quick start
 ===========
 
-As a work in progress, the :any:`open_cp` module cannot be installed, but can simply be imported.  This is a Python 3 module.
+As a work in progress, the `open_cp` module cannot be installed, but can simply be imported.  This is a Python 3 module.
 It relies upon `numpy` only, for core functionality.
 
 1. The recommended Python distribution is `Anaconda <https://www.continuum.io/downloads>`_
@@ -47,7 +47,7 @@ Data sources
 ------------
 
 The ability to load some external open data sources is provided (with instructions for downloading the actual data!) and some, currently simple,
-"synthetic data" producers are provided.  See the :any:`open_cp.sources` sub-package.
+"synthetic data" producers are provided.  See the :doc:`open_cp.sources` sub-package.
 
 
 Algorithms
@@ -56,10 +56,10 @@ Algorithms
 See the `examples <https://github.com/QuantCrimAtLeeds/PredictCode/tree/master/examples>`_ notebooks for reviews of
 the literature, implementation details, and examples, for each of these algorithms.
 
-- The :any:`retrohotspot.py` module implements the "retrospective hotspotting" algorithm.
-- The :any:`prohotspot.py` module implements the "prospective hotspotting" algorithm.
-- The :any:`sepp.py` module implements the "epidemic-type aftershock model" (ETAS) algorithm, with a variable bandwidth kernel density estimator.
-- The :any:`seppexp.py` module implements a grid based parametric ETAS model.
+- The :doc:`retrohotspot` module implements the "retrospective hotspotting" algorithm.
+- The :doc:`prohotspot` module implements the "prospective hotspotting" algorithm.
+- The :doc:`sepp` module implements the "epidemic-type aftershock model" (ETAS) algorithm, with a variable bandwidth kernel density estimator.
+- The :doc:`seppexp` module implements a grid based parametric ETAS model.
 
 
 Other modules

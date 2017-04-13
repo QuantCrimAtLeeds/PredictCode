@@ -10,12 +10,12 @@ Implements the "prospective hotspotting" technique from:
 2. Johnson et al.,
    "Prospective crime mapping in operational context",
    Home Office Online Report 19/07
-   [Police online library](http://library.college.police.uk/docs/hordsolr/rdsolr1907.pdf)
+   `Police online library <http://library.college.police.uk/docs/hordsolr/rdsolr1907.pdf>`_
 
 The underlying idea is to start with a kernel / weight defined in space and
 positive time.  This typically has finite extent, and might be related to
 discretised space and/or time.  Weights used in the literature tend to be
-of the form :math 1/(1+d):
+of the form :math:`1/(1+d)`.
 
 The classical algorithm assigns all events to cells in a gridding of space,
 and a "grid" of time (typically the number of whole weeks before the current
@@ -49,9 +49,9 @@ class Weight(metaclass=_abc.ABCMeta):
         """Evaluate the weight given the potentially discretised input.
 
         :param dt: The time distance from 0.  May be a scalar or a numpy array;
-        should be of a number type, not `timedelta` or similar.
+          should be of a number type, not `timedelta` or similar.
         :param dd: Spatial distance.  May be a scalar or a one-dimensional
-        numpy array.
+          numpy array.
 
         :return: A scalar or one-dimensional numpy array as appropriate.
         """
@@ -59,14 +59,14 @@ class Weight(metaclass=_abc.ABCMeta):
 
 
 class ClassicWeight(Weight):
-    """The classical weight, :math (1/(1+d))(1/(1+t)): where :math d: is
-    distance and :math t: is time.  Default units are "grid cells" and "weeks",
+    """The classical weight, :math:`(1/(1+d))(1/(1+t))` where :math:`d` is
+    distance and :math:`t` is time.  Default units are "grid cells" and "weeks",
     respectively.
 
     :param space_bandwidth: Distances greater than or equal to this set the
-    weight to 0.
+      weight to 0.
     :param time_bandwidth: Times greater than or equal to this set the weight
-    to 0.
+      to 0.
     """
     def __init__(self):
         self.space_bandwidth = 400 / 50
@@ -78,7 +78,7 @@ class ClassicWeight(Weight):
 
 
 class GridDistance(metaclass=_abc.ABCMeta):
-    """Calculates the distance between grid cells"""
+    """Abstract base class to calculate the distance between grid cells"""
     @_abc.abstractmethod
     def __call__(self, x1, y1, x2, y2):
         pass
@@ -86,7 +86,8 @@ class GridDistance(metaclass=_abc.ABCMeta):
 
 class DistanceDiagonalsSame(GridDistance):
     """Distance in the grid.  Diagonal distances are one, so (1,1) and
-    (2,2) are adjacent points.  This equates to using an \ell^\infty norm.
+    (2,2) are adjacent points.  This equates to using an :math:`\ell^\infty`
+    norm.
     """
     def __call__(self, x1, y1, x2, y2):
         xx = _np.abs(x1 - x2)
@@ -96,7 +97,8 @@ class DistanceDiagonalsSame(GridDistance):
 
 class DistanceDiagonalsDifferent(GridDistance):
     """Distance in the grid.  Now diagonal distances are two, so (1,1) and
-    (2,2) are two grid cells apart.  This equates to using an \ell^1 norm.
+    (2,2) are two grid cells apart.  This equates to using an :math:`\ell^1`
+    norm.
     """
     def __call__(self, x1, y1, x2, y2):
         return _np.abs(x1 - x2) + _np.abs(y1 - y2)
@@ -108,15 +110,16 @@ class ProspectiveHotSpot(predictors.DataTrainer):
     cell the event falls into, and then delegate to an instance of :class
     GridDistance: to compute the distance.  To compute time, we look at the
     time difference between the prediction time and the timestamp of the event
-    and then divide by the :attribute time_unit:, then round down to the
+    and then divide by the :attr:`time_unit`, then round down to the
     nearest whole number.  So 6 days divided by 1 week is 0 whole units.
 
-    Set :attribute distance: to change the computation of distance between
-    grid cells.  Set :attribute weight: to change the weight used.
+    Set :attr:`distance` to change the computation of distance between
+    grid cells.  Set :attr:`weight` to change the weight used.
 
-    :param region: The :class data.RectangularRegion: the data is in.
+    :param region: The :class:`RectangularRegion` the data is in.
     :param grid_size: The size of the grid to place the data into.
-    :param time_unit: A :class numpy.timedelta64: instance giving the time unit.
+    :param time_unit: A :class:`numpy.timedelta64` instance giving the time
+      unit.
     """
     def __init__(self, region, grid_size=50, time_unit=timedelta64(1, "W")):
         self.grid = grid_size
@@ -140,10 +143,10 @@ class ProspectiveHotSpot(predictors.DataTrainer):
 
         :param cutoff_time: Ignore data with a timestamp after this time.
         :param predict_time: Timestamp of the prediction.  Used to calculate
-        the time difference between events and "now".  Typically the same as
-        `cutoff_time`.
+          the time difference between events and "now".  Typically the same as
+          `cutoff_time`.
 
-        :return: An instance of :class GridPredictionArray:
+        :return: An instance of :class:`GridPredictionArray`
         """
         if not cutoff_time <= predict_time:
             raise ValueError("Data cutoff point should be before prediction time")
@@ -178,10 +181,10 @@ class ProspectiveHotSpotContinuous(predictors.DataTrainer):
 
         :param cutoff_time: Ignore data with a timestamp after this time.
         :param predict_time: Timestamp of the prediction.  Used to calculate
-        the time difference between events and "now".  Typically the same as
-        `cutoff_time`.
+          the time difference between events and "now".  Typically the same as
+          `cutoff_time`.
 
-        :return: An instance of :class ContinuousPrediction:
+        :return: An instance of :class:`ContinuousPrediction`
         """
         if not cutoff_time <= predict_time:
             raise ValueError("Data cutoff point should be before prediction time")

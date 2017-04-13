@@ -17,10 +17,14 @@ def _floor(x):
 
 class DataTrainer():
     """Base class for most "trainers": classes which take data and "train"
-    themselves (fit a statistical model, etc.) to the data.
+    themselves (fit a statistical model, etc.) to the data.  Can also be used
+    as a base for classes which can directly return a "prediction".
     """
     @property
     def data(self):
+        """An instance of :class:`TimedPoints` giving the data to be trained
+        on.
+        """
         return self._data
 
     @data.setter
@@ -48,6 +52,7 @@ class GridPrediction():
         self._yoffset = yoffset
     
     def risk(self, x, y):
+        """The risk at coordinate `(x,y)`."""
         xx = x - self._xoffset
         yy = y - self._yoffset
         return self.grid_risk(_floor(xx / self._xsize), _floor(yy / self._ysize))
@@ -67,13 +72,13 @@ class GridPrediction():
 
 
 class GridPredictionArray(GridPrediction):
-    """A :class GridPrediction: backed by a numpy array (or other
+    """A :class:`GridPrediction` backed by a numpy array (or other
     two-dimensional list-like object).
 
     :param xsize: The width of the grid cells.
     :param ysize: The height of the grid cells.
     :param matrix: A two dimensional numpy array (or other object with a
-    `shape` attribute and allowing indexing as `matrix[y][x]`).
+      `shape` attribute and allowing indexing as `matrix[y][x]`).
     :param xoffset: How much to offset the input x coordinate by; default 0.
     :param yoffset: How much to offset the input y coordinate by; default 0.
     """
@@ -89,7 +94,7 @@ class GridPredictionArray(GridPrediction):
         :param gy: y coordinate of the cell
 
         :return: The risk in the cell, or 0 if the cell is outside the range
-        of the data we have.
+          of the data we have.
         """
         ylim, xlim = self._matrix.shape
         if gx < 0 or gy < 0 or gx >= xlim or gy >= ylim:
@@ -98,10 +103,10 @@ class GridPredictionArray(GridPrediction):
 
     @staticmethod
     def from_continuous_prediction(prediction, width, height):
-        """Construct an instance from an instance of :ContinuousPrediction:
-        using the grid size and offset specified in that instance.  This is
-        more efficient as we sample each grid cell once and then store the
-        result.
+        """Construct an instance from an instance of
+        :class:`ContinuousPrediction` using the grid size and offset specified
+        in that instance.  This is more efficient as we sample each grid cell
+        once and then store the result.
 
         :param prediction: An instance of ContinuousPrediction to sample from
         :param width: Width of the grid, in number of cells
@@ -116,12 +121,14 @@ class GridPredictionArray(GridPrediction):
 
     @staticmethod
     def from_continuous_prediction_region(prediction, region, cell_width, cell_height=None):
-        """Construct an instance from an instance of :ContinuousPrediction:
-        using the region and passed cell sizes.
+        """Construct an instance from an instance of
+        :class:`ContinuousPrediction` using the region and passed cell sizes.
 
         :param prediction: An instance of ContinuousPrediction to sample from
+        :param region: The :class:`RectangularRegion` the grid
         :param cell_width: Width of each cell in the resulting grid
-        :param cell_height: Height of each cell in the resulting grid
+        :param cell_height: Optional; height of each cell in the resulting
+          grid; defaults to `cell_width`
         """
         if cell_height is None:
             cell_height = cell_width
@@ -137,17 +144,17 @@ class GridPredictionArray(GridPrediction):
 
     def mesh_data(self):
         """Returns a pair (xcoords, ycoords) which when paired with
-        :method intensity_matrix: is suitable for passing to matplotlib.pcolor
-        or pcolormesh.  That is, intensity_matrix[i][j] is the risk intensity
+        :meth:`intensity_matrix` is suitable for passing to `matplotlib.pcolor`
+        or `pcolormesh`.  That is, `intensity_matrix[i][j]` is the risk intensity
         in the rectangular cell with diagonally opposite vertices
-        (xcoords[j], ycoords[i]), (xcoords[j+1], ycoords[i+1]).
+        `(xcoords[j], ycoords[i])`, `(xcoords[j+1], ycoords[i+1])`.
         """
         xcoords = _np.arange(self._matrix.shape[1] + 1) * self._xsize + self._xoffset
         ycoords = _np.arange(self._matrix.shape[0] + 1) * self._ysize + self._yoffset
         return (xcoords, ycoords)
     
     def percentile_matrix(self):
-        """Returns a matrix of the same shape as :method intensity_matrix: but
+        """Returns a matrix of the same shape as :meth:`intensity_matrix` but
         with float values giving the percentile of risk, normalised to [0,1].
         So the cell with the highest risk is assigned 1.0.  Ties are rounded up,
         so if three cells share the highest risk, they are all assigned 1.0.
@@ -166,7 +173,7 @@ class ContinuousPrediction():
     :param xoffset: The x coordinate of the start of the grid.
     :param yoffset: The y coordinate of the start of the grid.
     :param samples: The number of samples to use when computing the risk in a
-    grid cell.
+      grid cell.
     """
     def __init__(self, cell_width=50, cell_height=50, xoffset=0, yoffset=0, samples=50):
         self.samples = samples
@@ -201,9 +208,9 @@ class ContinuousPrediction():
         """Return the risk at (a) coordinate(s).
 
         :param x: The x coordinate to evaluate the risk at.  May be a scalar
-        or a one-dimensional numpy array.
+          or a one-dimensional numpy array.
         :param y: The y coordinate to evaluate the risk at.  Should match `x`
-        in being a scalar or a one-dimensional numpy array.
+          in being a scalar or a one-dimensional numpy array.
 
         :return: A scalar or numpy array as appropriate.
         """
@@ -215,16 +222,17 @@ class KernelRiskPredictor(ContinuousPrediction):
     instance
     
     :param kernel: A callable object with signature `kernel(points)` where
-    points may be an array of size 2, for a single point, or an array of shape
-    `(2,N)` for `N` points to be computed at once.
-    :param kwards: Any constructor arguments which :class ContinuousPrediction:
-    takes.
+      points may be an array of size 2, for a single point, or an array of shape
+      `(2,N)` for `N` points to be computed at once.
+    :param kwards: Any constructor arguments which :class:`ContinuousPrediction`
+      takes.
     """
     def __init__(self, kernel, **kwargs):
         super().__init__(**kwargs)
         self._kernel = kernel
     
     def risk(self, x, y):
+        """The risk given by the kernel."""
         return self._kernel(_np.vstack([x,y]))
 
 
@@ -232,9 +240,9 @@ def grid_prediction_from_kernel(kernel, region, grid_size):
     """Utility function to convert a space kernel into a grid based prediction.
     
     :param kernel: A kernel object taking an array of shape (2,N) of N lots
-    of spatial coordinates, and returning an array of shape (N).
+      of spatial coordinates, and returning an array of shape (N).
     :param region: An instance of :class RectangularRegion: giving the
-    region to use.
+      region to use.
     :param grid_size: The size of grid to use.
     
     :return: An instance of :class GridPredictionArray:

@@ -8,7 +8,7 @@
     
     <title>open_cp.sources package &#8212; OpenCP 1.0 documentation</title>
     
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/haiku.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     
     <script type="text/javascript">
@@ -27,27 +27,33 @@
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="prev" title="open_cp.kernels" href="kernels.html" />
-   
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
-  
-  
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
-
+    <link rel="prev" title="open_cp.seppexp" href="seppexp.html" /> 
   </head>
   <body role="document">
-  
+      <div class="header" role="banner"><h1 class="heading"><a href="../index.html">
+          <span>OpenCP 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>open_cp.sources package</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="seppexp.html">open_cp.seppexp</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        </p>
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          <div class="body" role="main">
-            
+      </div>
+      <div class="content">
+        
+        
   <div class="section" id="open-cp-sources-package">
 <h1>open_cp.sources package<a class="headerlink" href="#open-cp-sources-package" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="submodules">
-<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
-</div>
+<ul class="simple">
+<li><a class="reference internal" href="#module-open_cp.sources.chicago" title="open_cp.sources.chicago"><code class="xref py py-mod docutils literal"><span class="pre">open_cp.sources.chicago</span></code></a></li>
+<li><a class="reference internal" href="#module-open_cp.sources.random" title="open_cp.sources.random"><code class="xref py py-mod docutils literal"><span class="pre">open_cp.sources.random</span></code></a></li>
+<li><a class="reference internal" href="#module-open_cp.sources.sepp" title="open_cp.sources.sepp"><code class="xref py py-mod docutils literal"><span class="pre">open_cp.sources.sepp</span></code></a></li>
+<li><a class="reference internal" href="#module-open_cp.sources.ukpolice" title="open_cp.sources.ukpolice"><code class="xref py py-mod docutils literal"><span class="pre">open_cp.sources.ukpolice</span></code></a></li>
+</ul>
 <div class="section" id="module-open_cp.sources.chicago">
 <span id="open-cp-sources-chicago-module"></span><h2>open_cp.sources.chicago module<a class="headerlink" href="#module-open_cp.sources.chicago" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="sources-chicago">
@@ -64,12 +70,39 @@ and the geocoding always returns a coordinate in the middle of a block.</p>
 <dl class="function">
 <dt id="open_cp.sources.chicago.default_burglary_data">
 <code class="descclassname">open_cp.sources.chicago.</code><code class="descname">default_burglary_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sources.chicago.default_burglary_data" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Load the default data, if available.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">An instance of <a class="reference internal" href="data.html#open_cp.data.TimedPoints" title="open_cp.data.TimedPoints"><code class="xref py py-class docutils literal"><span class="pre">open_cp.data.TimedPoints</span></code></a> or <cite>None</cite>.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="open_cp.sources.chicago.load">
 <code class="descclassname">open_cp.sources.chicago.</code><code class="descname">load</code><span class="sig-paren">(</span><em>filename</em>, <em>primary_description_names</em>, <em>to_meters=True</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sources.chicago.load" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Load data from a CSV file in the expected format.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>filename</strong> &#8211; Name of the CSV file load.</li>
+<li><strong>primary_description_names</strong> &#8211; Set of names to search for in the
+&#8220;primary description field&#8221;. E.g. pass <cite>{&#8220;THEFT&#8221;}</cite> to return only the
+&#8220;theft&#8221; crime type.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">An instance of <a class="reference internal" href="data.html#open_cp.data.TimedPoints" title="open_cp.data.TimedPoints"><code class="xref py py-class docutils literal"><span class="pre">open_cp.data.TimedPoints</span></code></a> or <cite>None</cite>.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 </div>
 </div>
@@ -78,8 +111,7 @@ and the geocoding always returns a coordinate in the middle of a block.</p>
 <div class="section" id="sources-random">
 <h3>sources.random<a class="headerlink" href="#sources-random" title="Permalink to this headline">¶</a></h3>
 <p>Produces synthetic data based upon simple random models.</p>
-<p>TODO: Currently overlaps a bit with the &#8220;Sampler&#8221; classes from the
-<cite>sources.sepp</cite> module.</p>
+<p>Currently overlaps a bit with the <cite>Sampler</cite> classes from the <cite>sources.sepp</cite> module.</p>
 <dl class="class">
 <dt id="open_cp.sources.random.KernelSampler">
 <em class="property">class </em><code class="descclassname">open_cp.sources.random.</code><code class="descname">KernelSampler</code><span class="sig-paren">(</span><em>region</em>, <em>kernel</em>, <em>k_max</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sources.random.KernelSampler" title="Permalink to this definition">¶</a></dt>
@@ -87,18 +119,21 @@ and the geocoding always returns a coordinate in the middle of a block.</p>
 <p>A simple &#8220;sampler&#8221; class which can sample from a kernel defined on a
 rectangular region.  Call as <cite>kernel(N)</cite> to make N samples, returning an
 array of shape (2,N).</p>
-<p>See also :class sources.sepp.SpaceSampler:</p>
+<p>See also <a class="reference internal" href="#open_cp.sources.sepp.SpaceSampler" title="open_cp.sources.sepp.SpaceSampler"><code class="xref py py-class docutils literal"><span class="pre">open_cp.sources.sepp.SpaceSampler</span></code></a></p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>region</strong> &#8211; A :class RectangularRegion: instance describing the region</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>region</strong> &#8211; A <a class="reference internal" href="data.html#open_cp.data.RectangularRegion" title="open_cp.data.RectangularRegion"><code class="xref py py-class docutils literal"><span class="pre">open_cp.data.RectangularRegion</span></code></a> instance
+describing the region the kernel is defined on.</li>
+<li><strong>kernel</strong> &#8211; The kernel, callable with an array of shape (2,k).</li>
+<li><strong>k_max</strong> &#8211; The maximum value the kernel takes (or an upper bound).</li>
+</ul>
+</td>
 </tr>
 </tbody>
 </table>
-<p>the kernel is defined on.
-:param kernel: The kernel, callable with an array of shape (2,k).
-:param k_max: The maximum value the kernel takes (or an upper bound).</p>
 </dd></dl>
 
 <dl class="function">
@@ -110,22 +145,22 @@ identically distributed space locations.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>space_sampler</strong> &#8211; The callable object to return the space coordinates.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>space_sampler</strong> &#8211; The callable object to return the space coordinates.
+Expects to be called as <cite>space_sampler(N)</cite> and returns an array of
+shape (2,N) of (x,y) coordinates.</li>
+<li><strong>start_time</strong> &#8211; The start time of the simulation.</li>
+<li><strong>end_time</strong> &#8211; The end time of the simulation.</li>
+<li><strong>expected_number</strong> &#8211; The expected number of events to simulate.</li>
+<li><strong>time_rate_unit</strong> &#8211; The <code class="xref py py-class docutils literal"><span class="pre">numpy.timedelta64</span></code> unit to use: this
+becomes the <em>smallest</em> interval of time we can simulate.  By default,
+one second.</li>
+</ul>
+</td>
 </tr>
-</tbody>
-</table>
-<p>Expects to be called as <cite>space_sampler(N)</cite> and returns an array of
-shape (2,N) of (x,y) coordinates.
-:param start_time: The start time of the simulation.
-:param end_time: The end time of the simulation.
-:param expected_number: The expected number of events to simulate.
-:param time_rate_unit: The <cite>numpy.timedelta64</cite> unit to use: this becomes
-the _smallest_ interval of time we can simulate.  By default, one second.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A :class TimedPoints: instance giving the simulation.</td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A <a class="reference internal" href="data.html#open_cp.data.TimedPoints" title="open_cp.data.TimedPoints"><code class="xref py py-class docutils literal"><span class="pre">open_cp.data.TimedPoints</span></code></a> instance giving the
+simulation.</p>
+</td>
 </tr>
 </tbody>
 </table>
@@ -140,21 +175,20 @@ chosen uniformly at random in a region.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>region</strong> &#8211; A :class RectangularRegion: instance giving the region to</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>region</strong> &#8211; A <a class="reference internal" href="data.html#open_cp.data.RectangularRegion" title="open_cp.data.RectangularRegion"><code class="xref py py-class docutils literal"><span class="pre">open_cp.data.RectangularRegion</span></code></a> instance giving
+the region to sample space locations in.</li>
+<li><strong>start_time</strong> &#8211; The start time of the simulation.</li>
+<li><strong>end_time</strong> &#8211; The end time of the simulation.</li>
+<li><strong>expected_number</strong> &#8211; The expected number of events to simulate.</li>
+<li><strong>time_rate_unit</strong> &#8211; The <code class="xref py py-class docutils literal"><span class="pre">numpy.timedelta64</span></code> unit to use: this
+becomes the <em>smallest</em> interval of time we can simulate.  By default,
+one second.</li>
+</ul>
+</td>
 </tr>
-</tbody>
-</table>
-<p>sample space locations in.
-:param start_time: The start time of the simulation.
-:param end_time: The end time of the simulation.
-:param expected_number: The expected number of events to simulate.
-:param time_rate_unit: The <cite>numpy.timedelta64</cite> unit to use: this becomes
-the _smallest_ interval of time we can simulate.  By default, one second.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A :class TimedPoints: instance giving the simulation.</td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A <code class="xref py py-class docutils literal"><span class="pre">TimedPoints</span></code> instance giving the simulation.</p>
+</td>
 </tr>
 </tbody>
 </table>
@@ -169,26 +203,24 @@ defined on [0,1] times [0,1].</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>kernel</strong> &#8211; A callable object giving the kernel.  Should be able to</td>
-</tr>
-</tbody>
-</table>
-<p>accept an array of shape (2, #points) and return an array of shape (#points).
-:param k_max: The maximum value the kernel takes (or an upper bound).
-:param samples: The number of samples to return.
-:param oversample: Change this to improve performance.  At each iteration,
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>kernel</strong> &#8211; A callable object giving the kernel.  Should be able to
+accept an array of shape (2, #points) and return an array of shape (#points).</li>
+<li><strong>k_max</strong> &#8211; The maximum value the kernel takes (or an upper bound).</li>
+<li><strong>samples</strong> &#8211; The number of samples to return.</li>
+<li><strong>oversample</strong> &#8211; Change this to improve performance.  At each iteration,
 we test this many more samples than we need.  Make this parameter too
 large, and we &#8220;waste&#8221; random numbers.  Make it too small, and we don&#8217;t
-utilise the parallel nature of numpy enough.  Defaults to 2.0</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">If one sample required, an array [x,y] of the point sampled.</td>
+utilise the parallel nature of numpy enough.  Defaults to 2.0</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">If one sample required, an array [x,y] of the point sampled.
+Otherwise an array of shape (2,N) where N is the number of samples.</p>
+</td>
 </tr>
 </tbody>
 </table>
-<p>Otherwise an array of shape (2,N) where N is the number of samples.</p>
 </dd></dl>
 
 </div>
@@ -218,14 +250,14 @@ some common kernels and samplers for backgrounds and triggers.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>exp_rate</strong> &#8211; The &#8220;rate&#8221; parameter of the exponential.</li>
-<li><strong>total_rate</strong> &#8211; The overall scaling of the kernel.  If this kernel is</li>
+<li><strong>total_rate</strong> &#8211; The overall scaling of the kernel.  If this kernel is
+used to simulate a point process, then this is the expected number of
+events.</li>
 </ul>
 </td>
 </tr>
 </tbody>
 </table>
-<p>used to simulate a point process, then this is the expected number of
-events.</p>
 <dl class="method">
 <dt id="open_cp.sources.sepp.Exponential.kernel_max">
 <code class="descname">kernel_max</code><span class="sig-paren">(</span><em>time_start</em>, <em>time_end</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sources.sepp.Exponential.kernel_max" title="Permalink to this definition">¶</a></dt>
@@ -289,15 +321,18 @@ of Predictive Policing&#8221;, 2015.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>background_rates</strong> &#8211; An array of arbitrary shape, giving the background</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>background_rates</strong> &#8211; An array of arbitrary shape, giving the background
+rate in each &#8220;cell&#8221;.</li>
+<li><strong>theta</strong> &#8211; The overall &#8220;intensity&#8221; of trigger / aftershock events.
+Should be less than 1.</li>
+<li><strong>omega</strong> &#8211; The rate (or inverse scale) of the exponential kernel.
+Increase to make aftershock events more localised in time.</li>
+</ul>
+</td>
 </tr>
 </tbody>
 </table>
-<p>rate in each &#8220;cell&#8221;.
-:param theta: The overall &#8220;intensity&#8221; of trigger / aftershock events.
-Should be less than 1.
-:param omega: The rate (or inverse scale) of the exponential kernel.
-Increase to make aftershock events more localised in time.</p>
 <dl class="method">
 <dt id="open_cp.sources.sepp.GridHawkesProcess.sample">
 <code class="descname">sample</code><span class="sig-paren">(</span><em>start_time</em>, <em>end_time</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sources.sepp.GridHawkesProcess.sample" title="Permalink to this definition">¶</a></dt>
@@ -335,11 +370,11 @@ We treat the input background rate as a matrix, so it has entries
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>rate</strong> &#8211; The rate of the process: the expected number of events per</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>rate</strong> &#8211; The rate of the process: the expected number of events per
+time unit.</td>
 </tr>
 </tbody>
 </table>
-<p>time unit.</p>
 <dl class="method">
 <dt id="open_cp.sources.sepp.HomogeneousPoisson.kernel_max">
 <code class="descname">kernel_max</code><span class="sig-paren">(</span><em>time_start</em>, <em>time_end</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sources.sepp.HomogeneousPoisson.kernel_max" title="Permalink to this definition">¶</a></dt>
@@ -357,11 +392,11 @@ process.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>rate</strong> &#8211; The rate of the process: the expected number of events per</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>rate</strong> &#8211; The rate of the process: the expected number of events per
+time unit.</td>
 </tr>
 </tbody>
 </table>
-<p>time unit.</p>
 <dl class="method">
 <dt id="open_cp.sources.sepp.HomogeneousPoissonSampler.sample">
 <code class="descname">sample</code><span class="sig-paren">(</span><em>start_time</em>, <em>end_time</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sources.sepp.HomogeneousPoissonSampler.sample" title="Permalink to this definition">¶</a></dt>
@@ -404,8 +439,8 @@ a space kernel.  For efficiency, we use a space sampler.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>time_kernel</strong> &#8211; Should follow the interface of :class TimeKernel:</li>
-<li><strong>space_sampler</strong> &#8211; Should follow the interface of :class SpaceSampler:</li>
+<li><strong>time_kernel</strong> &#8211; Should follow the interface of <a class="reference internal" href="#open_cp.sources.sepp.TimeKernel" title="open_cp.sources.sepp.TimeKernel"><code class="xref py py-class docutils literal"><span class="pre">TimeKernel</span></code></a></li>
+<li><strong>space_sampler</strong> &#8211; Should follow the interface of <a class="reference internal" href="#open_cp.sources.sepp.SpaceSampler" title="open_cp.sources.sepp.SpaceSampler"><code class="xref py py-class docutils literal"><span class="pre">SpaceSampler</span></code></a></li>
 </ul>
 </td>
 </tr>
@@ -470,12 +505,12 @@ dimensional Gaussian kernel in space (see
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">An array of shape (3,n) of space/time coordinates.</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">An array of shape (3,n) of space/time coordinates.
+The data should always be _sorted_ in time.</p>
 </td>
 </tr>
 </tbody>
 </table>
-<p>The data should always be _sorted_ in time.</p>
 </dd></dl>
 
 </dd></dl>
@@ -494,8 +529,8 @@ coordinates as space.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>background_sampler</strong> &#8211; Should follow the interface of :class Sampler:</li>
-<li><strong>trigger_sampler</strong> &#8211; Should follow the interface of :class Sampler:</li>
+<li><strong>background_sampler</strong> &#8211; Should follow the interface of <a class="reference internal" href="#open_cp.sources.sepp.Sampler" title="open_cp.sources.sepp.Sampler"><code class="xref py py-class docutils literal"><span class="pre">Sampler</span></code></a></li>
+<li><strong>trigger_sampler</strong> &#8211; Should follow the interface of <a class="reference internal" href="#open_cp.sources.sepp.Sampler" title="open_cp.sources.sepp.Sampler"><code class="xref py py-class docutils literal"><span class="pre">Sampler</span></code></a></li>
 </ul>
 </td>
 </tr>
@@ -506,7 +541,7 @@ coordinates as space.</p>
 <em class="property">class </em><code class="descname">Sample</code><span class="sig-paren">(</span><em>points</em>, <em>backgrounds</em>, <em>trigger_deltas</em>, <em>trigger_points</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sources.sepp.SelfExcitingPointProcess.Sample" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
 <p>Contains details of the sample as returned by
-:class SelfExcitingPointProcess:  This can be useful when, for example,
+<a class="reference internal" href="#open_cp.sources.sepp.SelfExcitingPointProcess" title="open_cp.sources.sepp.SelfExcitingPointProcess"><code class="xref py py-class docutils literal"><span class="pre">SelfExcitingPointProcess</span></code></a>.  This can be useful when, for example,
 checking the correctness of the simulation.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -515,15 +550,15 @@ checking the correctness of the simulation.</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>points</strong> &#8211; All points from the sampled process.</li>
 <li><strong>backgrounds</strong> &#8211; All the background events.</li>
-<li><strong>trigger_deltas</strong> &#8211; The &#8220;deltas&#8221; between trigger and triggered (aka</li>
+<li><strong>trigger_deltas</strong> &#8211; The &#8220;deltas&#8221; between trigger and triggered (aka
+parent and child) points.</li>
+<li><strong>trigger_points</strong> &#8211; With the same ordering as <cite>trigger_deltas</cite>, the
+position of the trigger (aka parent) point.</li>
 </ul>
 </td>
 </tr>
 </tbody>
 </table>
-<p>parent and child) points.
-:param trigger_points: With the same ordering as <cite>trigger_deltas</cite>, the
-position of the trigger (aka parent) point.</p>
 </dd></dl>
 
 <dl class="method">
@@ -626,13 +661,16 @@ intensity of the kernel over the time range.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>length_of_time</strong> &#8211; A time delta object, representing the length of time</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>length_of_time</strong> &#8211; A time delta object, representing the length of time
+&#8220;one unit&#8221; should represent: e.g. an hour, a day, etc.</li>
+<li><strong>minimal_time_unit</strong> &#8211; The minimal time length the resulting data
+represents.  Defaults to milli-seconds.</li>
+</ul>
+</td>
 </tr>
 </tbody>
 </table>
-<p>&#8220;one unit&#8221; should represent: e.g. an hour, a day, etc.
-:param minimal_time_unit: The minimal time length the resulting data
-represents.  Defaults to milli-seconds.</p>
 </dd></dl>
 
 <dl class="function">
@@ -643,22 +681,17 @@ represents.  Defaults to milli-seconds.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>points</strong> &#8211; Array of shape (3,n) representing time/space coordinates.</li>
 <li><strong>start_time</strong> &#8211; The time to map 0.0 to</li>
-<li><strong>time_unit</strong> &#8211; The duration of unit time, by default 60 seconds</li>
+<li><strong>time_unit</strong> &#8211; The duration of unit time, by default 60 seconds
+(so one minute, but giving the resulting data a resolution of seconds).
+See <a class="reference internal" href="#open_cp.sources.sepp.make_time_unit" title="open_cp.sources.sepp.make_time_unit"><code class="xref py py-func docutils literal"><span class="pre">make_time_unit()</span></code></a>.</li>
 </ul>
 </td>
 </tr>
-</tbody>
-</table>
-<p>(so one minute, but giving the resulting data a resolution of seconds).
-See :function make_time_unit:</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">An instance of :class TimedPoints:</td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">An instance of <a class="reference internal" href="data.html#open_cp.data.TimedPoints" title="open_cp.data.TimedPoints"><code class="xref py py-class docutils literal"><span class="pre">open_cp.data.TimedPoints</span></code></a></p>
+</td>
 </tr>
 </tbody>
 </table>
@@ -683,12 +716,39 @@ streets.  Most importantly, all timestamps are only to a _monthly_ resolution.</
 <dl class="function">
 <dt id="open_cp.sources.ukpolice.default_burglary_data">
 <code class="descclassname">open_cp.sources.ukpolice.</code><code class="descname">default_burglary_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sources.ukpolice.default_burglary_data" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Load the default data, if available.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">An instance of <a class="reference internal" href="data.html#open_cp.data.TimedPoints" title="open_cp.data.TimedPoints"><code class="xref py py-class docutils literal"><span class="pre">open_cp.data.TimedPoints</span></code></a> or <cite>None</cite>.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="open_cp.sources.ukpolice.load">
 <code class="descclassname">open_cp.sources.ukpolice.</code><code class="descname">load</code><span class="sig-paren">(</span><em>filename</em>, <em>primary_description_names</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.sources.ukpolice.load" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Load data from a CSV file in the expected format.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>filename</strong> &#8211; Name of the CSV file load.</li>
+<li><strong>primary_description_names</strong> &#8211; Set of names to search for in the
+&#8220;primary description field&#8221;. E.g. pass <cite>{&#8220;Burglary&#8221;}</cite> to return only the
+&#8220;burglary&#8221; crime type.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">An instance of <a class="reference internal" href="data.html#open_cp.data.TimedPoints" title="open_cp.data.TimedPoints"><code class="xref py py-class docutils literal"><span class="pre">open_cp.data.TimedPoints</span></code></a> or <cite>None</cite>.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 </div>
 </div>
@@ -698,78 +758,20 @@ streets.  Most importantly, all timestamps are only to a _monthly_ resolution.</
 </div>
 
 
-          </div>
-        </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
-  <ul>
-<li><a class="reference internal" href="#">open_cp.sources package</a><ul>
-<li><a class="reference internal" href="#submodules">Submodules</a></li>
-<li><a class="reference internal" href="#module-open_cp.sources.chicago">open_cp.sources.chicago module</a><ul>
-<li><a class="reference internal" href="#sources-chicago">sources.chicago</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#module-open_cp.sources.random">open_cp.sources.random module</a><ul>
-<li><a class="reference internal" href="#sources-random">sources.random</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#module-open_cp.sources.sepp">open_cp.sources.sepp module</a><ul>
-<li><a class="reference internal" href="#sources-sepp">sources.sepp</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#module-open_cp.sources.ukpolice">open_cp.sources.ukpolice module</a><ul>
-<li><a class="reference internal" href="#sources-ukpolice">sources.ukpolice</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#module-open_cp.sources">Module contents</a></li>
-</ul>
-</li>
-</ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="kernels.html" title="previous chapter">open_cp.kernels</a></li>
-  </ul></li>
-</ul>
-</div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/source/open_cp.sources.rst.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <form class="search" action="../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
-        </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="seppexp.html">open_cp.seppexp</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        </p>
+
       </div>
-      <div class="clearer"></div>
-    </div>
-    <div class="footer">
-      &copy;2017, University of Leeds.
-      
-      |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
-      
-      |
-      <a href="../_sources/source/open_cp.sources.rst.txt"
-          rel="nofollow">Page source</a>
-    </div>
 
-    
-
-    
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, University of Leeds.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
+    </div>
   </body>
 </html>

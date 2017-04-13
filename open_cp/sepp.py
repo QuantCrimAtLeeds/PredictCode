@@ -6,7 +6,7 @@ Implements the ETAS (Epidemic Type Aftershock-Sequences) model intensity
 estimation scheme outlined in Mohler et al. (2011).
 
 As this is a statistical model, we separate out the statistical optimisation
-procedure into a separate class, :class StocasticDecluster:  This allows
+procedure into a separate class :class:`StocasticDecluster`.  This allows
 testing and exploration of the model without worry about real world issues such
 as time-stamps.  
 
@@ -26,13 +26,13 @@ trained, the kernels can quickly be evaluated to make predictions.
 
 References
 ~~~~~~~~~~
-Mohler et al, "Self-Exciting Point Process Modeling of Crime",
-   Journal of the American Statistical Association, 2011
+1. Mohler et al, "Self-Exciting Point Process Modeling of Crime",
+   Journal of the American Statistical Association, 2011,
    DOI: 10.1198/jasa.2011.ap09546
 
-Rosser, Cheng, "Improving the Robustness and Accuracy of Crime Prediction with
-the Self-Exciting Point Process Through Isotropic Triggering"
-   Appl. Spatial Analysis
+2. Rosser, Cheng, "Improving the Robustness and Accuracy of Crime Prediction with
+   the Self-Exciting Point Process Through Isotropic Triggering",
+   Appl. Spatial Analysis,
    DOI: 10.1007/s12061-016-9198-y
 """
 
@@ -52,8 +52,8 @@ def p_matrix(points, background_kernel, trigger_kernel):
     :param trigger_kernel: The kernel giving the triggered event intensity.
 
     :return: A matrix `p` such that `p[i][i]` is the probability event `i` is a
-    background event, and `p[i][j]` is the probability event `j` is triggered
-    by event `i`.
+      background event, and `p[i][j]` is the probability event `j` is triggered
+      by event `i`.
     """
 
     number_data_points = points.shape[-1]
@@ -68,7 +68,7 @@ def p_matrix(points, background_kernel, trigger_kernel):
 
 def p_matrix_fast(points, background_kernel, trigger_kernel, time_cutoff=150, space_cutoff=1):
     """Computes the probability matrix.  Offers faster execution speed than
-    :function:`p_matrix` by, in the calculation of triggered event
+    :func:`p_matrix` by, in the calculation of triggered event
     probabilities, ignoring events which are beyond a space or time cutoff.
     These parameters should be set so that the `trigger_kernel` evaluates to
     (very close to) zero outside the cutoff zone.
@@ -77,15 +77,14 @@ def p_matrix_fast(points, background_kernel, trigger_kernel, time_cutoff=150, sp
     :param background_kernel: The kernel giving the background event intensity.
     :param trigger_kernel: The kernel giving the triggered event intensity.
     :param time_cutoff: The maximum time between two events which can be
-    considered in the trigging calculation.
+      considered in the trigging calculation.
     :param space_cutoff: The maximum (two-dimensional Eucliean) distance
-    between two events which can be considered in the trigging calculation.
+      between two events which can be considered in the trigging calculation.
 
     :return: A matrix `p` such that `p[i][i]` is the probability event `i` is a
-    background event, and `p[i][j]` is the probability event `j` is triggered
-    by event `i`.
+      background event, and `p[i][j]` is the probability event `j` is triggered
+      by event `i`.
     """
-
     number_data_points = points.shape[-1]
     p = _np.zeros((number_data_points, number_data_points))
     space_cutoff_sq = space_cutoff**2
@@ -110,7 +109,6 @@ def initial_p_matrix(points, initial_time_bandwidth = 0.1,
     :param initial_time_bandwidth: The "scale" of the exponential.
     :param initial_space_bandwidth: The standard deviation of the Gaussian.
     """
-
     def bkernel(pts):
         return _np.zeros(pts.shape[-1]) + 1
     def tkernel(pts):
@@ -127,11 +125,11 @@ def sample_points(points, p):
     :param p: The probability matrix.
 
     :return: A pair of `(backgrounds, triggered)` where `backgrounds` is the
-    (time, x, y) data of the points classified as being background events,
-    and `triggered` is the (time, x, y) *delta* of the triggered events.
-    That is, `triggered` represents the difference in space and time between
-    each triggered event and the event which triggered it, as sampled from the
-    probability matrix.
+      `(time, x, y)` data of the points classified as being background events,
+      and `triggered` is the `(time, x, y)` *delta* of the triggered events.
+      That is, `triggered` represents the difference in space and time between
+      each triggered event and the event which triggered it, as sampled from
+      the probability matrix.
     """
 
     number_data_points = points.shape[-1]
@@ -148,11 +146,11 @@ def make_kernel(data, background_kernel, trigger_kernel):
     the trigger kernel based on the space-time locations in the data.
 
     :param data: An array of shape `(3,N)` giving the space-time locations
-    events.  Used when computing the triggered / aftershock events.
+      events.  Used when computing the triggered / aftershock events.
     :param background_kernel: The kernel object giving the background risk
-    intensity.
+      intensity.
     :param trigger_kernel: The kernel object giving the trigger / aftershock
-    risk intensity.
+      risk intensity.
     
     :return: A kernel object which can be called on arrays on points.
     """
@@ -185,26 +183,25 @@ class StocasticDecluster():
     experimentation.
 
     :param background_kernel_estimator: The kernel estimator to use for
-    background events.
+      background events.
     :param trigger_kernel_estimator: The kernel estimator to use for triggered
-    / aftershock events.
+      / aftershock events.
     :param initial_time_bandwidth: The bandwidth in time to use when making an
-    initial classification of data into background or triggered events.  Default
-    is 0.1 day**(-1) in units of minutes (so 0.1*24*60).
+      initial classification of data into background or triggered events.
+      Default is 0.1 day**(-1) in units of minutes (so 0.1*24*60).
     :param initial_space_bandwidth: The bandwidth in space to use when making
-    an initial classification of data into background or triggered events.
-    Default is 50 units.
+      an initial classification of data into background or triggered events.
+      Default is 50 units.
     :param space_cutoff: The maximum distance we believe the triggered kernel
-    will extend to in space.  Decrease this to improve the speed of the
-    estimation, at the cost of possibly missing data.  Default is 500 units.
+      will extend to in space.  Decrease this to improve the speed of the
+      estimation, at the cost of possibly missing data.  Default is 500 units.
     :param time_cutoff: The maximum distance we believe the triggered kernel
-    will extend to in time.  Decrease this to improve the speed of the
-    estimation, at the cost of possibly missing data.  Default is 120 days,
-    in units of minutes (so 120*24*60).
+      will extend to in time.  Decrease this to improve the speed of the
+      estimation, at the cost of possibly missing data.  Default is 120 days,
+      in units of minutes (so 120*24*60).
     :param points: The three dimensional data.  `points[0]` is the times of
-    events, and `points[1]` and `points[2]` are the x and y coordinates.
+      events, and `points[1]` and `points[2]` are the x and y coordinates.
     """
-
     def __init__(self, background_kernel_estimator = None,
             trigger_kernel_estimator = None,
             initial_time_bandwidth = 0.1 * (_np.timedelta64(1, "D") / _np.timedelta64(1, "m")),
@@ -222,6 +219,7 @@ class StocasticDecluster():
 
     def next_iteration(self, p):
         """Perform a single iteration of the optimisation algorithm:
+        
         1. Samples background and triggered events using the p matrix.
         2. Estimates kernels from these samples.
         3. Normalises these kernels.
@@ -230,10 +228,9 @@ class StocasticDecluster():
         :param p: The matrix of probabilities to sample from.
 
         :return: A triple `(p, bkernel, tkernel)` where `p` is the new
-        probability matrix, `bkernel` the kernel for background events used to
-        compute `p`, and `tkernel` the kernel for triggered events.
+          probability matrix, `bkernel` the kernel for background events used to
+          compute `p`, and `tkernel` the kernel for triggered events.
         """
-        
         backgrounds, triggered = sample_points(self.points, p)
         bkernel = self.background_kernel_estimator(backgrounds)
         tkernel = self.trigger_kernel_estimator(triggered)
@@ -256,7 +253,7 @@ class StocasticDecluster():
 
         :param iterations: The number of optimisation steps to perform.
 
-        :return: :class:`OptimisationResult`
+        :return: :class:`OptimisationResult` instance
         """
         p = initial_p_matrix(self.points, self.initial_time_bandwidth, self.initial_space_bandwidth)
         errors = []
@@ -278,12 +275,12 @@ class OptimisationResult():
     :param background_kernel: the estimatede background event intensity kernel.
     :param trigger_kernel: the estimated triggered event intensity kernel.
     :param ell2_error: an array of the L^2 differences between successive
-    estimates of the probability matrix.  That these decay is a good indication
-    of convergence.
+      estimates of the probability matrix.  That these decay is a good indication
+      of convergence.
     :param time_cutoff: Optionally specify the maximum time extent of the
-    trigger_kernel used in calculations.
+      `trigger_kernel` used in calculations.
     :param space_cutoff: Optionally specify the maximum space extent of the
-    trigger_kernel used in calculations.
+      `trigger_kernel` used in calculations.
     """
     def __init__(self, kernel, p, background_kernel, trigger_kernel, ell2_error,
             time_cutoff=None, space_cutoff=None):
@@ -303,20 +300,20 @@ def make_space_kernel(data, background_kernel, trigger_kernel, time,
     the fixed time as passed in.
 
     :param data: An array of shape `(3,N)` giving the space-time locations
-    events.  Used when computing the triggered / aftershock events.
+      events.  Used when computing the triggered / aftershock events.
     :param background_kernel: The kernel object giving the background risk
-    intensity.  We assume this has a method `space_kernel` which gives just
-    the two dimensional spacial kernel.
+      intensity.  We assume this has a method `space_kernel` which gives just
+      the two dimensional spacial kernel.
     :param trigger_kernel: The kernel object giving the trigger / aftershock
-    risk intensity.
+      risk intensity.
     :param time: The fixed time coordinate to evaluate at.
     :param time_cutoff: Optional; if set, then we assume the trigger_kernel is
-    zero for times greater than this value (to speed up evaluation).
+      zero for times greater than this value (to speed up evaluation).
     :param space_cutoff: Optional; if set, then we assume the trigger_kernel is
-    zero for space distances greater than this value (to speed up evaluation).
+      zero for space distances greater than this value (to speed up evaluation).
     
     :return: A kernel object which can be called on arrays of (2 dimensional
-    space) points.
+      space) points.
     """
     mask = data[0] < time
     if time_cutoff is not None:
@@ -350,14 +347,15 @@ def make_space_kernel(data, background_kernel, trigger_kernel, time,
 
 
 class AverageTimeAdjustedKernel(kernels.Kernel):
-    """Wraps a :class Kernel: instance, which supports the `space_kernel` and
+    """Wraps a :class:`Kernel` instance, which supports the `space_kernel` and
     `time_kernel` interface, and builds a new kernel which is constant in time.
-    The time intensity is computed by taking an average of the middle half
-    of the original time kernel.
+    The new, constant time intensity is computed by taking an average of the
+    middle half of the original time kernel.
 
     :param kernel: The original kernel to delegate to.
     :param time_end: We assume that the original kernel is roughly correct
-    for times in the range 0 to `time_end`.
+      for times in the range 0 to `time_end`, and then sample the middle half
+      of this interval.
     """
     def __init__(self, kernel, time_end):
         self.delegate = kernel
@@ -369,27 +367,41 @@ class AverageTimeAdjustedKernel(kernels.Kernel):
         return _np.mean(kernel.time_kernel(points))
 
     def time_kernel(self, points):
+        """The time component of this kernel; in this case constant.
+
+        :param points: Scalar or one-dimensional array of time points.
+        """
         return _np.zeros_like(_np.asarray(points)) + self.time_average
 
     def space_kernel(self, points):
+        """The space component of this kernel; defers to the :attr:`delegate`
+        kernel.
+
+        :param points: Pair of `(x,y)` coords, or array of shape `(2,N)`
+          representing `N` points.
+        """
         return self.delegate.space_kernel(points)
 
     def __call__(self, points):
         return self.time_average * self.space_kernel(points[1:])
 
     def set_scale(self, value):
+        """Set the overall scaling factor; the returned kernel is multiplied
+        by this value.
+        """
         self.delegate.set_scale(value)
 
 
 class SEPPPredictor(predictors.DataTrainer):
-    """Returned by :class SEPPTrainer: encapsulated computed background and
+    """Returned by :class:`SEPPTrainer` encapsulated computed background and
     triggering kernels.  This class allows these to be evaluated on potentially
     different data to produce predictions.
 
     When making a prediction, the *time* component of the background kernel
-    is ignored.  This is allowed, because the kernel estimation used looks
-    at time and space separately for the background kernel.  We do this because
-    KDE methods don't allow us to "predict" into the future.
+    is ignored, using :class:`AverageTimeAdjustedKernel`.  This is allowed,
+    because the kernel estimation used looks at time and space separately for
+    the background kernel.  We do this because KDE methods don't allow us to
+    "predict" into the future.
 
     This class also stores information about the optimisation procedure.
     """
@@ -422,9 +434,9 @@ class SEPPPredictor(predictors.DataTrainer):
 
         :param predict_time: Time point to make a prediction at.
         :param cutoff_time: Optionally, limit the input data to only be from
-        before this time.
+          before this time.
 
-        :return: Instance of :class predictors.ContinuousPrediction:
+        :return: Instance of :class:`ContinuousPrediction`
         """
         events = self.data.events_before(cutoff_time)
         times = (events.timestamps - self.epoch_start) / _np.timedelta64(1, "m")
@@ -444,9 +456,9 @@ class SEPPTrainer(predictors.DataTrainer):
     data.
 
     :param k_time: The kth nearest neighbour to use in the KDE of the time
-    kernel; defaults to 100.
+      kernel; defaults to 100.
     :param k_space: The kth nearest neighbour to use in the KDE of space and
-    space/time kernels; defaults to 15.
+      space/time kernels; defaults to 15.
     """
     def __init__(self, k_time=100, k_space=15):
         self.k_time = k_time
@@ -505,9 +517,11 @@ class SEPPTrainer(predictors.DataTrainer):
         kernels, and returns an object which can make predictions.
 
         :param cutoff_time: If specified, then limit the historical data to
-        before this time.
+          before this time.
+        :param iterations: The number of iterations of the optimisation
+          algorithm to apply.
         
-        :return: A :class SEPPPredictor: instance.
+        :return: A :class:`SEPPPredictor` instance.
         """
         decluster = StocasticDecluster()
         decluster.trigger_kernel_estimator = self._trigger_kernel_estimator

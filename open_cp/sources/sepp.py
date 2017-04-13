@@ -1,6 +1,6 @@
 """
 sources.sepp
-~~~~~~~~~~~~
+============
 
 Produces synthetic data based upon a "self-exciting" or "Hawkes model" point
 process.  These are point processes where the conditional intensity function
@@ -105,7 +105,7 @@ class HomogeneousPoisson(TimeKernel):
     """A constant kernel, representing a homogeneous poisson process.
     
     :param rate: The rate of the process: the expected number of events per
-    time unit.
+      time unit.
     """
     def __init__(self, rate=1):
         self._rate = rate
@@ -122,8 +122,8 @@ class Exponential(TimeKernel):
 
     :param exp_rate: The "rate" parameter of the exponential.
     :param total_rate: The overall scaling of the kernel.  If this kernel is
-    used to simulate a point process, then this is the expected number of
-    events.
+      used to simulate a point process, then this is the expected number of
+      events.
     """
     def __init__(self, exp_rate=1, total_rate=1):
         self._rate = exp_rate
@@ -146,7 +146,7 @@ class Sampler(metaclass=_abc.ABCMeta):
         :param end_time: The end of the time window to sample from.
 
         :return: An array of shape (3,n) of space/time coordinates.
-        The data should always be _sorted_ in time.
+          The data should always be _sorted_ in time.
         """
         pass
 
@@ -157,7 +157,7 @@ class Sampler(metaclass=_abc.ABCMeta):
         :param points: Usual time/space array of points.
 
         :return: The same data, with each triple (t,x,y) preserved, but now
-        ordered so that points[0] is increasing.
+          ordered so that points[0] is increasing.
         """
         a = _np.argsort(points[0])
         return points[:,a]
@@ -242,8 +242,8 @@ class InhomogeneousPoissonFactors(Sampler):
     """A time/space sampler where the kernel factorises into a time kernel and
     a space kernel.  For efficiency, we use a space sampler.
 
-    :param time_kernel: Should follow the interface of :class TimeKernel:
-    :param space_sampler: Should follow the interface of :class SpaceSampler:
+    :param time_kernel: Should follow the interface of :class:`TimeKernel`
+    :param space_sampler: Should follow the interface of :class:`SpaceSampler`
     """
     def __init__(self, time_kernel, space_sampler):
         self._time_kernel = time_kernel
@@ -266,7 +266,7 @@ class HomogeneousPoissonSampler(Sampler):
     process.
 
     :param rate: The rate of the process: the expected number of events per
-    time unit.
+      time unit.
     """
     def __init__(self, rate):
         self.rate = rate
@@ -305,8 +305,8 @@ class SelfExcitingPointProcess(Sampler):
     points, then we use the first coordinate as time, and the remaining
     coordinates as space.
     
-    :param background_sampler: Should follow the interface of :class Sampler:
-    :param trigger_sampler: Should follow the interface of :class Sampler:
+    :param background_sampler: Should follow the interface of :class:`Sampler`
+    :param trigger_sampler: Should follow the interface of :class:`Sampler`
     """
     def __init__(self, background_sampler=None, trigger_sampler=None):
         self.background_sampler = background_sampler
@@ -317,15 +317,15 @@ class SelfExcitingPointProcess(Sampler):
 
     class Sample():
         """Contains details of the sample as returned by
-        :class SelfExcitingPointProcess:  This can be useful when, for example,
+        :class:`SelfExcitingPointProcess`.  This can be useful when, for example,
         checking the correctness of the simulation.
 
         :param points: All points from the sampled process.
         :param backgrounds: All the background events.
         :param trigger_deltas: The "deltas" between trigger and triggered (aka
-        parent and child) points.
+          parent and child) points.
         :param trigger_points: With the same ordering as `trigger_deltas`, the
-        position of the trigger (aka parent) point.
+          position of the trigger (aka parent) point.
         """
         def __init__(self, points, backgrounds, trigger_deltas, trigger_points):
             self.points = points
@@ -363,9 +363,9 @@ def make_time_unit(length_of_time, minimal_time_unit=timedelta64(1,"ms")):
     """Utility method to create a `time_unit`.
     
     :param length_of_time: A time delta object, representing the length of time
-    "one unit" should represent: e.g. an hour, a day, etc.
+      "one unit" should represent: e.g. an hour, a day, etc.
     :param minimal_time_unit: The minimal time length the resulting data
-    represents.  Defaults to milli-seconds.
+      represents.  Defaults to milli-seconds.
     """
     return (timedelta64(length_of_time) / minimal_time_unit) * minimal_time_unit
 
@@ -375,10 +375,10 @@ def scale_to_real_time(points, start_time, time_unit=timedelta64(60, "s")):
     :param points: Array of shape (3,n) representing time/space coordinates.
     :param start_time: The time to map 0.0 to
     :param time_unit: The duration of unit time, by default 60 seconds
-    (so one minute, but giving the resulting data a resolution of seconds).
-    See :function make_time_unit: 
+      (so one minute, but giving the resulting data a resolution of seconds).
+      See :func:`make_time_unit`.
 
-    :return: An instance of :class TimedPoints:
+    :return: An instance of :class:`open_cp.data.TimedPoints`
     """
     times = [_np.datetime64(start_time) + time_unit * t for t in points[0]]
     return data.TimedPoints.from_coords(times, points[1], points[2])
@@ -390,11 +390,11 @@ class GridHawkesProcess(Sampler):
     of Predictive Policing", 2015.
     
     :param background_rates: An array of arbitrary shape, giving the background
-    rate in each "cell".
+      rate in each "cell".
     :param theta: The overall "intensity" of trigger / aftershock events.
-    Should be less than 1.
+      Should be less than 1.
     :param omega: The rate (or inverse scale) of the exponential kernel.
-    Increase to make aftershock events more localised in time.
+      Increase to make aftershock events more localised in time.
     """
     def __init__(self, background_rates, theta, omega):
         self.mus = _np.asarray(background_rates)

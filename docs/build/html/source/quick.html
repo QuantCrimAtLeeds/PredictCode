@@ -8,7 +8,7 @@
     
     <title>Quick start &#8212; OpenCP 1.0 documentation</title>
     
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/haiku.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     
     <script type="text/javascript">
@@ -28,25 +28,30 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="open_cp.data" href="data.html" />
-    <link rel="prev" title="OpenCP" href="../index.html" />
-   
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
-  
-  
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
-
+    <link rel="prev" title="OpenCP" href="../index.html" /> 
   </head>
   <body role="document">
-  
+      <div class="header" role="banner"><h1 class="heading"><a href="../index.html">
+          <span>OpenCP 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>Quick start</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="../index.html">OpenCP</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="data.html">open_cp.data</a>&#160;&#160;»
+        </p>
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          <div class="body" role="main">
-            
+      </div>
+      <div class="content">
+        
+        
   <div class="section" id="quick-start">
 <h1>Quick start<a class="headerlink" href="#quick-start" title="Permalink to this headline">¶</a></h1>
-<p>As a work in progress, the <code class="xref any docutils literal"><span class="pre">open_cp</span></code> module cannot be installed, but can simply be imported.  This is a Python 3 module.
+<p>As a work in progress, the <cite>open_cp</cite> module cannot be installed, but can simply be imported.  This is a Python 3 module.
 It relies upon <cite>numpy</cite> only, for core functionality.</p>
 <ol class="arabic simple">
 <li>The recommended Python distribution is <a class="reference external" href="https://www.continuum.io/downloads">Anaconda</a></li>
@@ -77,7 +82,7 @@ as a continuously varying kernel, while grid based techniques will divide space 
 <p>Once the relative risk intensity has been estimated, it is common to sample the risk intensity to a grid (if the prediction method was continuous)
 and then to select the top 1%, 5%, 10% etc. grid cells by risk.  These can then form the basis for targeted &#8220;guardian&#8221; action.  For historic data, when
 &#8220;scoring&#8221; the prediction method, it is common to calculate the fraction of actual crime which occurred in these highest risk grid cells to get a &#8220;hit rate&#8221;.</p>
-<p>The module <code class="xref any docutils literal"><span class="pre">open_cp.predictors</span></code> contains base classes and utility methods.</p>
+<p>The module <a class="reference internal" href="predictors.html#module-open_cp.predictors" title="open_cp.predictors"><code class="xref any py py-mod docutils literal"><span class="pre">open_cp.predictors</span></code></a> contains base classes and utility methods.</p>
 </div>
 <div class="section" id="data-sources">
 <h2>Data sources<a class="headerlink" href="#data-sources" title="Permalink to this headline">¶</a></h2>
@@ -89,10 +94,10 @@ and then to select the top 1%, 5%, 10% etc. grid cells by risk.  These can then 
 <p>See the <a class="reference external" href="https://github.com/QuantCrimAtLeeds/PredictCode/tree/master/examples">examples</a> notebooks for reviews of
 the literature, implementation details, and examples, for each of these algorithms.</p>
 <ul class="simple">
-<li>The <code class="xref any docutils literal"><span class="pre">retrohotspot.py</span></code> module implements the &#8220;retrospective hotspotting&#8221; algorithm.</li>
-<li>The <code class="xref any docutils literal"><span class="pre">prohotspot.py</span></code> module implements the &#8220;prospective hotspotting&#8221; algorithm.</li>
-<li>The <code class="xref any docutils literal"><span class="pre">sepp.py</span></code> module implements the &#8220;epidemic-type aftershock model&#8221; (ETAS) algorithm, with a variable bandwidth kernel density estimator.</li>
-<li>The <code class="xref any docutils literal"><span class="pre">seppexp.py</span></code> module implements a grid based parametric ETAS model.</li>
+<li>The <a class="reference internal" href="retrohotspot.html"><span class="doc">open_cp.retrohotspot</span></a> module implements the &#8220;retrospective hotspotting&#8221; algorithm.</li>
+<li>The <a class="reference internal" href="prohotspot.html"><span class="doc">open_cp.prohotspot</span></a> module implements the &#8220;prospective hotspotting&#8221; algorithm.</li>
+<li>The <a class="reference internal" href="sepp.html"><span class="doc">open_cp.sepp</span></a> module implements the &#8220;epidemic-type aftershock model&#8221; (ETAS) algorithm, with a variable bandwidth kernel density estimator.</li>
+<li>The <a class="reference internal" href="seppexp.html"><span class="doc">open_cp.seppexp</span></a> module implements a grid based parametric ETAS model.</li>
 </ul>
 </div>
 <div class="section" id="other-modules">
@@ -110,67 +115,22 @@ contains <a class="reference external" href="https://docs.pytest.org/en/latest/"
 </div>
 
 
-          </div>
-        </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
-  <ul>
-<li><a class="reference internal" href="#">Quick start</a><ul>
-<li><a class="reference internal" href="#data-input">Data input</a></li>
-<li><a class="reference internal" href="#prediction">Prediction</a></li>
-<li><a class="reference internal" href="#data-sources">Data sources</a></li>
-<li><a class="reference internal" href="#algorithms">Algorithms</a></li>
-<li><a class="reference internal" href="#other-modules">Other modules</a></li>
-<li><a class="reference internal" href="#testing">Testing</a></li>
-</ul>
-</li>
-</ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="../index.html" title="previous chapter">OpenCP</a></li>
-      <li>Next: <a href="data.html" title="next chapter">open_cp.data</a></li>
-  </ul></li>
-</ul>
-</div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/source/quick.rst.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <form class="search" action="../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
-        </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="../index.html">OpenCP</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="data.html">open_cp.data</a>&#160;&#160;»
+        </p>
+
       </div>
-      <div class="clearer"></div>
-    </div>
-    <div class="footer">
-      &copy;2017, University of Leeds.
-      
-      |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
-      
-      |
-      <a href="../_sources/source/quick.rst.txt"
-          rel="nofollow">Page source</a>
-    </div>
 
-    
-
-    
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, University of Leeds.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
+    </div>
   </body>
 </html>

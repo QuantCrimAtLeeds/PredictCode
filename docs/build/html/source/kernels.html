@@ -8,7 +8,7 @@
     
     <title>open_cp.kernels &#8212; OpenCP 1.0 documentation</title>
     
-    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/haiku.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     
     <script type="text/javascript">
@@ -27,23 +27,28 @@
     <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="open_cp.sources package" href="open_cp.sources.html" />
-    <link rel="prev" title="open_cp.data" href="data.html" />
-   
-  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
-  
-  
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
-
+    <link rel="next" title="open_cp.predictors" href="predictors.html" />
+    <link rel="prev" title="open_cp.data" href="data.html" /> 
   </head>
   <body role="document">
-  
+      <div class="header" role="banner"><h1 class="heading"><a href="../index.html">
+          <span>OpenCP 1.0 documentation</span></a></h1>
+        <h2 class="heading"><span>open_cp.kernels</span></h2>
+      </div>
+      <div class="topnav" role="navigation" aria-label="top navigation">
+      
+        <p>
+        «&#160;&#160;<a href="data.html">open_cp.data</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="predictors.html">open_cp.predictors</a>&#160;&#160;»
+        </p>
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          <div class="body" role="main">
-            
+      </div>
+      <div class="content">
+        
+        
   <div class="section" id="module-open_cp.kernels">
 <span id="open-cp-kernels"></span><h1>open_cp.kernels<a class="headerlink" href="#module-open_cp.kernels" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="kernels">
@@ -54,34 +59,30 @@ point processes.</p>
 <p>More formally, a kernel is any python object which is callable (e.g. a
 function, or an instance of a class implementing <cite>__call__</cite>).  We follow the
 e.g. scipy convention:</p>
-<ul class="simple">
-<li>A kernel expecting a one dimensional input may take a scalar as input,</li>
-</ul>
-<p>or a one-dimensional numpy array.  It should return, respectively, a scalar
+<ul>
+<li><p class="first">A kernel expecting a one dimensional input may take a scalar as input,
+or a one-dimensional numpy array.  It should return, respectively, a scalar
 or a one-dimensional array of the same size.  For example:</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>def gaussian(p):</dt>
-<dd>return np.exp(-p * p)</dd>
-</dl>
-</div></blockquote>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">gaussian</span><span class="p">(</span><span class="n">p</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">p</span> <span class="o">*</span> <span class="n">p</span><span class="p">)</span>
+</pre></div>
+</div>
 <p>Here we use <cite>np.exp</cite> to make sure that if <cite>p</cite> is an array, we handle it
 correctly.</p>
-<ul class="simple">
-<li>A kernel expecting a <cite>k</cite> dimensional input may take an array of shape <cite>(k)</cite></li>
-</ul>
-<p>to represent a point, or an array of shape <cite>(k,N)</cite> to represent <cite>N</cite> points.
+</li>
+<li><p class="first">A kernel expecting a <cite>k</cite> dimensional input may take an array of shape <cite>(k)</cite>
+to represent a point, or an array of shape <cite>(k,N)</cite> to represent <cite>N</cite> points.
 The return should be, respectively, a scalar or an array of shape <cite>(N)</cite>.
 We follow this convention to allow e.g. the following:</p>
-<blockquote>
-<div><dl class="docutils">
-<dt>def x_y_sum(p):</dt>
-<dd>return p[0] + p[1]</dd>
-</dl>
-</div></blockquote>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">x_y_sum</span><span class="p">(</span><span class="n">p</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+</pre></div>
+</div>
 <p>In the single-point case, <cite>p[0]</cite> is a scalar representing the x coordinate and
 <cite>p[1]</cite> a scalar representing the y coordinate.  In the multiple point case,
 <cite>p[0]</cite> is an array of all the x coordinates.</p>
+</li>
+</ul>
 <dl class="class">
 <dt id="open_cp.kernels.GaussianKernel">
 <em class="property">class </em><code class="descclassname">open_cp.kernels.</code><code class="descname">GaussianKernel</code><span class="sig-paren">(</span><em>means</em>, <em>variances</em>, <em>scale=1.0</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.GaussianKernel" title="Permalink to this definition">¶</a></dt>
@@ -113,27 +114,32 @@ kernel.</p>
 <dt id="open_cp.kernels.KNNG1_NDFactors">
 <em class="property">class </em><code class="descclassname">open_cp.kernels.</code><code class="descname">KNNG1_NDFactors</code><span class="sig-paren">(</span><em>k_first=100</em>, <em>k_rest=15</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.KNNG1_NDFactors" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#open_cp.kernels.TimeSpaceFactorsEstimator" title="open_cp.kernels.TimeSpaceFactorsEstimator"><code class="xref py py-class docutils literal"><span class="pre">open_cp.kernels.TimeSpaceFactorsEstimator</span></code></a></p>
-<p>A :class KernelEstimator: which applies the
-:class KthNearestNeighbourGaussianKDE: to first coordinate with one value
+<p>A <a class="reference internal" href="#open_cp.kernels.KernelEstimator" title="open_cp.kernels.KernelEstimator"><code class="xref py py-class docutils literal"><span class="pre">KernelEstimator</span></code></a> which applies the
+<a class="reference internal" href="#open_cp.kernels.KthNearestNeighbourGaussianKDE" title="open_cp.kernels.KthNearestNeighbourGaussianKDE"><code class="xref py py-class docutils literal"><span class="pre">KthNearestNeighbourGaussianKDE</span></code></a> to first coordinate with one value
 of k, and then to the remaining coordinates with another value of k, and
 combines the result.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>k_first</strong> &#8211; The nearest neighbour to use in the first coordinate,</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>k_first</strong> &#8211; The nearest neighbour to use in the first coordinate,
+defaults to 100, if N is too small then uses N-1.</li>
+<li><strong>k_rest</strong> &#8211; The nearest neighbour to use for the remaining coordinates,
+defaults to 15, if N is too small then uses N-1.</li>
+</ul>
+</td>
 </tr>
 </tbody>
 </table>
-<p>defaults to 100, if N is too small then uses N-1.
-:param k_rest: The nearest neighbour to use for the remaining coordinates,
-defaults to 15, if N is too small then uses N-1.</p>
 </dd></dl>
 
 <dl class="class">
 <dt id="open_cp.kernels.Kernel">
 <em class="property">class </em><code class="descclassname">open_cp.kernels.</code><code class="descname">Kernel</code><a class="headerlink" href="#open_cp.kernels.Kernel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Abstract base class for classes implementing kernels.  You are not
+required to extend this class, but you should implement the interface.</p>
 <dl class="method">
 <dt id="open_cp.kernels.Kernel.set_scale">
 <code class="descname">set_scale</code><span class="sig-paren">(</span><em>scale=1.0</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.Kernel.set_scale" title="Permalink to this definition">¶</a></dt>
@@ -147,39 +153,41 @@ returned.</p>
 <dt id="open_cp.kernels.KernelEstimator">
 <em class="property">class </em><code class="descclassname">open_cp.kernels.</code><code class="descname">KernelEstimator</code><a class="headerlink" href="#open_cp.kernels.KernelEstimator" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>Abstract base class for classes implementing kernel estimators.  You are
+not required to extend this class, but you should implement the interface.</p>
 </dd></dl>
 
 <dl class="class">
 <dt id="open_cp.kernels.KthNearestNeighbourGaussianKDE">
 <em class="property">class </em><code class="descclassname">open_cp.kernels.</code><code class="descname">KthNearestNeighbourGaussianKDE</code><span class="sig-paren">(</span><em>k=15</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.KthNearestNeighbourGaussianKDE" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#open_cp.kernels.KernelEstimator" title="open_cp.kernels.KernelEstimator"><code class="xref py py-class docutils literal"><span class="pre">open_cp.kernels.KernelEstimator</span></code></a></p>
-<p>A :class KernelEstimator: which applies the algorithm given by
-:function kth_nearest_neighbour_gaussian_kde:</p>
+<p>A <a class="reference internal" href="#open_cp.kernels.KernelEstimator" title="open_cp.kernels.KernelEstimator"><code class="xref py py-class docutils literal"><span class="pre">KernelEstimator</span></code></a> which applies the algorithm given by
+<a class="reference internal" href="#open_cp.kernels.kth_nearest_neighbour_gaussian_kde" title="open_cp.kernels.kth_nearest_neighbour_gaussian_kde"><code class="xref py py-func docutils literal"><span class="pre">kth_nearest_neighbour_gaussian_kde()</span></code></a></p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>k</strong> &#8211; The nearest neighbour to use, defaults to 15, if N is too small</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>k</strong> &#8211; The nearest neighbour to use, defaults to 15, if N is too small
+then uses N-1.</td>
 </tr>
 </tbody>
 </table>
-<p>then uses N-1.</p>
 </dd></dl>
 
 <dl class="class">
 <dt id="open_cp.kernels.ReflectedKernel">
 <em class="property">class </em><code class="descclassname">open_cp.kernels.</code><code class="descname">ReflectedKernel</code><span class="sig-paren">(</span><em>delegate</em>, <em>reflected_axis=0</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.ReflectedKernel" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#open_cp.kernels.Kernel" title="open_cp.kernels.Kernel"><code class="xref py py-class docutils literal"><span class="pre">open_cp.kernels.Kernel</span></code></a></p>
-<p>A specialisation of :class Kernel: which is for where, along certain
+<p>A specialisation of <a class="reference internal" href="#open_cp.kernels.Kernel" title="open_cp.kernels.Kernel"><code class="xref py py-class docutils literal"><span class="pre">Kernel</span></code></a> which is for where, along certain
 axes, we know that the data is concentrated on the positive interval
-[0, infty].  We wrap an existing :class Kernel: instance, but reflect
+[0, infty].  We wrap an existing <a class="reference internal" href="#open_cp.kernels.Kernel" title="open_cp.kernels.Kernel"><code class="xref py py-class docutils literal"><span class="pre">Kernel</span></code></a> instance, but reflect
 about 0 any estimated probability mass on the negative reals.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>delegate</strong> &#8211; The :class Kernel: instance to delegate to.</li>
+<li><strong>delegate</strong> &#8211; The <a class="reference internal" href="#open_cp.kernels.Kernel" title="open_cp.kernels.Kernel"><code class="xref py py-class docutils literal"><span class="pre">Kernel</span></code></a> instance to delegate to.</li>
 <li><strong>reflected_axis</strong> &#8211; Which axis to reflect about.</li>
 </ul>
 </td>
@@ -198,13 +206,13 @@ about 0 any estimated probability mass on the negative reals.</p>
 <em class="property">class </em><code class="descclassname">open_cp.kernels.</code><code class="descname">ReflectedKernelEstimator</code><span class="sig-paren">(</span><em>estimator</em>, <em>reflected_axis=0</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.ReflectedKernelEstimator" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#open_cp.kernels.KernelEstimator" title="open_cp.kernels.KernelEstimator"><code class="xref py py-class docutils literal"><span class="pre">open_cp.kernels.KernelEstimator</span></code></a></p>
 <p>Wraps an existing :class KernelEstimator: but reflects the estimated
-kernel about 0 in one axis.  See :class ReflectedKernel:</p>
+kernel about 0 in one axis.  See <a class="reference internal" href="#open_cp.kernels.ReflectedKernel" title="open_cp.kernels.ReflectedKernel"><code class="xref py py-class docutils literal"><span class="pre">ReflectedKernel</span></code></a></p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>estimator</strong> &#8211; The :class KernelEstimator: to delegate to.</li>
+<li><strong>estimator</strong> &#8211; The <a class="reference internal" href="#open_cp.kernels.KernelEstimator" title="open_cp.kernels.KernelEstimator"><code class="xref py py-class docutils literal"><span class="pre">KernelEstimator</span></code></a> to delegate to.</li>
 <li><strong>reflected_axis</strong> &#8211; Which axis to reflect about.</li>
 </ul>
 </td>
@@ -217,20 +225,23 @@ kernel about 0 in one axis.  See :class ReflectedKernel:</p>
 <dt id="open_cp.kernels.TimeSpaceFactorsEstimator">
 <em class="property">class </em><code class="descclassname">open_cp.kernels.</code><code class="descname">TimeSpaceFactorsEstimator</code><span class="sig-paren">(</span><em>time_estimator</em>, <em>space_estimator</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.TimeSpaceFactorsEstimator" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#open_cp.kernels.KernelEstimator" title="open_cp.kernels.KernelEstimator"><code class="xref py py-class docutils literal"><span class="pre">open_cp.kernels.KernelEstimator</span></code></a></p>
-<p>A :class KernelEstimator: which applies a one-dimensional kernel
+<p>A <a class="reference internal" href="#open_cp.kernels.KernelEstimator" title="open_cp.kernels.KernelEstimator"><code class="xref py py-class docutils literal"><span class="pre">KernelEstimator</span></code></a> which applies a one-dimensional kernel
 estimator to the first (time) coordinate of the data, and another kernel
 estimator to the remaining (space) coordinates.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>time_estimator</strong> &#8211; A :class KernelEstimator: for the one-dimensional</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>time_estimator</strong> &#8211; A <a class="reference internal" href="#open_cp.kernels.KernelEstimator" title="open_cp.kernels.KernelEstimator"><code class="xref py py-class docutils literal"><span class="pre">KernelEstimator</span></code></a> for the one-dimensional
+time data.</li>
+<li><strong>space_estimator</strong> &#8211; A <a class="reference internal" href="#open_cp.kernels.KernelEstimator" title="open_cp.kernels.KernelEstimator"><code class="xref py py-class docutils literal"><span class="pre">KernelEstimator</span></code></a> for the remaining
+coordinates.</li>
+</ul>
+</td>
 </tr>
 </tbody>
 </table>
-<p>time data.
-:param space_estimator: A :class KernelEstimator: for the remaining
-coordinates.</p>
 <dl class="class">
 <dt id="open_cp.kernels.TimeSpaceFactorsEstimator.Factors_Kernel">
 <em class="property">class </em><code class="descname">Factors_Kernel</code><span class="sig-paren">(</span><em>first</em>, <em>rest</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.TimeSpaceFactorsEstimator.Factors_Kernel" title="Permalink to this definition">¶</a></dt>
@@ -249,7 +260,7 @@ coordinates.</p>
 <dl class="method">
 <dt id="open_cp.kernels.TimeSpaceFactorsEstimator.Factors_Kernel.time_kernel">
 <code class="descname">time_kernel</code><span class="sig-paren">(</span><em>points</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.TimeSpaceFactorsEstimator.Factors_Kernel.time_kernel" title="Permalink to this definition">¶</a></dt>
-<dd><p>A one-dimensional, _normalised_ kernel giving the time
+<dd><p>A one-dimensional, <em>normalised</em> kernel giving the time
 component of the overall kernel.</p>
 </dd></dl>
 
@@ -263,16 +274,10 @@ component of the overall kernel.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>coords</strong> &#8211; All the coordinates; only the 1st coordinate will be</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>coords</strong> &#8211; All the coordinates; only the 1st coordinate will be
+used.</td>
 </tr>
-</tbody>
-</table>
-<p>used.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A one dimensional kernel.</td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">A one dimensional kernel.</td>
 </tr>
 </tbody>
 </table>
@@ -299,55 +304,51 @@ component of the overall kernel.</p>
 <dl class="function">
 <dt id="open_cp.kernels.compute_kth_distance">
 <code class="descclassname">open_cp.kernels.</code><code class="descname">compute_kth_distance</code><span class="sig-paren">(</span><em>coords</em>, <em>k=15</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.compute_kth_distance" title="Permalink to this definition">¶</a></dt>
-<dd><p>Find the (Euclidean) distance to the <a href="#id1"><span class="problematic" id="id2">`</span></a>k`th nearest neighbour.</p>
+<dd><p>Find the (Euclidean) distance to the <cite>k</cite> th nearest neighbour.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>coords</strong> &#8211; An array of shape (n,N) of N points in n dimensional space;</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>coords</strong> &#8211; An array of shape (n,N) of N points in n dimensional space;
+if n=1 then input is an array of shape (N).</li>
+<li><strong>k</strong> &#8211; The nearest neighbour to use, defaults to 15, if N is too small
+then uses N-1.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">An array of shape (N) where the i-th entry is the distance from
+the i-th point to its k-th nearest neighbour.</p>
+</td>
 </tr>
 </tbody>
 </table>
-<p>if n=1 then input is an array of shape (N).
-:param k: The nearest neighbour to use, defaults to 15, if N is too small
-then uses N-1.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">An array of shape (N) where the i-th entry is the distance from</td>
-</tr>
-</tbody>
-</table>
-<p>the i-th point to its k-th nearest neighbour.</p>
 </dd></dl>
 
 <dl class="function">
 <dt id="open_cp.kernels.compute_normalised_kth_distance">
 <code class="descclassname">open_cp.kernels.</code><code class="descname">compute_normalised_kth_distance</code><span class="sig-paren">(</span><em>coords</em>, <em>k=15</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.compute_normalised_kth_distance" title="Permalink to this definition">¶</a></dt>
-<dd><p>Find the (Euclidean) distance to the <a href="#id3"><span class="problematic" id="id4">`</span></a>k`th nearest neighbour.
+<dd><p>Find the (Euclidean) distance to the <cite>k</cite> th nearest neighbour.
 The input data is first scaled so that each coordinate (independently) has
 unit sample variance.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>coords</strong> &#8211; An array of shape (n,N) of N points in n dimensional space;</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>coords</strong> &#8211; An array of shape (n,N) of N points in n dimensional space;
+if n=1 then input is an array of shape (N).</li>
+<li><strong>k</strong> &#8211; The nearest neighbour to use, defaults to 15, if N is too small
+then uses N-1.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">An array of shape (N) where the i-th entry is the distance from
+the i-th point to its k-th nearest neighbour.</p>
+</td>
 </tr>
 </tbody>
 </table>
-<p>if n=1 then input is an array of shape (N).
-:param k: The nearest neighbour to use, defaults to 15, if N is too small
-then uses N-1.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">An array of shape (N) where the i-th entry is the distance from</td>
-</tr>
-</tbody>
-</table>
-<p>the i-th point to its k-th nearest neighbour.</p>
 </dd></dl>
 
 <dl class="function">
@@ -355,32 +356,29 @@ then uses N-1.</p>
 <code class="descclassname">open_cp.kernels.</code><code class="descname">kth_nearest_neighbour_gaussian_kde</code><span class="sig-paren">(</span><em>coords</em>, <em>k=15</em><span class="sig-paren">)</span><a class="headerlink" href="#open_cp.kernels.kth_nearest_neighbour_gaussian_kde" title="Permalink to this definition">¶</a></dt>
 <dd><p>Estimate a kernel using variable bandwidth with a Gaussian kernel.
 The input data is scaled (independently in each coordinate) to have unit
-variance in each coordinate, and then the distance to the <a href="#id5"><span class="problematic" id="id6">`</span></a>k`th nearest
+variance in each coordinate, and then the distance to the <cite>k</cite> th nearest
 neighbour is found.  The returned kernel is normalised, and is the sum
 of Gaussians centred on each data point, where the standard deviation for
 each coordinate is the distance for that point, multiplied by the standard
 deviation for that coordinate.</p>
 <p>See the Appendix of:
-Mohler et al, &#8220;Self-Exciting Point Process Modeling of Crime&#8221;,</p>
-<blockquote>
-<div>Journal of the American Statistical Association, 2011
-DOI: 10.1198/jasa.2011.ap09546</div></blockquote>
+Mohler et al, &#8220;Self-Exciting Point Process Modeling of Crime&#8221;,
+Journal of the American Statistical Association, 2011
+DOI: 10.1198/jasa.2011.ap09546</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>coords</strong> &#8211; An array of shape (n,N) of N points in n dimensional space;</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>coords</strong> &#8211; An array of shape (n,N) of N points in n dimensional space;
+if n=1 then input is an array of shape (N).</li>
+<li><strong>k</strong> &#8211; The nearest neighbour to use, defaults to 15, if N is too small
+then uses N-1.</li>
+</ul>
+</td>
 </tr>
-</tbody>
-</table>
-<p>if n=1 then input is an array of shape (N).
-:param k: The nearest neighbour to use, defaults to 15, if N is too small
-then uses N-1.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A kernel object.</td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A kernel object.</p>
+</td>
 </tr>
 </tbody>
 </table>
@@ -396,20 +394,18 @@ but much faster, than (numerically) integerating out all but one variable.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>coords</strong> &#8211; An array of shape (n,N) of N points in n dimensional space;</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>coords</strong> &#8211; An array of shape (n,N) of N points in n dimensional space;
+if n=1 then input is an array of shape (N).</li>
+<li><strong>coord_index</strong> &#8211; Which coordinate to return the marginal for; defaults
+to 0 so giving the first coordinate.</li>
+<li><strong>k</strong> &#8211; The nearest neighbour to use, defaults to 15, if N is too small
+then uses N-1.</li>
+</ul>
+</td>
 </tr>
-</tbody>
-</table>
-<p>if n=1 then input is an array of shape (N).
-:param coord_index: Which coordinate to return the marginal for; defaults
-to 0 so giving the first coordinate.
-:param k: The nearest neighbour to use, defaults to 15, if N is too small
-then uses N-1.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">A one-dimensional kernel.</td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">A one-dimensional kernel.</p>
+</td>
 </tr>
 </tbody>
 </table>
@@ -419,62 +415,22 @@ then uses N-1.</p>
 </div>
 
 
-          </div>
-        </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="../index.html">Table Of Contents</a></h3>
-  <ul>
-<li><a class="reference internal" href="#">open_cp.kernels</a><ul>
-<li><a class="reference internal" href="#kernels">kernels</a></li>
-</ul>
-</li>
-</ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../index.html">Documentation overview</a><ul>
-      <li>Previous: <a href="data.html" title="previous chapter">open_cp.data</a></li>
-      <li>Next: <a href="open_cp.sources.html" title="next chapter">open_cp.sources package</a></li>
-  </ul></li>
-</ul>
-</div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../_sources/source/kernels.rst.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <form class="search" action="../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
-        </div>
+      <div class="bottomnav" role="navigation" aria-label="bottom navigation">
+      
+        <p>
+        «&#160;&#160;<a href="data.html">open_cp.data</a>
+        &#160;&#160;::&#160;&#160;
+        <a class="uplink" href="../index.html">Contents</a>
+        &#160;&#160;::&#160;&#160;
+        <a href="predictors.html">open_cp.predictors</a>&#160;&#160;»
+        </p>
+
       </div>
-      <div class="clearer"></div>
-    </div>
-    <div class="footer">
-      &copy;2017, University of Leeds.
-      
-      |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
-      
-      |
-      <a href="../_sources/source/kernels.rst.txt"
-          rel="nofollow">Page source</a>
-    </div>
 
-    
-
-    
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, University of Leeds.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.5.1.
+    </div>
   </body>
 </html>
