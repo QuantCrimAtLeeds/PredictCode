@@ -161,8 +161,8 @@ class TimedPoints:
         return TimedPoints(new_times, new_coords)
 
     def events_before(self, cutoff_time=None):
-        """Returns just the events with timestamps before (or equal to) the
-        cutoff.
+        """Returns a new instance with just the events with timestamps before
+        (or equal to) the cutoff.
 
         :param cutoff_time: End of the time period we're interested in.
           Default is `None` which means return all the data.
