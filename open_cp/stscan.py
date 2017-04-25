@@ -281,8 +281,9 @@ class STSTrainer(predictors.DataTrainer):
 
         clusters, stats, start_times = zip(*clusters)
         time_regions = [(s,time) for s in start_times]
-        return STSResult(self.region, clusters, time_ranges=time_regions,
-            statistics=stats)
+        max_clusters = self.maximise_clusters(clusters, time)
+        return STSResult(self.region, clusters, max_clusters,
+                         time_ranges=time_regions, statistics=stats)
 
     def maximise_clusters(self, clusters, time=None):
         """The prediction method will return the smallest clusters (subject
@@ -312,9 +313,14 @@ class STSContinuousPrediction(predictors.ContinuousPrediction):
     clusters and a user-defined weight to generate a continuous "risk"
     prediction.  Set the :attr:`weight` to change weight.
     
+    It is not clear that the generated "risk" has much to do with reality!
+    We, by default, use enlarged cluster sizes (with removes the problem of
+    clusters with zero radius!) which can lead to overlapping clusters.
+    
     :param clusters: List of computed clusters.
     """
     def __init__(self, clusters):
+        super().__init__()
         self.weight = self.quatric_weight
         self.clusters = clusters
         pass
@@ -336,32 +342,56 @@ class STSContinuousPrediction(predictors.ContinuousPrediction):
     def weight(self, value):
         self._weight = value
     
+    def _vectorised_weight(self, values):
+        """Allows values to be a one-dimensional array.  Returns 0 is the
+        value is not in the interval [0,1).
+        """
+        values = _np.asarray(values)
+        allowed = (values >= 0) & (values < 1)
+        if len(values.shape) > 0:
+            return _np.asarray([self.weight(x) if a else 0.0 for x, a in zip(values,allowed)])
+        return self.weight(values) if allowed else 0.0
+    
     def risk(self, x, y):
         """The relative "risk", varying between 0 and `n`, the number of
         clusters detected.
         """
         pt = _np.array([x,y])
-        risk = 0.0
+        if len(pt.shape) == 1:
+            pt = pt[:,None]
+        risk = _np.zeros(pt.shape[1])
         for n, cluster in enumerate(self.clusters):
-            dist = ( _np.sqrt(_np.sum((_np.asarray(cluster.centre) - pt)**2))
+            dist = ( _np.sqrt(_np.sum((pt - _np.asarray(cluster.centre)[:,None])**2, axis=0))
                     / cluster.radius )
-            if dist < 1.0:
-                risk += len(self.clusters) - n - 1 + self.weight(dist)
+            weights = self._vectorised_weight(dist)
+            risk += (len(self.clusters) - n - 1 + weights) * (weights > 0)
         return risk                
 
 
 class STSResult():
     """Stores the computed clusters from :class:`STSTrainer`.  These can be
     used to produce gridded or continuous "risk" predictions.
+    
+    :param region: The rectangular region enclosing the data.
+    :param clusters: A list of :class:`Cluster` instances describing the found
+      clusters.
+    :param max_clusters: A list of :class:`Cluster` instances describing the
+      clusters with radii enlarged to the maximal extent.
+    :param time_ranges: The time range associated with each cluster.
+    :param statistics: The value of the log likelihood for each cluster.
+    :param pvalues: (Optionally) the estimated p-values.
     """
-    def __init__(self, region, clusters, time_ranges=None, statistics=None, pvalues=None):
+    def __init__(self, region, clusters, max_clusters=None, time_ranges=None,
+                 statistics=None, pvalues=None):
         self.region = region
         self.clusters = clusters
+        if max_clusters is None:
+            max_clusters = clusters
+        self.max_clusters = max_clusters
         self.time_ranges = time_ranges
         self.statistics = statistics
         self.pvalues = pvalues
         pass
-    
     
     def _add_cluster(self, cluster, risk_matrix, grid_size, base_risk):
         """Adds risk in base_risk + (0,1]"""
@@ -387,19 +417,24 @@ class STSResult():
         risk than the secondary cluster, and so on.  Within each cluster,
         cells near the centre have a higher risk than cells near the boundary.
         
-        It is probably more "accurate" to produce a continuous prediction
-        and then convert that to a gridded prediction in the standard way.
-        
         :param grid_size: The size of resulting grid.
         """
         xs, ys = self.region.grid_size(grid_size)
         risk_matrix = _np.zeros((ys, xs))
-        print(risk_matrix.shape, ys, xs)
         for n, cluster in enumerate(self.clusters):
             self._add_cluster(cluster, risk_matrix, grid_size,
                               len(self.clusters) - n - 1)
-        return predictors.GridPredictionArray(xs, ys, risk_matrix,
+        return predictors.GridPredictionArray(grid_size, grid_size, risk_matrix,
             xoffset=self.region.xmin, yoffset=self.region.ymin)
 
-    def continuous_prediction(self):
-        return STSContinuousPrediction(self.clusters)
+    def continuous_prediction(self, use_maximal_clusters=True):
+        """Make a continuous prediction based upon the found clusters.
+        
+        :param use_maximal_clusters: If `True` then use the largest possible
+          radii for each cluster.
+        
+        :return: An instance of :class:`STSContinuousPrediction` which allows
+          further options to be set.
+        """
+        clusters = self.max_clusters if use_maximal_clusters else self.clusters
+        return STSContinuousPrediction(clusters)

@@ -39,8 +39,8 @@ class GridPrediction():
     the grid cell the coordinates contained, and then deferring to the abstract
     `grid_risk` method.
     
-    :param xsize: The width of the grid cells.
-    :param ysize: The height of the grid cells.
+    :param xsize: The width of each grid cell.
+    :param ysize: The height of each grid cell.
     :param xoffset: How much to offset the input x coordinate by; default 0.
     :param yoffset: How much to offset the input y coordinate by; default 0.
     """
@@ -75,8 +75,8 @@ class GridPredictionArray(GridPrediction):
     """A :class:`GridPrediction` backed by a numpy array (or other
     two-dimensional list-like object).
 
-    :param xsize: The width of the grid cells.
-    :param ysize: The height of the grid cells.
+    :param xsize: The width of each grid cell.
+    :param ysize: The height of each grid cell.
     :param matrix: A two dimensional numpy array (or other object with a
       `shape` attribute and allowing indexing as `matrix[y][x]`).
     :param xoffset: How much to offset the input x coordinate by; default 0.

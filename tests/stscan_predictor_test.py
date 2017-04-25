@@ -23,6 +23,15 @@ def an_STSResult_overlapping_clusters():
     clusters = [testmod.Cluster([10,60],10), testmod.Cluster([15,60], 15)]
     return testmod.STSResult(region, clusters)
     
+def test_STSContinuousPrediction_vectorise():
+    pred = testmod.STSContinuousPrediction(None)
+    assert(pred._vectorised_weight(0.5) == pytest.approx(.75**2))
+    assert(pred._vectorised_weight(0.1) == pytest.approx(0.99**2))
+    assert(pred._vectorised_weight(-0.1) == 0)
+    assert(pred._vectorised_weight(1.2) == 0)
+    x = [0.5, -0.1, 0.1, 1.2]
+    np.testing.assert_allclose(pred._vectorised_weight(x), [.75**2,0,.99**2,0])
+
 def test_STSContinuousPrediction_overlapping():
     pred = an_STSResult_overlapping_clusters().continuous_prediction()
     d1 = 2 / 10
@@ -36,6 +45,11 @@ def test_STSContinuousPrediction_customweight():
     pred.weight = lambda t : 1
     assert(pred.risk(12,60) == 3)
     
+def test_STSContinuousPrediction_samples():
+    pred = an_STSResult_overlapping_clusters().continuous_prediction()
+    pred.weight = lambda t : 1
+    pred.grid_risk(0,1)
+    
 def an_STSResult_nonaligned_centres():
     region = open_cp.RectangularRegion(xmin=0,xmax=100,ymin=50,ymax=100)
     clusters = [testmod.Cluster([9,59.5],10), testmod.Cluster([49,50.5], 12)]
@@ -43,7 +57,7 @@ def an_STSResult_nonaligned_centres():
 
 def test_STSResult():
     pred = an_STSResult_nonaligned_centres().grid_prediction(10)
-    assert((pred.xsize, pred.ysize) == (10, 5))
+    assert((pred.xsize, pred.ysize) == (10, 10))
     assert(pred.intensity_matrix.shape == (5,10))
     # 1st row has centre points (5,55), (15,55), (25,55) etc.
     expected = np.zeros((5,10))
