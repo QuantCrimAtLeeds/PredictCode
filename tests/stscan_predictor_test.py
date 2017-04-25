@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-import unittest.mock as mock
 import datetime
 
 import open_cp.stscan as testmod
@@ -58,6 +57,13 @@ def test_STSResult():
     
     np.testing.assert_allclose(pred.intensity_matrix, expected)
     
+def some_test_points():
+    times = [datetime.datetime(2017,4,20) + i * datetime.timedelta(hours=2)
+        for i in range(100)]
+    xcoords = list(range(100))
+    ycoords = [200 - i for i in range(100)]
+    return open_cp.TimedPoints.from_coords(times, xcoords, ycoords)
+    
 def test_STSTrainer_properties():
     trainer = testmod.STSTrainer()
     assert(trainer.geographic_population_limit == pytest.approx(0.5))
@@ -79,6 +85,15 @@ def test_STSTrainer_properties():
     assert(trainer.time_max_interval / np.timedelta64(1,"W") == 12)
     trainer.time_max_interval = datetime.timedelta(days=5)
     assert(trainer.time_max_interval / np.timedelta64(1,"D") == 5)
+    
+    assert(trainer.region is None)
+    trainer.region = None
+    assert(trainer.region is None)
+    trainer.data = some_test_points()
+    assert(trainer.region.xmin == 0)
+    assert(trainer.region.xmax == 99)
+    assert(trainer.region.ymin == 101)
+    assert(trainer.region.ymax == 200)
 
 def a_custom_trainer():
     trainer = testmod.STSTrainer()
@@ -86,13 +101,7 @@ def a_custom_trainer():
     trainer.geographic_radius_limit = 1000
     trainer.time_population_limit = 0.3
     trainer.time_max_interval = datetime.timedelta(days=5)
-    
-    times = [datetime.datetime(2017,4,20) + i * datetime.timedelta(hours=2)
-        for i in range(100)]
-    xcoords = list(range(100))
-    ycoords = [200 - i for i in range(100)]
-    trainer.data = open_cp.TimedPoints.from_coords(times, xcoords, ycoords)
-    
+    trainer.data = some_test_points()
     return trainer    
     
 def test_STSTrainer_bin_timestamps():
@@ -173,4 +182,36 @@ def test__possible_space_clusters2():
                 frozenset([0,1,2,3]), frozenset([0,1,2]), frozenset([1,3]) }
     assert(len(sets) == len(expected))
     assert(set(sets) == expected)
+
+def test__possible_space_clusters2_with_max_raidus():
+    points = np.array([[0,0],[1,0],[2,0],[1,2]]).T
+    discs = testmod._possible_space_clusters(points, 1)
+    sets = resulting_sets(points, discs)
+    expected = { frozenset([0]), frozenset([1]), frozenset([2]),
+                frozenset([3]), frozenset([0,1]), frozenset([1,2]),
+                frozenset([0,1,2]) }
+    assert(len(sets) == len(expected))
+    assert(set(sets) == expected)
+
+def test_maximise_clusters():
+    trainer = testmod.STSTrainer()
+    points = np.array([[0,0],[1,0],[2,0],[1,2]]).T
+    ts = [np.datetime64("2017-01-01")]*points.shape[1]
+    trainer.data = open_cp.TimedPoints(ts, points)
     
+    clusters = [testmod.Cluster(np.array([0,0]), 0)]
+    new_clusters = trainer.maximise_clusters(clusters)
+    assert( len(new_clusters) == 1 )
+    assert(all(np.all(d.centre == dd.centre) for d,dd in zip(clusters, new_clusters)))
+    assert(new_clusters[0].radius == pytest.approx(1))
+
+def test_predict():
+    s = 20
+    timestamps = np.datetime64("2017-01-01") + (np.random.random(size=s)
+        * np.timedelta64(300 * 24 * 60 * 60, "s"))
+    timestamps.sort()
+    xcoords = np.random.random(size=s) * 10000
+    ycoords = np.random.random(size=s) * 10000
+    trainer = testmod.STSTrainer()
+    trainer.data = open_cp.TimedPoints.from_coords(timestamps, xcoords, ycoords)
+    trainer.predict() # Test is just that it runs...

@@ -101,6 +101,23 @@ class RectangularRegion():
                                  self.ymin, self.xmax, self.ymax)
 
 
+def order_by_time(timestamps, xcoords, ycoords):
+    """Reorder the timestamps so they are increasing, and reorder the coords in
+    the same way (so the timestamps and coordinates continue to be associated
+    in the same way).
+    
+    :param timestamps: Array-like object of timestamps
+    :param xcoords: Array-like object of x coordinates.
+    :param ycoords: Array-like object of y coordinates.
+    
+    :return: Triple of `(timestamps, xcoords, ycoords)`.
+    """
+    timestamps = _np.asarray(timestamps)
+    xcoords, ycoords = _np.asarray(xcoords), _np.asarray(ycoords)
+    args = _np.argsort(timestamps)
+    return timestamps[args], xcoords[args], ycoords[args]
+
+
 class TimedPoints:
     """Stores a list of timestamped x-y coordinates of events.
     

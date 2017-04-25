@@ -29,7 +29,7 @@ class DataTrainer():
 
     @data.setter
     def data(self, value):
-        if not isinstance(value, data.TimedPoints):
+        if value is not None and not isinstance(value, data.TimedPoints):
             raise TypeError("data should be of class TimedPoints")
         self._data = value
         

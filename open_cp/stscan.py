@@ -43,7 +43,7 @@ Cluster = _collections.namedtuple("Cluster", ["centre", "radius"])
 
 
 def _possible_start_times(timestamps, max_interval_length, end_time):
-    times = end_time - timestamps
+    times = _np.datetime64(end_time) - timestamps
     zerotime = _np.timedelta64(0,"s")
     times = timestamps[(zerotime <= times) & (times <= max_interval_length)]
     if len(times) <= 1:
@@ -51,21 +51,23 @@ def _possible_start_times(timestamps, max_interval_length, end_time):
     deltas = times[1:] - times[:-1]
     return _np.hstack(([times[0]],times[1:][deltas > zerotime]))
 
-def _possible_space_clusters(points):
+def _possible_space_clusters(points, max_radius=_np.inf):
     discs = []
     for pt in points.T:
         distances = pt[:,None] - points
         distances = _np.sqrt(_np.sum(distances**2, axis=0))
         distances.sort()
-        discs.extend(Cluster(pt, r) for r in distances)
+        discs.extend(Cluster(pt, r*1.00001) for r in distances if r <= max_radius)
     # Reduce number
-    allmasks = [_np.sum((points - cluster.centre[:,None])**2, axis=0) <= cluster.radius**2
+    # Use a tuple here so we can use a set; this is _much_ faster
+    allmasks = [tuple(_np.sum((points - cluster.centre[:,None])**2, axis=0) <= cluster.radius**2)
              for cluster in discs]
     masks = []
+    set_masks = set()
     for i,m in enumerate(allmasks):
-        if any( _np.all(m==allmasks[index]) for index in masks ):
-            continue
-        masks.append(i)
+        if m not in set_masks:
+            masks.append(i)
+            set_masks.add(m)
     return [discs[i] for i in masks]
 
 
@@ -79,8 +81,26 @@ class STSTrainer(predictors.DataTrainer):
         self.geographic_radius_limit = 3000
         self.time_population_limit = 0.5
         self.time_max_interval = _np.timedelta64(12, "W")
+        self.data = None
+        self.region = None
         pass
     
+    @property
+    def region(self):
+        """The :class:`data.RectangularRegion` which contains the data; used
+        by the output to generate grids etc.  If set to `None` then will
+        automatically be the bounding-box of the input data.
+        """
+        if self._region is None:
+            self.region = None
+        return self._region
+    
+    @region.setter
+    def region(self, value):
+        if value is None and self.data is not None:
+            value = self.data.bounding_box
+        self._region = value
+
     @property
     def geographic_population_limit(self):
         """No space disc can contain more than this fraction of the total
@@ -171,6 +191,71 @@ class STSTrainer(predictors.DataTrainer):
         new.data = data.TimedPoints(self.data.timestamps, newcoords)
         return new
     
+    def _possible_start_times(self, end_time, events):
+        """A generator returing all possible start times"""
+        for st in _possible_start_times(events.timestamps,
+                                        self.time_max_interval, end_time):
+            events_in_time = (events.timestamps >= st) & (events.timestamps <= end_time)
+            count = _np.sum(events_in_time)
+            if count / events.number_data_points <= self.time_population_limit:
+                yield st, count, events_in_time
+                
+    def _disc_generator(self, discs, events):
+        """A generator which yields triples `(disc, count, mask)` where `disc`
+        is a :class:`Cluster` giving the space disk, `count` is the number of
+        events in this disc, and `mask` is the boolean mask of which events are
+        in the disc.
+        
+        :param discs: An iterable giving the discs
+        """
+        for disc in discs:
+            space_counts = ( _np.sum((events.coords - disc.centre[:,None])**2, axis=0)
+                    <= disc.radius ** 2 )
+            count = _np.sum(space_counts)
+            yield disc, count, space_counts
+    
+    def _possible_discs(self, events):
+        """Return all possible discs which satisfy our limits"""
+        all_discs = _possible_space_clusters(events.coords, self.geographic_radius_limit)
+        N = events.number_data_points
+        for disc, count, space_counts in self._disc_generator(all_discs, events):
+            if count <= N * self.geographic_population_limit:
+                yield disc, count, space_counts
+    
+    def _statistic(self, actual, expected, total):
+        """Calculate the log likelihood"""
+        stat = actual * (_np.log(actual) - _np.log(expected))
+        stat += (total - actual) * (_np.log(total - actual) - _np.log(total - expected))
+        return stat
+    
+    def _scan_all(self, end_time, events, discs_generator, disc_output=None):
+        best = (None, -_np.inf, None)
+        N = events.number_data_points
+
+        for disc, space_count, space_mask in discs_generator:
+            if disc_output is not None:
+                disc_output.append(disc)
+            time_generator = self._possible_start_times(end_time, events)
+            for start, time_count, time_mask in time_generator:
+                expected = time_count * space_count / N
+                actual = _np.sum(time_mask & space_mask)
+                if actual > expected:
+                    stat = self._statistic(actual, expected, N)
+                    if stat > best[1]:
+                        best = (disc, stat, start)
+        return best
+
+    def _remove_intersecting(self, all_discs, disc):
+        return [ d for d in all_discs
+            if _np.sum((d.centre - disc.centre)**2) > (d.radius + disc.radius)**2
+            ]
+
+    def _events_time(self, time=None):
+        events = self.data.events_before(time)
+        if time is None:
+            time = self.data.timestamps[-1]
+        return events, time
+
     def predict(self, time=None):
         """Make a prediction.
         
@@ -180,33 +265,46 @@ class STSTrainer(predictors.DataTrainer):
         
         :return: A instance of :class:`STSResult` giving the found clusters.
         """
-        events = self.data.events_before(time)
-        if time is None:
-            time = self.data.timestamps[-1]
-            
-        start_times = _possible_start_times(events.timestamps,
-                                            self.time_max_interval, time)
-        time_counts = _np.empty(len(start_times), dtype=_np.object)
-        for i, st in enumerate(start_times):
-            time_counts[i] = (events.timestamps >= st) & (events.timestamps <= time)
+        events, time = self._events_time(time)
+        all_discs = []
+        clusters = []
+        best_disc, stat, start_time = self._scan_all(time, events,
+            self._possible_discs(events), all_discs)
+        
+        while best_disc is not None:
+            clusters.append((best_disc, stat, start_time))
+            all_discs = self._remove_intersecting(all_discs, best_disc)
+            if len(all_discs) == 0:
+                break
+            best_disc, stat, start_time = self._scan_all(time, events,
+                self._disc_generator(all_discs, events))
 
-        discs = _possible_space_clusters(events.coords)
-        space_counts = _np.empty(len(discs), dtype=_np.object)
-        for i, disc in enumerate(discs):
-            space_counts[i] = ( _np.sum((events.coords - disc.centre[:,None])**2, axis=0)
-                                <= disc.radius ** 2 )
+        clusters, stats, start_times = zip(*clusters)
+        time_regions = [(s,time) for s in start_times]
+        return STSResult(self.region, clusters, time_ranges=time_regions,
+            statistics=stats)
 
-        for i, disc in enumerate(discs):
-            space_count = space_counts[i] # So don't need to cache??!
-            norm_sc = _np.sum(space_count) / events.number_data_points
-            for j, start in enumerate(start_times):
-                time_count = time_counts[j]
-                expected = _np.sum(time_count) * norm_sc
-                actual = _np.sum(time_count & space_count)
-                if actual > expected:
-                    pass
-
-        raise NotImplementedError()
+    def maximise_clusters(self, clusters, time=None):
+        """The prediction method will return the smallest clusters (subject
+        to each cluster being centred on the coordinates of an event).  This
+        method will enlarge each cluster to the maxmimum radius it can be
+        without including further events.
+        
+        :param clusters: List-like object of :class:`Cluster` instances.
+        :param time: Only data up to and including this time is used when
+          computing clusters.  If `None` then use the last timestamp of the
+          data.
+        
+        :return: Array of clusters with larger radii.
+        """
+        events, time = self._events_time(time)
+        out = []
+        for disc in clusters:
+            distances = _np.sum((events.coords - disc.centre[:,None])**2, axis=0)
+            rr = disc.radius ** 2
+            new_radius = _np.sqrt(min( dd for dd in distances if dd > rr ))
+            out.append(Cluster(disc.centre, new_radius))
+        return out
 
 
 class STSContinuousPrediction(predictors.ContinuousPrediction):
@@ -256,10 +354,14 @@ class STSResult():
     """Stores the computed clusters from :class:`STSTrainer`.  These can be
     used to produce gridded or continuous "risk" predictions.
     """
-    def __init__(self, region, clusters):
+    def __init__(self, region, clusters, time_ranges=None, statistics=None, pvalues=None):
         self.region = region
         self.clusters = clusters
+        self.time_ranges = time_ranges
+        self.statistics = statistics
+        self.pvalues = pvalues
         pass
+    
     
     def _add_cluster(self, cluster, risk_matrix, grid_size, base_risk):
         """Adds risk in base_risk + (0,1]"""

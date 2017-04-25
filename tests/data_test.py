@@ -1,6 +1,7 @@
 import pytest
 from open_cp.data import Point, RectangularRegion, TimedPoints
 import open_cp.data
+import datetime
 
 import numpy as np
 
@@ -157,6 +158,18 @@ def test_TimedPoints_times_datetime():
     assert( dates[1] == dt(2017,3,20,14,30) )
     assert( dates[2] == dt(2017,3,21,0) )
 
+def test_order_by_times():
+    ts = np.floor(np.random.random(size=100) * 350)
+    ts = [datetime.datetime(2017,1,1) + datetime.timedelta(days=t) for t in ts]
+    xcs = list(range(100))
+    ycs = [100-x for x in range(100)]
+    timestamps, xcoords, ycoords = open_cp.data.order_by_time(ts, xcs, ycs)
+    for t1, t2 in zip(timestamps[1:], timestamps[:-1]):
+        assert(t1>=t2)
+    for t, x, y in zip(timestamps, xcoords, ycoords):
+        assert(x + y == 100)
+        assert(t == ts[x])
+    
 
 def test_project_from_lon_lat():
     tp = TimedPoints([np.datetime64("2016-12")], [[-1.5],[50]])
