@@ -191,13 +191,14 @@ class STSTrainer(predictors.DataTrainer):
         new.data = data.TimedPoints(self.data.timestamps, newcoords)
         return new
     
-    def _possible_start_times(self, end_time, events):
+    def _possible_start_times(self, end_time, timestamps):
         """A generator returing all possible start times"""
-        for st in _possible_start_times(events.timestamps,
+        N = len(timestamps)
+        for st in _possible_start_times(timestamps,
                                         self.time_max_interval, end_time):
-            events_in_time = (events.timestamps >= st) & (events.timestamps <= end_time)
+            events_in_time = (timestamps >= st) & (timestamps <= end_time)
             count = _np.sum(events_in_time)
-            if count / events.number_data_points <= self.time_population_limit:
+            if count / N <= self.time_population_limit:
                 yield st, count, events_in_time
                 
     def _disc_generator(self, discs, events):
@@ -228,18 +229,20 @@ class STSTrainer(predictors.DataTrainer):
         stat += (total - actual) * (_np.log(total - actual) - _np.log(total - expected))
         return stat
     
-    def _scan_all(self, end_time, events, discs_generator, disc_output=None):
+    def _scan_all(self, end_time, events, discs_generator, disc_output=None, timestamps=None):
+        if timestamps is None:
+            timestamps = events.timestamps
         best = (None, -_np.inf, None)
         N = events.number_data_points
+        possible_times = list(self._possible_start_times(end_time, timestamps))
 
         for disc, space_count, space_mask in discs_generator:
             if disc_output is not None:
                 disc_output.append(disc)
-            time_generator = self._possible_start_times(end_time, events)
-            for start, time_count, time_mask in time_generator:
+            for start, time_count, time_mask in possible_times:
                 expected = time_count * space_count / N
                 actual = _np.sum(time_mask & space_mask)
-                if actual > expected:
+                if actual > expected and actual > 1:
                     stat = self._statistic(actual, expected, N)
                     if stat > best[1]:
                         best = (disc, stat, start)
@@ -256,12 +259,14 @@ class STSTrainer(predictors.DataTrainer):
             time = self.data.timestamps[-1]
         return events, time
 
-    def predict(self, time=None):
+    def predict(self, time=None, max_clusters=None):
         """Make a prediction.
         
         :param time: Timestamp of the prediction point.  Only data up to
           and including this time is used when computing clusters.  If `None`
           then use the last timestamp of the data.
+        :param max_clusters: If not `None` then return at most this many
+          clusters.
         
         :return: A instance of :class:`STSResult` giving the found clusters.
         """
@@ -276,6 +281,8 @@ class STSTrainer(predictors.DataTrainer):
             all_discs = self._remove_intersecting(all_discs, best_disc)
             if len(all_discs) == 0:
                 break
+            if max_clusters is not None and len(clusters) >= max_clusters:
+                break
             best_disc, stat, start_time = self._scan_all(time, events,
                 self._disc_generator(all_discs, events))
 
@@ -284,6 +291,34 @@ class STSTrainer(predictors.DataTrainer):
         max_clusters = self.maximise_clusters(clusters, time)
         return STSResult(self.region, clusters, max_clusters,
                          time_ranges=time_regions, statistics=stats)
+
+    def monte_carlo_simulate(self, time=None, runs=999):
+        """Perform a monte carlo simulation for the purposes of estimating 
+        p-values.  We repeatedly shuffle the timestamps of the data and then
+        find the most likely cluster for each new dataset.  This method is
+        more efficient than calling :method:`predict` repeatedly with
+        shuffled data.
+
+        :param time: Optionally restrict the data to before this time, as for
+          :method:`predict`
+        :param runs: The number of samples to take, by default 999
+
+        :return: An ordered list of statistics.
+        """
+        events, time = self._events_time(time)
+        all_discs = []
+        best_disc, stat, start_time = self._scan_all(time, events,
+            self._possible_discs(events), all_discs)
+        timestamps = _np.array(events.timestamps)
+        stats = []
+        for _ in range(runs):
+            _np.random.shuffle(timestamps)
+            _,stat,_ = self._scan_all(time, events,
+                self._disc_generator(all_discs, events), timestamps = timestamps)
+            stats.append(stat)
+        stats = _np.asarray(stats)
+        stats.sort()
+        return stats
 
     def maximise_clusters(self, clusters, time=None):
         """The prediction method will return the smallest clusters (subject
