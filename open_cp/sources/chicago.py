@@ -139,24 +139,32 @@ def _convert_header_for_geojson(header, dic):
         raise ValueError("Header not in expected format: {} caused by {}/{}".format(
             header, type(ex), ex))
 
-def generate_GeoJSON_Features(filename=_default_filename, type="snapshot"):
+def _generate_GeoJSON_Features(file, dic):
+    reader = csv.reader(file)
+    column_lookup, coord_lookup = _convert_header_for_geojson(next(reader), dic)
+    for row in reader:
+        properties = {key : row[i] for key, i in column_lookup.items()}
+        properties["timestamp"] = _date_from_csv(properties["timestamp"]).isoformat()
+        if row[coord_lookup[0]] == "":
+            geometry = None
+        else:
+            coordinates = [float(row[i]) for i in coord_lookup]
+            geometry = {"type":"Point", "coordinates":coordinates}
+        yield {"geometry": geometry, "properties": properties,
+                "type": "Feature"}
+
+def generate_GeoJSON_Features(file=_default_filename, type="snapshot"):
     """Generate a sequence of GeoJSON "features" from the CSV file.
     See :func:`load_to_GeoJSON`.
+    
+    :param file: Either a filename, or a file object.
     """
     dic = _get_dic(type)
-    with open(filename) as file:
-        reader = csv.reader(file)
-        column_lookup, coord_lookup = _convert_header_for_geojson(next(reader), dic)
-        for row in reader:
-            properties = {key : row[i] for key, i in column_lookup.items()}
-            properties["timestamp"] = _date_from_csv(properties["timestamp"]).isoformat()
-            if row[coord_lookup[0]] == "":
-                geometry = None
-            else:
-                coordinates = [float(row[i]) for i in coord_lookup]
-                geometry = {"type":"Point", "coordinates":coordinates}
-            yield {"geometry": geometry, "properties": properties,
-                    "type": "Feature"}
+    if isinstance(file, str):
+        with open(file) as f:
+            yield from _generate_GeoJSON_Features(f, dic)
+    else:
+        yield from _generate_GeoJSON_Features(file, dic)
 
 def load_to_GeoJSON(filename=_default_filename, type="snapshot"):
     """Load the specified CSV file to a list of GeoJSON (see
@@ -186,7 +194,33 @@ except:
     gpd = None
     _geometry = None
 
-def load_to_geoDataFrame(filename=_default_filename, datetime_as_string=True, type="snapshot"):
+def convert_null_geometry_to_empty(frame):
+    """Utility method.  Convert any geometry in the geoDataFrame which is
+    "null" (`None` or empty) to a Point type geometry which is empty.  The
+    returned geoDateFrame is suitable for projecting and other geometrical
+    transformations.
+    """
+    def null_to_point(x):
+        if x is None or x.is_empty:
+            return _geometry.Point()
+        return x
+    newgeo = frame.geometry.map(null_to_point)
+    return frame.set_geometry(newgeo)
+
+def convert_null_geometry_to_none(frame):
+    """Utility method.  Convert any geometry in the geoDataFrame which is
+    "null" (`None` or empty) to `None`.  The returned geoDateFrame is suitable
+    for saving.
+    """
+    def null_to_none(x):
+        if x is None or x.is_empty:
+            return None
+        return x
+    newgeo = frame.geometry.map(null_to_none)
+    return frame.set_geometry(newgeo)
+
+def load_to_geoDataFrame(filename=_default_filename, datetime_as_string=True,
+                         type="snapshot", empty_geometry="none"):
     """Return the same data as :func:`load_to_GeoJSON` but as a geoPandas
     data-frame.
 
@@ -197,6 +231,11 @@ def load_to_geoDataFrame(filename=_default_filename, datetime_as_string=True, ty
       for using (geo)pandas to analyse the data.
     :param type: Either "snapshot" or "all" depending on whether the data
       has headers conforming the the data "last year" or "2001 to present".
+    :param empty_geometry: Either "none" to return `None` as the geometry of
+      crimes which have no location data in the CSV file (this is correct if
+      you wish to save the data-frame); or "empty" to return an empty `Point`
+      type (which is correct, for example, if you wish to re-project the
+      data-frame).  Yes, GeoPandas appears to be annoying like this.
 
     """
     geo_data = load_to_GeoJSON(filename, type=type)
@@ -204,10 +243,11 @@ def load_to_geoDataFrame(filename=_default_filename, datetime_as_string=True, ty
         for feature in geo_data:
             feature["properties"]["timestamp"] = _date_from_iso(feature["properties"]["timestamp"])
     frame = gpd.GeoDataFrame.from_features(geo_data)
-    def none_to_point(x):
-        if x is None:
-            return _geometry.Point()
-        return x
-    frame.geometry = frame.geometry.map(none_to_point)
+    if empty_geometry == "none":
+        pass
+    elif empty_geometry == "empty":
+        frame = convert_null_geometry_to_empty(frame)
+    else:
+        raise ValueError("Unknown `empty_geometry` parameter `{}`".format(empty_geometry))
     frame.crs = {"init":"EPSG:4326"}
     return frame
