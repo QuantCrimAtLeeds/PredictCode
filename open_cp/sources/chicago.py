@@ -27,6 +27,23 @@ _default_filename = os.path.join(os.path.split(__file__)[0],"chicago.csv")
 
 _FEET_IN_METERS = 3.28084
 
+def _date_from_csv(date_string):
+    return datetime.datetime.strptime(date_string, "%m/%d/%Y %I:%M:%S %p")
+
+def _date_from_iso(iso_string):
+    return datetime.datetime.strptime(iso_string, "%Y-%m-%dT%H:%M:%S")
+
+def _date_from_other(dt_str):
+    # Like 4/16/13 5:00
+    try:
+        date, time = dt_str.split()
+        month, day, year = date.split("/")
+        hour, minutes = time.split(":")
+        return datetime.datetime(year=int(year)+2000, month=int(month), day=int(day),
+                                 hour=int(hour), minute=int(minutes))
+    except Exception as ex:
+        raise Exception("Failed to parse {}, cause {}/{}".format(dt_str, type(ex), ex))
+
 _FIELDS = {
     "snapshot" : {
         "_DESCRIPTION_FIELD" : ' PRIMARY DESCRIPTION',
@@ -40,7 +57,8 @@ _FIELDS = {
             "crime": ' PRIMARY DESCRIPTION',
             "type": ' SECONDARY DESCRIPTION',
             "timestamp": 'DATE  OF OCCURRENCE'},
-        "GEOJSON_COORDS" : ('LONGITUDE', 'LATITUDE')
+        "GEOJSON_COORDS" : ('LONGITUDE', 'LATITUDE'),
+        "DT_CONVERT" : _date_from_csv
     },
     "all" : {
         "_DESCRIPTION_FIELD" : 'Primary Type',
@@ -54,15 +72,13 @@ _FIELDS = {
             "crime": 'Primary Type',
             "type": 'Description',
             "timestamp": 'Date'},
-        "GEOJSON_COORDS" : ('Longitude', 'Latitude')
+        "GEOJSON_COORDS" : ('Longitude', 'Latitude'),
+        "DT_CONVERT" : _date_from_csv
     }
 }
-
-def _date_from_csv(date_string):
-    return datetime.datetime.strptime(date_string, "%m/%d/%Y %I:%M:%S %p")
-
-def _date_from_iso(iso_string):
-    return datetime.datetime.strptime(iso_string, "%Y-%m-%dT%H:%M:%S")
+_FIELDS["all_other"] = dict(_FIELDS["all"])
+_FIELDS["all_other"]["DT_CONVERT"] = _date_from_other
+        
 
 def _convert_header(header, dic):
     lookup = dict()
@@ -140,11 +156,12 @@ def _convert_header_for_geojson(header, dic):
             header, type(ex), ex))
 
 def _generate_GeoJSON_Features(file, dic):
+    dt_convert = dic["DT_CONVERT"]
     reader = csv.reader(file)
     column_lookup, coord_lookup = _convert_header_for_geojson(next(reader), dic)
     for row in reader:
         properties = {key : row[i] for key, i in column_lookup.items()}
-        properties["timestamp"] = _date_from_csv(properties["timestamp"]).isoformat()
+        properties["timestamp"] = dt_convert(properties["timestamp"]).isoformat()
         if row[coord_lookup[0]] == "":
             geometry = None
         else:

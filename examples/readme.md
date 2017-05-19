@@ -5,6 +5,7 @@ IPython notebooks showing examples of the algorithms.
 ### Data sets
 
 - [Example data sets](Example%20Data%20Sets.ipynb) quickly explores packages which provide data from Chicago, UK police forces (spatial only) and some synthetic data.
+- [Chicago](Chicago) explores the chicago dataset in more detail.  This dataset is seemingly widely used in the literature, but the way events are geocoded seems to have changed, and so directly reproducing old research is hard.  We explore this problem.
 
 ### Other notebooks
 
