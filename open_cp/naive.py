@@ -24,6 +24,8 @@ class CountingGridKernel(predictors.DataTrainer):
     def predict(self):
         if self.region is None:
             region = self.data.bounding_box
+        else:
+            region = self.region
         xsize, ysize = region.grid_size(self.grid_size)
 
         matrix = _np.zeros((ysize, xsize))
