@@ -53,9 +53,7 @@ class GridPrediction():
     
     def risk(self, x, y):
         """The risk at coordinate `(x,y)`."""
-        xx = x - self._xoffset
-        yy = y - self._yoffset
-        return self.grid_risk(_floor(xx / self._xsize), _floor(yy / self._ysize))
+        return self.grid_risk(*self.grid_coord(x, y))
 
     def grid_risk(self, gridx, gridy):
         raise NotImplementedError()
@@ -69,6 +67,29 @@ class GridPrediction():
     def ysize(self):
         """The height of each cell"""
         return self._ysize
+    
+    @property
+    def xoffset(self):
+        """The x coordinate of the left side of the grid."""
+        return self._xoffset
+    
+    @property
+    def yoffset(self):
+        """The y coordinate of the bottom side of the grid."""
+        return self._yoffset
+
+    def grid_coord(self, x, y):
+        """Where does the point fall in the grid.
+        
+        :param x: x coord
+        :param y: y coord
+        
+        :return: `(gridx, gridy)` coordinates in the grid where this point
+          falls.
+        """
+        xx = x - self._xoffset
+        yy = y - self._yoffset
+        return (_floor(xx / self._xsize), _floor(yy / self._ysize))
 
 
 class GridPredictionArray(GridPrediction):

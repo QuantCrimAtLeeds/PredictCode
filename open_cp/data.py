@@ -4,7 +4,9 @@ import numpy as _np
 import datetime as _datetime
 
 class Point():
-    """A simple 2 dimensional point class."""
+    """A simple 2 dimensional point class.
+    
+    Is "iterable" and returns (x,y).  Similarly supports indexing."""
     def __init__(self, x=0, y=0):
         self._x = x
         self._y = y
@@ -18,6 +20,17 @@ class Point():
     def y(self):
         """The y coordinate."""
         return self._y
+
+    def __iter__(self):
+        yield self.x
+        yield self.y
+        
+    def __getitem__(self, i):
+        if i == 0:
+            return self.x
+        if i == 1:
+            return self.y
+        raise ValueError("Index must be 0 or 1.")
 
     def __add__(self, other):
         return Point(self.x + other.x, self.y + other.y)
@@ -47,6 +60,16 @@ class RectangularRegion():
     @property
     def ymax(self):
         return self._max.y
+
+    @property
+    def xrange(self):
+        """The pair (xmin, xmax)"""
+        return (self.xmin, self.xmax)
+
+    @property
+    def yrange(self):
+        """The pair (ymin, ymax)"""
+        return (self.ymin, self.ymax)
 
     @property
     def min(self):
@@ -92,8 +115,8 @@ class RectangularRegion():
         """
         if cell_height is None:
             cell_height = cell_width
-        xsize = int(_np.rint((self.xmax - self.xmin) / cell_width))
-        ysize = int(_np.rint((self.ymax - self.ymin) / cell_height))
+        xsize = int(_np.ceil((self.xmax - self.xmin) / cell_width))
+        ysize = int(_np.ceil((self.ymax - self.ymin) / cell_height))
         return xsize, ysize
 
     def __repr__(self):

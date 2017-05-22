@@ -23,6 +23,20 @@ def test_Point_immutable():
         p.x = 5
     with pytest.raises(AttributeError):
         p.y = 5
+        
+def test_Point_iterable():
+    def func(x, y):
+        assert x == 5
+        assert y == 7
+    p = Point(5, 7)
+    func(*p)
+    
+def test_Point_indexing():
+    p = Point(3,7)
+    assert p[0] == 3
+    assert p[1] == 7
+    with pytest.raises(ValueError):
+        p[2]
 
 
 def test_RectangluarRegion_getters():

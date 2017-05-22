@@ -17,20 +17,27 @@ while the geocoding seems complicated (work in progress to understand)...
 The crime type "HOMICIDE" is reported multiple times in the dataset.
 """
 
-import csv
-import os.path
+import csv as _csv
+import os.path as _path
 import datetime
-import numpy as np
+import numpy as _np
 from ..data import TimedPoints
 
-_default_filename = os.path.join(os.path.split(__file__)[0],"chicago.csv")
+_default_filename = _path.join(_path.split(__file__)[0],"chicago.csv")
 
 _FEET_IN_METERS = 3.28084
 
 def _date_from_csv(date_string):
     return datetime.datetime.strptime(date_string, "%m/%d/%Y %I:%M:%S %p")
 
-def _date_from_iso(iso_string):
+def date_from_iso(iso_string):
+    """Convert a datetime string in ISO format into a :class:`datetime`
+    instance.
+    
+    :param iso_string: Like "2017-10-23T05:12:39"
+    
+    :return: A :class:`datetime` instance.
+    """
     return datetime.datetime.strptime(iso_string, "%Y-%m-%dT%H:%M:%S")
 
 def _date_from_other(dt_str):
@@ -121,7 +128,7 @@ def load(filename, primary_description_names, to_meters=True, type="snapshot"):
     data = []
 
     with open(filename) as file:
-        reader = csv.reader(file)
+        reader = _csv.reader(file)
         lookup = _convert_header(next(reader), dic)
         for row in reader:
             description = row[lookup[dic["_DESCRIPTION_FIELD"]]].strip()
@@ -134,8 +141,8 @@ def load(filename, primary_description_names, to_meters=True, type="snapshot"):
                 data.append((_date_from_csv(t), float(x), float(y)))
 
     data.sort(key = lambda triple : triple[0])
-    xcoords = np.empty(len(data))
-    ycoords = np.empty(len(data))
+    xcoords = _np.empty(len(data))
+    ycoords = _np.empty(len(data))
     for i, (_, x, y) in enumerate(data):
         xcoords[i], ycoords[i] = x, y
     times = [t for t, _, _ in data]
@@ -157,7 +164,7 @@ def _convert_header_for_geojson(header, dic):
 
 def _generate_GeoJSON_Features(file, dic):
     dt_convert = dic["DT_CONVERT"]
-    reader = csv.reader(file)
+    reader = _csv.reader(file)
     column_lookup, coord_lookup = _convert_header_for_geojson(next(reader), dic)
     for row in reader:
         properties = {key : row[i] for key, i in column_lookup.items()}
@@ -266,5 +273,5 @@ def load_to_geoDataFrame(filename=_default_filename, datetime_as_string=True,
         frame = convert_null_geometry_to_empty(frame)
     else:
         raise ValueError("Unknown `empty_geometry` parameter `{}`".format(empty_geometry))
-    frame.crs = {"init":"EPSG:4326"}
+    frame.crs = {"init":"epsg:4326"}
     return frame
