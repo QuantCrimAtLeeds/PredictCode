@@ -12,6 +12,7 @@ The city of chicago releases a rich dataset of crimes investigated by the police
 - [Geo-coding of the Chicago dataset](Geo-coding%20of%20the%20Chicago%20dataset.ipynb) - Explore the geo-coding of events in the data.
 - [Old Chicago Data](Old%20Chicago%20Data.ipynb) - Look at an (extract of) old data I have found (being careful not to reveal private information.)
 - [Simulate spatial location](Simulate%20spatial%20location.ipynb) - (Work in progress) Attempt to randomly, but in a realistic way, change the geocoding of the dataset of that the events are less "clumpy".
+- [Geographic Boundaries](Geographic_Boundaries.ipynb) - Shows how we classify the regions of the city into different "regions" or "sides".
 
 ## Geocoding
 
