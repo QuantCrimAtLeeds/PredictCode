@@ -63,6 +63,8 @@ def test_MaskedGrid_from_Grid():
     assert not mg.is_valid(1,0)
     assert mg.is_valid(0,1)
     assert mg.is_valid(1,1)
+    assert mg.xextent == 2
+    assert mg.yextent == 2
 
 def test_RectangluarRegion_getters():
     r = RectangularRegion(5, 8, 10, 14)

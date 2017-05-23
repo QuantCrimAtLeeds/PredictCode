@@ -30,7 +30,7 @@ class DataTrainer():
         self._data = value
         
 
-class GridPrediction(data.Grid):
+class GridPrediction(data.BoundedGrid):
     """A prediction based on a grid.  The risk is always computed by finding
     the grid cell the coordinates contained, and then deferring to the abstract
     `grid_risk` method.
@@ -50,6 +50,41 @@ class GridPrediction(data.Grid):
 
     def grid_risk(self, gridx, gridy):
         raise NotImplementedError()
+
+    @property
+    def xextent(self):
+        return 0
+
+    @property
+    def yextent(self):
+        return 0
+
+    def is_valid(self, gx, gy):
+        """Is the grid cell included in the possibly masked grid?  If False
+        then this cell should be ignored for computations.  Is *not*
+        guaranteed to return False merely because the grid coordinates are out
+        of range of the "extent".
+        """
+        return True
+
+    @property
+    def intensity_matrix(self):
+        """Generate, or get, a matrix representing the risk.  May be
+        implemented by a lookup, or may repeatedly call :method:`grid_risk`.
+        """
+        intensity = _np.empty((self.yextent, self.xextent))
+        mask = _np.empty((self.yextent, self.xextent), dtype=_np.bool)
+        for y in range(self.yextent):
+            for x in range(self.xextent):
+                intensity[y][x] = grid_pred.grid_risk(x, y)
+                mask[y][x] = not grid_pred.is_valid(x, y)
+        if not _np.any(mask):
+            return intensity
+        risk = _np.ma.masked_array(intensity, mask)
+
+    def __repr__(self):
+        return "GridPrediction(offset=({},{}), size={}x{})".format(self.xoffset,
+                self.yoffset, self.xsize, self.ysize)
 
 
 class GridPredictionArray(GridPrediction):
@@ -118,10 +153,38 @@ class GridPredictionArray(GridPrediction):
         newpred = prediction.rebase(cell_width, cell_height, region.xmin, region.ymin)
         return GridPredictionArray.from_continuous_prediction(newpred, width, height)
 
+    @staticmethod
+    def from_continuous_prediction_grid(prediction, grid):
+        """Construct an instance from an instance of
+        :class:`ContinuousPrediction` and an :class:`BoundedGrid` instance.
+
+        :param prediction: An instance of :class:`ContinuousPrediction` to
+          sample from
+        :param grid: An instance of :class:`BoundedGrid` to base the grid on.
+        """
+        newpred = prediction.rebase(grid.xsize, grid.ysize, grid.xoffset, grid.yoffset)
+        return GridPredictionArray.from_continuous_prediction(newpred, grid.xextent, grid.yextent)
+
     @property
     def intensity_matrix(self):
         """Get the matrix containing data which we use"""
         return self._matrix
+
+    @property
+    def xextent(self):
+        return self._matrix.shape[1]
+
+    @property
+    def yextent(self):
+        return self._matrix.shape[0]
+
+    def is_valid(self, gx, gy):
+        if not hasattr(self._matrix, "mask"):
+            return True
+        ylim, xlim = self._matrix.shape
+        if gx < 0 or gy < 0 or gx >= xlim or gy >= ylim:
+            return True
+        return not self._matrix.mask[gy][gx]
 
     def mesh_data(self):
         """Returns a pair (xcoords, ycoords) which when paired with
@@ -130,8 +193,8 @@ class GridPredictionArray(GridPrediction):
         in the rectangular cell with diagonally opposite vertices
         `(xcoords[j], ycoords[i])`, `(xcoords[j+1], ycoords[i+1])`.
         """
-        xcoords = _np.arange(self._matrix.shape[1] + 1) * self._xsize + self._xoffset
-        ycoords = _np.arange(self._matrix.shape[0] + 1) * self._ysize + self._yoffset
+        xcoords = _np.arange(self._matrix.shape[1] + 1) * self.xsize + self.xoffset
+        ycoords = _np.arange(self._matrix.shape[0] + 1) * self.ysize + self.yoffset
         return (xcoords, ycoords)
     
     def percentile_matrix(self):
@@ -143,6 +206,22 @@ class GridPredictionArray(GridPrediction):
         data = self._matrix.ravel().copy()
         data.sort()
         return _np.searchsorted(data, self._matrix, side="right") / len(data)
+
+    def mask_with(self, mask):
+        """Mask the intensity matrix with the given instance of
+        :class:`MaskedGrid`."""
+        if self.xsize != mask.xsize or self.ysize != mask.ysize:
+            raise ValueError("Grid cell sizes differ")
+        if self.xoffset != mask.xoffset or self.yoffset != mask.yoffset:
+            raise ValueError("Grid offsets differ")
+        if self.intensity_matrix.shape != mask.mask.shape:
+            raise ValueError("Extent of the grids differ")
+        self._matrix = mask.mask_matrix(self.intensity_matrix)
+
+    def __repr__(self):
+        return "GridPredictionArray(offset=({},{}), size={}x{}, risk intensity size={}x{})".format(
+                self.xoffset, self.yoffset, self.xsize, self.ysize,
+                self.xextent, self.yextent)
 
 
 class ContinuousPrediction():

@@ -23,12 +23,15 @@ class CountingGridKernel(predictors.DataTrainer):
     This can also be used to produce plots of the actual events which occurred:
     essentially a two-dimensional histogram.
     
-    :param grid_size: The width and height of each grid cell.
+    :param grid_width: The width of each grid cell.
+    :param grid_height: The height of each grid cell, if None, then the same as
+      `width`.
     :param region: Optionally, the :class:`RectangularRegion` to base the grid
       on.  If not specified, this will be the bounding box of the data.
     """
-    def __init__(self, grid_size, region = None):
-        self.grid_size = grid_size
+    def __init__(self, grid_width, grid_height = None, region = None):
+        self.grid_width = grid_width
+        self.grid_height = grid_height
         self.region = region
         
     def predict(self):
@@ -46,18 +49,19 @@ class CountingGridKernel(predictors.DataTrainer):
             region = self.data.bounding_box
         else:
             region = self.region
-        xsize, ysize = region.grid_size(self.grid_size)
+        xsize, ysize = region.grid_size(self.grid_width, self.grid_height)
+        height = self.grid_width if self.grid_height is None else self.grid_height
 
         matrix = _np.zeros((ysize, xsize))
         mask = ( (self.data.xcoords >= region.xmin) & (self.data.xcoords <= region.xmax)
                 & (self.data.ycoords >= region.ymin) & (self.data.ycoords <= region.ymax) )
         xc, yc = self.data.xcoords[mask], self.data.ycoords[mask]
-        xg = _np.floor((xc - region.xmin) / self.grid_size).astype(_np.int)
-        yg = _np.floor((yc - region.ymin) / self.grid_size).astype(_np.int)
+        xg = _np.floor((xc - region.xmin) / self.grid_width).astype(_np.int)
+        yg = _np.floor((yc - region.ymin) / height).astype(_np.int)
         for x, y in zip(xg, yg):
             matrix[y][x] += 1
 
-        return predictors.GridPredictionArray(self.grid_size, self.grid_size,
+        return predictors.GridPredictionArray(self.grid_width, height,
             matrix, region.xmin, region.ymin)
 
 

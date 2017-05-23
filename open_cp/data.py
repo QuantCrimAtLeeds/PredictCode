@@ -167,6 +167,10 @@ class Grid():
         """The y coordinate of the bottom side of the grid."""
         return self._yoffset
 
+    def __repr__(self):
+        return "Grid(offset=({},{}), size={}x{})".format(self.xoffset,
+                self.yoffset, self.xsize, self.ysize)
+
     def grid_coord(self, x, y):
         """Where does the point fall in the grid.
         
@@ -195,7 +199,33 @@ class Grid():
             ymax = self.yoffset + (gy + 1) * self.ysize)
 
 
-class MaskedGrid(Grid):
+class BoundedGrid(Grid):
+    """Abstract base class for a :class:`Grid` object which has an "extent":
+    only cells in rectangle based at `(0,0)` have meaning.
+    """
+    def __init__(self, xsize, ysize, xoffset, yoffset):
+        super().__init__(xsize, ysize, xoffset, yoffset)
+
+    @property
+    def xextent(self):        
+        """The width of the grid area."""
+        raise NotImplementedError()
+
+    @property
+    def yextent(self):        
+        """The height of the grid area."""
+        raise NotImplementedError()
+
+    def region(self):
+        """Returns the :class:`RectangularRegion` defined by the grid and its
+        extent.
+        """
+        return RectangularRegion(xmin = self.xoffset, ymin = self.yoffset,
+            xmax = self.xoffset + self.xextent * self.xsize,
+            ymax = self.yoffset + self.yextent * self.ysize)
+
+
+class MaskedGrid(BoundedGrid):
     """A rectangular grid of finite extent where some cells may be "masked" or
     "invalid".  Valid cells are always in a range from `(0,0)` to
     `(xextent - 1, yextent - 1)` inclusive.
@@ -212,10 +242,25 @@ class MaskedGrid(Grid):
         super().__init__(xsize, ysize, xoffset, yoffset)
         self._mask = _np.asarray(mask).astype(_np.bool)
 
+    def __repr__(self):
+        return "MaskedGrid(offset=({},{}), size={}x{}, mask region={}x{})".format(
+                self.xoffset, self.yoffset, self.xsize, self.ysize, self.xextent,
+                self.yextent)
+
     @property
     def mask(self):
         """The mask"""
         return self._mask
+
+    @property
+    def xextent(self):
+        """The width of the masked grid area."""
+        return self.mask.shape[1]
+
+    @property
+    def yextent(self):
+        """The height of the masked grid area."""
+        return self.mask.shape[0]
 
     def is_valid(self, gx, gy):
         """Is the grid cell `(gx, gy)` valid?"""
@@ -227,6 +272,15 @@ class MaskedGrid(Grid):
     def from_grid(grid, mask):
         """Static constructor from a :class:`Grid` instance."""
         return MaskedGrid(grid.xsize, grid.ysize, grid.xoffset, grid.yoffset, mask)
+
+    def mask_matrix(self, matrix):
+        """Return a `numpy` "masked array" from the matrix, and this class's
+        mask.
+
+        :param matrix: An array like object of the same shape as the mask, i.e.
+          (yextent, xextent).
+        """
+        return _np.ma.masked_array(matrix, self.mask)
 
 
 def order_by_time(timestamps, xcoords, ycoords):

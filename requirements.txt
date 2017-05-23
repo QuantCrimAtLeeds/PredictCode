@@ -1,6 +1,7 @@
 numpy
 scipy
 pyproj
+shapely
 
 pytest
 codecov
