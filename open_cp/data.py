@@ -38,6 +38,11 @@ class Point():
     def __repr__(self):
         return "Point({},{})".format(self.x, self.y)
 
+    def __eq__(self, other):
+        if isinstance(other, Point):
+            return self.x == other.x and self.y == other.y
+        return tuple(self) == tuple(other)
+
 
 class RectangularRegion():
     """Stores a rectangular region."""
@@ -122,6 +127,106 @@ class RectangularRegion():
     def __repr__(self):
         return "RectangularRegion( ({},{}) -> ({},{}) )".format(self.xmin,
                                  self.ymin, self.xmax, self.ymax)
+
+
+class Grid():
+    """Stores details of a rectangular grid.
+
+    :param xsize: Width of each grid cell.
+    :param ysize: Height of each grid cell.
+    :param xoffset: The x coordinate of the right side of grid cell (0,0).
+    :param yoffset: The y coordinate of the bottom side of grid cell (0,0).
+    """
+    def __init__(self, xsize, ysize, xoffset, yoffset):
+        self._xoffset = xoffset
+        self._yoffset = yoffset
+        self._xsize = xsize
+        self._ysize = ysize
+
+    @staticmethod
+    def _floor(x):
+        return int(_np.floor(x))
+
+    @property
+    def xsize(self):
+        """The width of each cell"""
+        return self._xsize
+
+    @property
+    def ysize(self):
+        """The height of each cell"""
+        return self._ysize
+    
+    @property
+    def xoffset(self):
+        """The x coordinate of the left side of the grid."""
+        return self._xoffset
+    
+    @property
+    def yoffset(self):
+        """The y coordinate of the bottom side of the grid."""
+        return self._yoffset
+
+    def grid_coord(self, x, y):
+        """Where does the point fall in the grid.
+        
+        :param x: x coordinate
+        :param y: y coordinate
+        
+        :return: `(gridx, gridy)` coordinates in the grid where this point
+          falls.
+        """
+        xx = x - self.xoffset
+        yy = y - self.yoffset
+        return (self._floor(xx / self.xsize), self._floor(yy / self.ysize))
+
+    def bounding_box_of_cell(self, gx, gy):
+        """Return the bounding box of the cell.
+
+        :param gx: x coordinate of the cell
+        :param gy: y coordinate of the cell
+
+        :return: A :class:`RectangularRegion` giving the (xmin,ymin) and
+          (xmax,ymax) coordinates of the cell.
+        """
+        return RectangularRegion(xmin = self.xoffset + gx * self.xsize,
+            xmax = self.xoffset + (gx + 1) * self.xsize,
+            ymin = self.yoffset + gy * self.ysize,
+            ymax = self.yoffset + (gy + 1) * self.ysize)
+
+
+class MaskedGrid(Grid):
+    """A rectangular grid of finite extent where some cells may be "masked" or
+    "invalid".  Valid cells are always in a range from `(0,0)` to
+    `(xextent - 1, yextent - 1)` inclusive.
+
+    :param xsize: Width of each grid cell.
+    :param ysize: Height of each grid cell.
+    :param xoffset: The x coordinate of the right side of grid cell (0,0).
+    :param yoffset: The y coordinate of the bottom side of grid cell (0,0).
+    :param mask: An array-like object of shape (yextent, xextent) which can be
+      converted to booleans.  We follow the numpy masking convention, and if a
+      cell is "masked" then it is "invalid".
+    """
+    def __init__(self, xsize, ysize, xoffset, yoffset, mask):
+        super().__init__(xsize, ysize, xoffset, yoffset)
+        self._mask = _np.asarray(mask).astype(_np.bool)
+
+    @property
+    def mask(self):
+        """The mask"""
+        return self._mask
+
+    def is_valid(self, gx, gy):
+        """Is the grid cell `(gx, gy)` valid?"""
+        if gx < 0 or gy < 0 or gx >= self.mask.shape[1] or gy >= self.mask.shape[0]:
+            raise ValueError("Coordinates ({},{}) out of range for mask.", gx, gy)
+        return not self.mask[gy][gx]
+
+    @staticmethod
+    def from_grid(grid, mask):
+        """Static constructor from a :class:`Grid` instance."""
+        return MaskedGrid(grid.xsize, grid.ysize, grid.xoffset, grid.yoffset, mask)
 
 
 def order_by_time(timestamps, xcoords, ycoords):

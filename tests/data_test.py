@@ -39,6 +39,31 @@ def test_Point_indexing():
         p[2]
 
 
+def test_MaskedGrid():
+    mg = open_cp.data.MaskedGrid(10, 10, 0, 0, [[True, False], [False, False]])
+    assert not mg.is_valid(0,0)
+    assert mg.is_valid(1,0)
+    assert mg.is_valid(0,1)
+    assert mg.is_valid(1,1)
+
+    with pytest.raises(ValueError):
+        mg.is_valid(-1, 0)
+    with pytest.raises(ValueError):
+        mg.is_valid(0, -1)
+    with pytest.raises(ValueError):
+        mg.is_valid(2, 0)
+    with pytest.raises(ValueError):
+        mg.is_valid(0, 2)
+
+def test_MaskedGrid_from_Grid():
+    grid = open_cp.data.Grid(10, 15, 5, 7)
+    mg = open_cp.data.MaskedGrid.from_grid(grid, [[False, True], [False, False]])
+
+    assert mg.is_valid(0,0)
+    assert not mg.is_valid(1,0)
+    assert mg.is_valid(0,1)
+    assert mg.is_valid(1,1)
+
 def test_RectangluarRegion_getters():
     r = RectangularRegion(5, 8, 10, 14)
     assert r.xmin == 5

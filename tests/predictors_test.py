@@ -13,6 +13,20 @@ def test_DataTrainer():
     test.data = testmod.data.TimedPoints([],[[],[]])
 
 
+def test_GridPrediction_grid_coord():
+    g = testmod.GridPrediction(10, 20, xoffset=5, yoffset=15)
+    assert(g.grid_coord(5, 15) == (0,0))
+    assert(g.grid_coord(14, 34) == (0,0))
+    assert(g.grid_coord(15, 34) == (1,0))
+    assert(g.grid_coord(14, 35) == (0,1))
+    assert(g.grid_coord(15, 35) == (1,1))
+
+def test_GridPrediction_bounding_box_of_cell():
+    g = testmod.GridPrediction(10, 20, xoffset=5, yoffset=15)
+    bb = g.bounding_box_of_cell(0,0)
+    assert(bb.min == (5,15))
+    assert(bb.max == (15,35))
+
 def test_GridPrediction():
     class Test(testmod.GridPrediction):
         def __init__(self, xsize, ysize, xoffset = 0, yoffset = 0):

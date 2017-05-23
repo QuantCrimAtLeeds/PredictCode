@@ -23,9 +23,23 @@ import datetime
 import numpy as _np
 from ..data import TimedPoints
 
-_default_filename = _path.join(_path.split(__file__)[0],"chicago.csv")
-
+_datadir = None
+_default_filename = "chicago.csv"
 _FEET_IN_METERS = 3.28084
+
+def set_data_directory(datadir):
+    """Set the default location for search for the default input file."""
+    global _datadir
+    _datadir = datadir
+
+def get_default_filename():
+    """Returns the default filename, if available.  Otherwise raises
+    AttributeError.
+    """
+    global _datadir
+    if _datadir is None:
+        raise AttributeError("datadir not set; call `set_data_directory()`.")
+    return _path.join(_datadir, _default_filename)
 
 def _date_from_csv(date_string):
     return datetime.datetime.strptime(date_string, "%m/%d/%Y %I:%M:%S %p")
@@ -96,12 +110,12 @@ def _convert_header(header, dic):
     return lookup
 
 def default_burglary_data():
-    """Load the default data, if available.
+    """Load the default data, if available, giving just "THEFT" data.
 
     :return: An instance of :class:`open_cp.data.TimedPoints` or `None`.
     """
     try:
-        return load(_default_filename, {"THEFT"})
+        return load(get_default_filename(), {"THEFT"})
     except Exception:
         return None
 
@@ -177,7 +191,7 @@ def _generate_GeoJSON_Features(file, dic):
         yield {"geometry": geometry, "properties": properties,
                 "type": "Feature"}
 
-def generate_GeoJSON_Features(file=_default_filename, type="snapshot"):
+def generate_GeoJSON_Features(file, type="snapshot"):
     """Generate a sequence of GeoJSON "features" from the CSV file.
     See :func:`load_to_GeoJSON`.
     
@@ -190,7 +204,7 @@ def generate_GeoJSON_Features(file=_default_filename, type="snapshot"):
     else:
         yield from _generate_GeoJSON_Features(file, dic)
 
-def load_to_GeoJSON(filename=_default_filename, type="snapshot"):
+def load_to_GeoJSON(filename, type="snapshot"):
     """Load the specified CSV file to a list of GeoJSON (see
     http://geojson.org/) features.  Events with no location data have `None`
     as the geometry.  Timestamps are converted to standard ISO string format.
@@ -243,7 +257,7 @@ def convert_null_geometry_to_none(frame):
     newgeo = frame.geometry.map(null_to_none)
     return frame.set_geometry(newgeo)
 
-def load_to_geoDataFrame(filename=_default_filename, datetime_as_string=True,
+def load_to_geoDataFrame(filename, datetime_as_string=True,
                          type="snapshot", empty_geometry="none"):
     """Return the same data as :func:`load_to_GeoJSON` but as a geoPandas
     data-frame.

@@ -11,10 +11,6 @@ and classes which encapsulate a given prediction.
 import numpy as _np
 from . import data
 
-def _floor(x):
-    return int(_np.floor(x))
-
-
 class DataTrainer():
     """Base class for most "trainers": classes which take data and "train"
     themselves (fit a statistical model, etc.) to the data.  Can also be used
@@ -34,7 +30,7 @@ class DataTrainer():
         self._data = value
         
 
-class GridPrediction():
+class GridPrediction(data.Grid):
     """A prediction based on a grid.  The risk is always computed by finding
     the grid cell the coordinates contained, and then deferring to the abstract
     `grid_risk` method.
@@ -46,10 +42,7 @@ class GridPrediction():
     """
     
     def __init__(self, xsize, ysize, xoffset = 0, yoffset = 0):
-        self._xsize = xsize
-        self._ysize = ysize
-        self._xoffset = xoffset
-        self._yoffset = yoffset
+        super().__init__(xsize, ysize, xoffset, yoffset)
     
     def risk(self, x, y):
         """The risk at coordinate `(x,y)`."""
@@ -57,39 +50,6 @@ class GridPrediction():
 
     def grid_risk(self, gridx, gridy):
         raise NotImplementedError()
-
-    @property
-    def xsize(self):
-        """The width of each cell"""
-        return self._xsize
-
-    @property
-    def ysize(self):
-        """The height of each cell"""
-        return self._ysize
-    
-    @property
-    def xoffset(self):
-        """The x coordinate of the left side of the grid."""
-        return self._xoffset
-    
-    @property
-    def yoffset(self):
-        """The y coordinate of the bottom side of the grid."""
-        return self._yoffset
-
-    def grid_coord(self, x, y):
-        """Where does the point fall in the grid.
-        
-        :param x: x coord
-        :param y: y coord
-        
-        :return: `(gridx, gridy)` coordinates in the grid where this point
-          falls.
-        """
-        xx = x - self._xoffset
-        yy = y - self._yoffset
-        return (_floor(xx / self._xsize), _floor(yy / self._ysize))
 
 
 class GridPredictionArray(GridPrediction):

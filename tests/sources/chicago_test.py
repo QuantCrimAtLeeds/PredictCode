@@ -6,11 +6,9 @@ import numpy as np
 
 import open_cp.sources.chicago as chicago
 
-def test_load_default_filename():
-    with mock.patch("builtins.open", MockOpen(None)) as open_mock:
-        assert( chicago.default_burglary_data() == None )
-        filename = open_mock.calls[0][0][0]
-        assert( os.path.split(filename)[1] == "chicago.csv" )
+def test_set_data_dir():
+    chicago.set_data_directory("..")
+    assert chicago.get_default_filename() == os.path.join("..", "chicago.csv")
 
 @pytest.fixture
 def string_data_snap():

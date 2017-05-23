@@ -64,3 +64,18 @@ def test_top_slice_random_data_with_repeats():
         expected_super_set = x >= np.min(x[mask])
         np.testing.assert_array_equal(mask * expected_super_set, mask)
         
+def test_top_slice_masked():
+    data = np.asarray([1,2,3,0,4,5])
+    data = np.ma.masked_array(data, mask = [True, False, False, False, True, False])
+
+    s = evaluation.top_slice(data, 1.0)
+    np.testing.assert_array_equal([False, True, True, True, False, True], s)
+
+    s = evaluation.top_slice(data, 0.0)
+    assert( not np.any(s) )
+
+    s = evaluation.top_slice(data, 0.5)
+    np.testing.assert_array_equal([False, False, True, False, False, True], s)
+
+    s = evaluation.top_slice(data, 0.4)
+    np.testing.assert_array_equal([False, False, False, False, False, True], s)
