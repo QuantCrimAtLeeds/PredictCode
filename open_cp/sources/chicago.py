@@ -139,6 +139,7 @@ def load(filename, primary_description_names, to_meters=True, type="snapshot"):
     :return: An instance of :class:`open_cp.data.TimedPoints` or `None`.
     """
     dic = _get_dic(type)
+    dt_convert = dic["DT_CONVERT"]
     data = []
 
     with open(filename) as file:
@@ -152,7 +153,7 @@ def load(filename, primary_description_names, to_meters=True, type="snapshot"):
             y = row[lookup[dic["_Y_FIELD"]]].strip()
             t = row[lookup[dic["_TIME_FIELD"]]].strip()
             if x != "" and y != "":
-                data.append((_date_from_csv(t), float(x), float(y)))
+                data.append((dt_convert(t), float(x), float(y)))
 
     data.sort(key = lambda triple : triple[0])
     xcoords = _np.empty(len(data))
@@ -289,3 +290,47 @@ def load_to_geoDataFrame(filename, datetime_as_string=True,
         raise ValueError("Unknown `empty_geometry` parameter `{}`".format(empty_geometry))
     frame.crs = {"init":"epsg:4326"}
     return frame
+
+
+_sides = None
+
+def _load_sides():
+    global _sides
+    if _sides is not None:
+        return
+    global _datadir
+    geojson = _path.join(_datadir, "Chicago_Areas.geojson")
+    frame = gpd.read_file(geojson)
+    side_mapping = {
+        "Far North" : [1,2,3,4,9,10,11,12,13,14,76,77],
+        "Northwest" : [15,16,17,18,19,20],
+        "North" : [5,6,7,21,22],
+        "West" : list(range(23, 32)),
+        "Central" : [8,32,33],
+        "South" : list(range(34,44)) + [60, 69],
+        "Southwest" : [56,57,58,59] + list(range(61,69)),
+        "Far Southwest" : list(range(70,76)),
+        "Far Southeast" : list(range(44,56))
+    }
+    frame["side"] = frame.area_numbe.map(lambda x : next(key
+         for key, item in side_mapping.items() if int(x) in item) )
+    _sides = frame.drop(["area", "area_num_1", "comarea", "comarea_id",
+                        "perimeter", "shape_area", "shape_len"], axis=1)
+    _sides.crs = {"init": "epsg:4326"}
+    _sides = _sides.to_crs({"init": "epsg:2790"})
+    
+
+def get_side(name):
+    """Return a geometry (a polygon, typically) of the outline of the shape
+    of the given "side" of Chicago, projected to {"init":"epsg:2790"}, which
+    is Illinois in metres.
+    
+    Needs the file "Chicago_Areas.geojson" to be in the "datadir".  This can
+    be downloaded from:
+    https://data.cityofchicago.org/Facilities-Geographic-Boundaries/Boundaries-Community-Areas-current-/cauq-8yn6
+    
+    :param name: One of "Far North", "Northwest", "North", "West", "Central",
+        "South", "Southwest", "Far Southwest", "Far Southeast"
+    """
+    _load_sides()
+    return _sides[_sides.side == name].unary_union

@@ -6,7 +6,9 @@ Contains routines and classes to help with evaluation of predictions.
 """
 
 import numpy as _np
+import collections as _collections
 from . import naive as _naive
+from . import predictors as _predictors
 
 def _top_slice_one_dim(risk, fraction):
     data = risk.compressed().copy()
@@ -111,6 +113,81 @@ def maximum_hit_rate(grid, timed_points, percentage_coverage):
     return hit_rates(risk, timed_points, percentage_coverage)
 
 
-class HitRateEvaluator():
-    """Abstracts the task of 
+class PredictionProvider():
+    def predict(self, time):
+        """Produce a prediction at this time."""
+        raise NotImplementedError()
+
+
+HitRateDetail = _collections.namedtuple("HitRateDetail",
+    ["total_cell_count", "prediction"])
+
+
+class HitRateResult():
+    def __init__(self, rates, details):
+        self._rates = rates
+        self._details = details
+        
+    @property
+    def rates(self):
+        """Dictionary from `start` to a dictionary from "coverage
+        percentage level" to "fractional hit rate".
+        """
+        return self._rates
+    
+    @property
+    def details(self):
+        return self._details
+
+
+class HitRateEvaluator(_predictors.DataTrainer):
+    """Abstracts the task of running a "trainer" and/or "predictor" over a set
+    of data, producing a prediction, and then comparing this prediction against
+    reality at various coverage levels, and then repeating for all dates in a
+    range.
     """
+    def __init__(self, provider):
+        self._provider = provider
+        
+    def _points(self, start, end):
+        mask = (self.data.timestamps >= start) & (self.data.timestamps < end)
+        return self.data[mask]
+        
+    @staticmethod
+    def time_range(start, end, length):
+        """Helper method to generate an iterable of (start, end)
+        
+        :param start: Start time
+        :param end: End time, inclusive
+        :param length: Length of time for interval
+        """
+        s = start
+        while s <= end:
+            yield (s, s + length)
+            s += length
+    
+    def run(self, times, coverage_levels):
+        """Run tests.
+        
+        :param times: Iterable of (start, end) times.  A prediction will be
+          made for the time `start` and then evaluated across the range `start`
+          to `end`.
+        :param coverage_levels: Iterable of *percentage* coverage levels to
+          test the hit rate for.
+          
+        :return: Instance of :class:`HitRateResult`
+        """
+        coverage_levels = list(coverage_levels)
+        details = dict()
+        out = dict()
+        for start, end in times:
+            pred = self._provider.predict(start)
+            points = self._points(start, end)
+            if points.number_data_points == 0:
+                continue
+            out[start] = hit_rates(pred, points, coverage_levels)
+            details[start] = HitRateDetail(
+                total_cell_count=_np.ma.sum(~pred.intensity_matrix.mask),
+                prediction = pred
+                )
+        return HitRateResult(out, details)

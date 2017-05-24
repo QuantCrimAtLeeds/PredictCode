@@ -6,7 +6,8 @@
 
 
 import os
-datadir = os.path.join("..", "..", "..", "..", "..", "Data")
+#datadir = os.path.join("..", "..", "..", "..", "..", "Data")
+datadir = os.path.join("//media", "disk", "Data")
 outdir = os.path.join(datadir, "generated")
 
 # Necessary on my windows box; not needed on my linux box

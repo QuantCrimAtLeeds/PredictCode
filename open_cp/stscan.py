@@ -341,6 +341,21 @@ class STSTrainer(predictors.DataTrainer):
             new_radius = _np.sqrt(min( dd for dd in distances if dd > rr ))
             out.append(Cluster(disc.centre, new_radius))
         return out
+    
+    def to_satscan(self, filename):
+        """Writes the training data to two SaTScan compatible files.  Does
+        *not* currently write settings, so these will need to be entered
+        manually.
+        
+        :param filename: Saves files "filename.geo" and "filename.cas"
+          containing the geometry and "cases" repsectively.
+        """
+        with open(filename + ".geo", "w") as geofile:
+            for i, (x,y) in enumerate(self.data.coords.T):
+                print("{}\t{}\t{}".format(i, x, y), file=geofile)
+        with open(filename + ".cas", "w") as casefile:
+            for i, (t) in enumerate(self.data.timestamps):
+                print("{}\t{}\t{}".format(i, 1, t), file=casefile)
 
 
 class STSContinuousPrediction(predictors.ContinuousPrediction):
