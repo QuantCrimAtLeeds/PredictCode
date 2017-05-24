@@ -31,12 +31,10 @@ Alternatively, we can just use the weight / kernel in a continuous kernel
 density estimate scheme.
 """
 
-from . import predictors
-from . import data
+from . import predictors as _predictors
 
 import abc as _abc
 import numpy as _np
-from numpy import timedelta64
 
 class Weight(metaclass=_abc.ABCMeta):
     """Base class for weights / kernels.  Classes implementing this algorithm
@@ -104,7 +102,7 @@ class DistanceDiagonalsDifferent(GridDistance):
         return _np.abs(x1 - x2) + _np.abs(y1 - y2)
 
 
-class ProspectiveHotSpot(predictors.DataTrainer):
+class ProspectiveHotSpot(_predictors.DataTrainer):
     """Implements the classical, grid based algorithm.  To calculate distances,
     we consider the grid cell we are computing the risk intensity for, the grid
     cell the event falls into, and then delegate to an instance of :class
@@ -118,13 +116,21 @@ class ProspectiveHotSpot(predictors.DataTrainer):
 
     :param region: The :class:`RectangularRegion` the data is in.
     :param grid_size: The size of the grid to place the data into.
+    :param grid: Alternative to specifying the region and grid_size is to pass
+      a :class:`BoundedGrid` instance.
     :param time_unit: A :class:`numpy.timedelta64` instance giving the time
       unit.
     """
-    def __init__(self, region, grid_size=50, time_unit=timedelta64(1, "W")):
-        self.grid = grid_size
+    def __init__(self, region=None, grid_size=50, time_unit=_np.timedelta64(1, "W"), grid=None):
+        if grid is None:
+            self.grid = grid_size
+            self.region = region
+        else:
+            self.region = grid.region()
+            self.grid = grid.xsize
+            if grid.xsize != grid.ysize:
+                raise ValueError("Only supports *square* grid cells.")
         self.time_unit = time_unit
-        self.region = region
         self.weight = ClassicWeight()
         self.distance = DistanceDiagonalsSame()
 
@@ -160,18 +166,18 @@ class ProspectiveHotSpot(predictors.DataTrainer):
         for x in range(width):
             for y in range(height):
                 matrix[y][x] = self._total_weight(time_deltas, events.coords, x, y)
-        return predictors.GridPredictionArray(self.grid, self.grid, matrix,
+        return _predictors.GridPredictionArray(self.grid, self.grid, matrix,
                                               self.region.xmin, self.region.ymin)
 
 
-class ProspectiveHotSpotContinuous(predictors.DataTrainer):
+class ProspectiveHotSpotContinuous(_predictors.DataTrainer):
     """Implements the prospective hotspot algorithm as a kernel density
     estimation.  A copy of the space/time kernel / weight is laid down over
     each event and the result is summed.  To allow compatibility with the grid
     based method, we set a time unit and a grid size, but these are purely used
     to scale the data appropriately.
     """
-    def __init__(self, grid_size=50, time_unit=timedelta64(1, "W")):
+    def __init__(self, grid_size=50, time_unit=_np.timedelta64(1, "W")):
         self.grid = grid_size
         self.time_unit = time_unit
         self.weight = ClassicWeight()
@@ -201,5 +207,5 @@ class ProspectiveHotSpotContinuous(predictors.DataTrainer):
             # Return a scalar if input as scalar
             return r[0] if len(r)==1 else r
 
-        return predictors.KernelRiskPredictor(kernel, cell_width=self.grid,
+        return _predictors.KernelRiskPredictor(kernel, cell_width=self.grid,
                 cell_height=self.grid)

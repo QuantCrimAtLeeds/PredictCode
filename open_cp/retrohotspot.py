@@ -107,10 +107,18 @@ class RetroHotSpotGrid(predictors.DataTrainer):
     :param region: An instance of :RectangularRegion: giving the region the
       grid should cover.
     :param grid_size: The size of grid to use.
+    :param grid: Alternative to specifying the region and grid_size is to pass
+      a :class:`BoundedGrid` instance.
     """
-    def __init__(self, region, grid_size=150):
-        self.grid_size = grid_size
-        self.region = region
+    def __init__(self, region=None, grid_size=150, grid=None):
+        if grid is None:
+            self.grid_size = grid_size
+            self.region = region
+        else:
+            self.region = grid.region()
+            self.grid_size = grid.xsize
+            if grid.xsize != grid.ysize:
+                raise ValueError("Only supports *square* grid cells.")
         self.weight = Quartic()
 
     def predict(self, start_time=None, end_time=None):

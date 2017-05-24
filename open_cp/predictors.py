@@ -312,3 +312,26 @@ def grid_prediction_from_kernel(kernel, region, grid_size):
             yoffset=region.ymin, cell_width=grid_size, cell_height=grid_size)
     return GridPredictionArray.from_continuous_prediction(cts_predictor,
             width, height)
+
+def grid_prediction(continuous_prediction, grid):
+    """Utility function to convert a continuous prediction to a grid based
+    prediction.
+
+    :param continuous_prediction: An instance of :class:`ContinuousPrediction`
+      or a kernel.
+    :param grid: An instance of :class:`BoundedGrid`, which may be masked.
+    """
+    try:
+        kernel = continuous_prediction.to_kernel()
+    except:
+        kernel = continuous_prediction
+    
+    prediction = KernelRiskPredictor(kernel)
+    risk = GridPredictionArray.from_continuous_prediction_grid(prediction, grid)
+    
+    try:
+        risk.mask_with(grid)
+    except:
+        pass
+    
+    return risk

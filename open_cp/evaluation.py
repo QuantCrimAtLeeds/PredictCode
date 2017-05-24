@@ -109,3 +109,8 @@ def maximum_hit_rate(grid, timed_points, percentage_coverage):
         # Oh well, couldn't do that
         pass
     return hit_rates(risk, timed_points, percentage_coverage)
+
+
+class HitRateEvaluator():
+    """Abstracts the task of 
+    """

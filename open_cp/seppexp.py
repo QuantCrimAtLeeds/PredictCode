@@ -267,13 +267,21 @@ class SEPPTrainer(predictors.DataTrainer):
 
     :param region: The rectangular region the grid should cover.
     :param grid_size: The size of grid to use.
+    :param grid: Alternative to specifying the region and grid_size is to pass
+      a :class:`BoundedGrid` instance.
     """
-    def __init__(self, region, grid_size=50):
-        self.grid_size = grid_size
-        self.region = region
+    def __init__(self, region=None, grid_size=50, grid=None):
+        if grid is None:
+            self.grid_size = grid_size
+            self.region = region
+        else:
+            self.region = grid.region()
+            self.grid_size = grid.xsize
+            if grid.xsize != grid.ysize:
+                raise ValueError("Only supports *square* grid cells.")
 
     def _make_cells(self, events):
-        times = events.time_deltas()
+        times = events.time_deltas(time_unit = _np.timedelta64(1, "m"))
         cells = _make_cells(self.region, self.grid_size, events, times)
         return cells, times[-1]
 
