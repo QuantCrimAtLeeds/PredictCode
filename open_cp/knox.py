@@ -4,11 +4,24 @@ knox
 
 Implements a monte carlo algorithm to compute knox statistics and p-values.
 
-ADD REFERENCES
 
+1. Johnson, Bowers, "The Burglary as Clue to the Future: The Beginnings of
+  Prospective Hot-Spotting", European Journal of Criminology Volume: 1
+  issue: 2, page(s): 237-255.  DOI: https://doi.org/10.1177/1477370804041252
+2. Johnson, S.D., Bernasco, W., Bowers, K.J. et al. "Space–Time Patterns of
+  Risk: A Cross National Assessment of Residential Burglary Victimization",
+  J Quant Criminol (2007) 23: 201. doi:10.1007/s10940-007-9025-3
+3. Townsley, Homel, Chaseling, "Infectious Burglaries. A Test of the Near
+  Repeat Hypothesis" Br J Criminol (2003) 43 (3): 615-633.
+  https://doi.org/10.1093/bjc/43.3.615
+4. Knox, "Epidemiology of Childhood Leukaemia in Northumberland and Durham",
+  Br J Prev Soc Med. 1964 Jan; 18(1): 17–24.
+  https://www.ncbi.nlm.nih.gov/pmc/articles/PMC1058931/
+5. Besag, Diggle, "Simple Monte Carlo Tests for Spatial Pattern",  Journal of
+  the Royal Statistical Society. Series C (Applied Statistics) Vol. 26,
+  No. 3 (1977), pp. 327-333 https://www.jstor.org/stable/2346974
 """
 
-from . import data
 from . import predictors as _predictors
 import numpy as _np
 import scipy.spatial.distance as _distance
@@ -50,6 +63,12 @@ def distances(points, start=None, end=None):
     return out
 
 class Knox(_predictors.DataTrainer):
+    """Computes the knox statistic and monte carlo dervied p-value.
+    See the doc-strings on the attributes for more details.
+    
+    :param space_bins: List of pairs `(min, max)`.
+    :param time_bins: List of pairs `(start, end)`.
+    """
     def __init__(self, space_bins = None, time_bins = None):
         self.space_bins = space_bins
         self.time_bins = time_bins
@@ -124,7 +143,8 @@ class Knox(_predictors.DataTrainer):
         :param iterations: The number of iterations to perform when estimating
           the p-value.
         
-        :return: An array whose `[i,j]` entry corresponds to space bin [i] and
+        :return: An instance of :class:`Result`.
+            An array whose `[i,j]` entry corresponds to space bin [i] and
           time bin [j].  Each entry is a pair `(statistic, p-value)`.
         """
         points = self.data.coords.T
@@ -132,19 +152,61 @@ class Knox(_predictors.DataTrainer):
         times = (self.data.timestamps - self.data.timestamps[0]) / _np.timedelta64(1, "ms")
         time_distances = distances(times)
         
-        cells = self._stat(dists, time_distances)
+        stats = self._stat(dists, time_distances)
         monte_carlo_cells = []
         for _ in range(iterations):
             _np.random.shuffle(times)
             time_distances = distances(times)
             monte_carlo_cells.append(self._stat(dists, time_distances))
         
-        out = _np.empty(cells.shape + (2,))
-        for i in range(cells.shape[0]):
-            for j in range(cells.shape[1]):
-                statistic = cells[i][j]
-                out[i][j][0] = statistic
-                stats = _np.asarray([c[i][j] for c in monte_carlo_cells])
-                pvalue = _np.sum( statistic <= stats ) / (1 + iterations)
-                out[i][j][1] = pvalue
-        return out
+        pvalues = _np.empty(stats.shape)
+        all_statistics = _np.empty(stats.shape, dtype=_np.object)
+        for i in range(stats.shape[0]):
+            for j in range(stats.shape[1]):
+                all_statistics[i][j] = _np.asarray([c[i][j] for c in monte_carlo_cells])
+                pvalues[i][j] = ( _np.sum( stats[i][j] <= all_statistics[i][j] )
+                        / (1 + iterations) )
+        return Result(stats, pvalues, all_statistics, self.space_bins, self.time_bins)
+    
+class Result():
+    """The result of computing the knox statistic."""
+    def __init__(self, stats, pvalues, cells, space_bins, time_bins):
+        self._stats = stats
+        self._pvalues = pvalues
+        self._cells = cells
+        self._space_bins = space_bins
+        self._time_bins = time_bins
+        
+    @property
+    def space_bins(self):
+        """The space bins which were used in the computation."""
+        return self._space_bins
+    
+    @property
+    def time_bins(self):
+        """The time bins which were used in the computation."""
+        return self._time_bins
+    
+    def statistic(self, space_bin, time_bin):
+        """Return the knox statistic for the given bins.
+        
+        :param space_bin: Index of the space bin to query.
+        :param time_bin: Index of the time bin to query.
+        """
+        return self._stats[space_bin][time_bin]
+    
+    def pvalue(self, space_bin, time_bin):
+        """Return the p-value for the given bins.
+        
+        :param space_bin: Index of the space bin to query.
+        :param time_bin: Index of the time bin to query.
+        """
+        return self._pvalues[space_bin][time_bin]
+    
+    def distribution(self, space_bin, time_bin):
+        """Returns all the monte carlo derived statistics for this bin.
+        
+        :param space_bin: Index of the space bin to query.
+        :param time_bin: Index of the time bin to query.
+        """
+        return self._cells[space_bin][time_bin]
