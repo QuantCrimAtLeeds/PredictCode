@@ -54,10 +54,9 @@ def data1():
 def test_calculate(data1):
     data1.space_bins = [[0, 2]]
     data1.set_time_bins([[0, 50]], "hours")
-    cells = data1.calculate()
-    assert( cells.shape == (1,1,2) )
-    assert( cells[0][0][0] == 1 )
-    assert( cells[0][0][1] == 999/1000 )
+    result = data1.calculate()
+    assert( result.statistic(0,0) == 1 )
+    assert( result.pvalue(0,0) == 999/1000 )
 
 @pytest.fixture
 def data2():
@@ -72,13 +71,12 @@ def data2():
 def test_calculate_two(data2):
     data2.space_bins = [[0.9, 1.1]]
     data2.set_time_bins([[0, 25]], "hours")
-    cells = data2.calculate()
-    assert( cells.shape == (1,1,2) )
-    assert( cells[0][0][0] == 2 )
+    result = data2.calculate()
+    assert( result.statistic(0,0) == 2 )
     # Shuffle to 112 112 121 121 211 211
     # 1/3 of time we get 2, otherwise get 1
     # Evil non-deterministic test
-    assert( abs(cells[0][0][1] - 1/3) < 0.2 )
+    assert( abs(result.pvalue(0,0) - 1/3) < 0.2 )
 
 @pytest.fixture
 def data3():
@@ -90,14 +88,24 @@ def data3():
     k.data = data.TimedPoints.from_coords(times, [1,1,1], [5, 7, 4])
     return k
 
-def test_calculate_two(data3):
+def test_calculate_three(data3):
     data3.space_bins = [[0.9, 1.1], [0.9, 2.1], [1.5, 2.5]]
     data3.set_time_bins([(0,3), (2,3)], "hours")
-    cells = data3.calculate()
-    assert( cells.shape == (3,2,2) )
-    assert( cells[0][0][0] == 1 )
-    assert( cells[1][0][0] == 2 )
-    assert( cells[2][0][0] == 1 )
-    assert( cells[0][1][0] == 1 )
-    assert( cells[1][1][0] == 1 )
-    assert( cells[2][1][0] == 0 )
+    result = data3.calculate()
+    assert( result.statistic(0,0) == 1)
+    assert( result.statistic(1,0) == 2)
+    assert( result.statistic(2,0) == 1)
+
+    assert( result.statistic(0,1) == 1)
+    assert( result.statistic(1,1) == 1)
+    assert( result.statistic(2,1) == 0)
+    
+    np.testing.assert_array_equal(result.space_bins, [[0.9, 1.1], [0.9, 2.1], [1.5, 2.5]] )
+    np.testing.assert_array_equal(result.time_bins, [
+            [np.timedelta64(0,"h"), np.timedelta64(3,"h")],
+            [np.timedelta64(2,"h"), np.timedelta64(3,"h")]
+            ])
+        
+    for i in range(3):
+        for j in range(2):
+            assert(result.distribution(i,j).shape == (999,))
