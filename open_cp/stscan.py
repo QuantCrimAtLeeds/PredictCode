@@ -402,13 +402,6 @@ class STSTrainer(predictors.DataTrainer):
                     index = unique_coords.index(pt)
                     print("{}\t{}\t{}".format(index+1, c[pt], timeformatter(t)), file=casefile)
 
-        #with open(filename + ".geo", "w") as geofile:
-        #    for i, (x,y) in enumerate(self.data.coords.T):
-        #        print("{}\t{}\t{}".format(i, x, y), file=geofile)
-        #with open(filename + ".cas", "w") as casefile:
-        #    for i, (t) in enumerate(self.data.timestamps):
-        #        print("{}\t{}\t{}".format(i, 1, timeformatter(t)), file=casefile)
-
 
 class STSContinuousPrediction(predictors.ContinuousPrediction):
     """A :class:`predictors.ContinuousPrediction` which uses the computed

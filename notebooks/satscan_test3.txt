@@ -1,0 +1,118 @@
+                                 _____________________________
+
+                                        SaTScan v9.4.4
+                                 _____________________________
+
+
+Program run on: Thu May 25 20:19:35 2017
+
+Prospective Space-Time analysis
+scanning for clusters with high rates
+using the Space-Time Permutation model.
+_______________________________________________________________________________________________
+
+SUMMARY OF DATA
+
+Study period.......................: 0 to 1000
+Number of locations................: 23
+Total number of cases..............: 100
+_______________________________________________________________________________________________
+
+CLUSTERS DETECTED
+
+1.Location IDs included.: 21, 6, 22, 11
+  Coordinates / radius..: (30,30) / 20.00
+  Time frame............: 930 to 1000
+  Number of cases.......: 10
+  Expected cases........: 5.46
+  Observed / expected...: 1.83
+  Test statistic........: 1.622161
+  P-value...............: 1.00
+  Recurrence interval...: 1.0 unit
+
+NOTE: The sequential Monte Carlo procedure was used to terminate the calculations after 50
+replications.
+
+_______________________________________________________________________________________________
+
+PARAMETER SETTINGS
+
+Input
+-----
+  Case File        : C:\Users\Matthew\Documents\m_drive\GitHub\PredictCode\notebooks\satscan_test3.cas
+  Time Precision   : Generic
+  Start Time       : 0
+  End Time         : 1000
+  Coordinates File : C:\Users\Matthew\Documents\m_drive\GitHub\PredictCode\notebooks\satscan_test3.geo
+  Coordinates      : Cartesian
+
+Analysis
+--------
+  Type of Analysis        : Prospective Space-Time
+  Probability Model       : Space-Time Permutation
+  Scan for Areas with     : High Rates
+  Time Aggregation Units  : Generic
+  Time Aggregation Length : 1
+
+Output
+------
+  Main Results File : C:\Users\Matthew\Documents\m_drive\GitHub\PredictCode\notebooks\satscan_test3.txt
+
+Data Checking
+-------------
+  Temporal Data Check     : Check to ensure that all cases and controls are within the specified temporal study period.
+  Geographical Data Check : Check to ensure that all observations (cases, controls and populations) are within the specified geographical area.
+
+Spatial Neighbors
+-----------------
+  Use Non-Euclidian Neighbors file : No
+  Use Meta Locations File          : No
+  Multiple Coordinates Type        : Allow only one set of coordinates per location ID.
+
+Spatial Window
+--------------
+  Maximum Spatial Cluster Size : 50 percent of population at risk
+  Maximum Spatial Cluster Size : 50 Cartesian units
+  Window Shape                 : Circular
+
+Temporal Window
+---------------
+  Minimum Temporal Cluster Size : 1 Generic
+  Maximum Temporal Cluster Size : 50 percent of study period
+
+Space And Time Adjustments
+--------------------------
+  Adjust for Weekly Trends, Nonparametric : No
+
+Inference
+---------
+  P-Value Reporting                  : Default Combination
+  Number of Replications             : 999
+  Adjusted for Earlier Analyses      : No
+  Adjusting for More Likely Clusters : No
+
+Spatial Output
+--------------
+  Report Hierarchical Clusters              : Yes
+  Criteria for Reporting Secondary Clusters : No Geographical Overlap
+  Restrict Reporting to Smaller Clusters    : No
+
+Temporal Graphs
+---------------
+  Produce Temporal Graphs : No
+
+Other Output
+------------
+  Report Critical Values  : No
+  Report Monte Carlo Rank : No
+
+Run Options
+-----------
+  Processer Usage   : All Available Proccessors
+  Suppress Warnings : No
+  Logging Analysis  : Yes
+_______________________________________________________________________________________________
+
+Program completed  : Thu May 25 20:19:35 2017
+Total Running Time : 0 seconds
+Processor Usage    : 4 processors

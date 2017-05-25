@@ -190,3 +190,61 @@ class AbstractSTScan():
         stat = actual * (_np.log(actual) - _np.log(expected))
         stat += (total - actual) * (_np.log(total - actual) - _np.log(total - expected))
         return stat
+
+    def to_satscan(self, filename, offset):
+        """Writes the training data to two SaTScan compatible files.  Does
+        *not* currently write settings, so these will need to be entered
+        manually.  The timestamps
+        
+        :param filename: Saves files "filename.geo" and "filename.cas"
+          containing the geometry and "cases" repsectively.
+        :param offset: The "end time" in generic units, from which the
+          `timestamps` are subtracted.
+        """
+        unique_coords = list(set( (x,y) for x,y in self.coords.T ))
+        with open(filename + ".geo", "w") as geofile:
+            for i, (x,y) in enumerate(unique_coords):
+                print("{}\t{}\t{}".format(i+1, x, y), file=geofile)
+
+        unique_times = list(set( t for t in self.timestamps ))
+        with open(filename + ".cas", "w") as casefile:
+            for i, (t) in enumerate(unique_times):
+                pts = self.coords.T[self.timestamps == t]
+                pts = [ (x,y) for x,y in pts ]
+                import collections
+                c = collections.Counter(pts)
+                for pt in c:
+                    index = unique_coords.index(pt)
+                    print("{}\t{}\t{}".format(index+1, c[pt], int(offset - t)), file=casefile)
+
+class SaTScanData():
+    """Load and manipulate data in SaTScan format.  Currently assumes "generic
+    time", i.e. time in integers.
+    """
+    def __init__(self, filename, time_end):
+        self.time_end = time_end
+        self.geo = { i : (x,y) for i,x,y in self._geo(filename)}
+        self.cases = list(self._cases(filename))
+    
+    def to_coords_time(self):
+        """Convert to the same format as for :class:`AbstractSTScan`"""
+        times = []
+        coords = []
+        for i, c, t in self.cases:
+            for _ in range(c):
+                times.append(self.time_end - t)
+                coords.append(self.geo[i])
+        return _np.asarray(coords).T, _np.asarray(times)
+
+    def _geo(self, filename):
+        with open(filename + ".geo") as geofile:
+            for row in geofile:
+                i, x, y = row.split()
+                yield int(i), float(x), float(y)
+
+    def _cases(self, filename):
+        with open(filename + ".cas") as casfile:
+            for row in casfile:
+                i, count, t = row.split()
+                yield int(i), int(count), int(t)
+        
