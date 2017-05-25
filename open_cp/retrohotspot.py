@@ -137,6 +137,6 @@ class RetroHotSpotGrid(predictors.DataTrainer):
             for gridy in range(ysize):
                 y = gridy * self.grid_size + self.region.ymin + self.grid_size / 2
                 matrix[gridy][gridx] = _np.sum(self.weight(
-                        x - self.data.xcoords, y - self.data.ycoords))
+                        x - coords[0], y - coords[1]))
         return predictors.GridPredictionArray(self.grid_size, self.grid_size,
             matrix, self.region.xmin, self.region.ymin)

@@ -39,13 +39,13 @@ _cdict = {'red':   [(0.0,  1.0, 1.0),
                    (1.0,  0.2, 0.2)]}
 yellow_to_red = matplotlib.colors.LinearSegmentedColormap("yellow_to_red", _cdict)
 
-def grid_for_south_side(xoffset=0, yoffset=0):
+def grid_for_south_side(xoffset=0, yoffset=0, xsize=250, ysize=250):
     """Generated a masked grid for the South side geometry.
     
     :param xoffset: How much to move the left side by
     :param yoffset: How much to move the bottom side by
     """
-    grid = open_cp.data.Grid(xsize=250, ysize=250, xoffset=0, yoffset=0)
+    grid = open_cp.data.Grid(xsize=xsize, ysize=ysize, xoffset=0, yoffset=0)
     global south_side
     return open_cp.geometry.mask_grid_by_intersection(south_side, grid)
 
