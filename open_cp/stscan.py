@@ -38,9 +38,9 @@ from . import predictors
 from . import data
 import numpy as _np
 import collections as _collections
+import datetime as _datetime
 
 Cluster = _collections.namedtuple("Cluster", ["centre", "radius"])
-
 
 def _possible_start_times(timestamps, max_interval_length, end_time):
     times = _np.datetime64(end_time) - timestamps
@@ -350,12 +350,32 @@ class STSTrainer(predictors.DataTrainer):
         :param filename: Saves files "filename.geo" and "filename.cas"
           containing the geometry and "cases" repsectively.
         """
+        def timeformatter(t):
+            t = _np.datetime64(t, "s")
+            return str(t)
+
+        unique_coords = list(set( (x,y) for x,y in self.data.coords.T ))
         with open(filename + ".geo", "w") as geofile:
-            for i, (x,y) in enumerate(self.data.coords.T):
-                print("{}\t{}\t{}".format(i, x, y), file=geofile)
+            for i, (x,y) in enumerate(unique_coords):
+                print("{}\t{}\t{}".format(i+1, x, y), file=geofile)
+
+        unique_times = list(set( t for t in self.data.timestamps ))
         with open(filename + ".cas", "w") as casefile:
-            for i, (t) in enumerate(self.data.timestamps):
-                print("{}\t{}\t{}".format(i, 1, t), file=casefile)
+            for i, (t) in enumerate(unique_times):
+                pts = self.data.coords.T[self.data.timestamps == t]
+                pts = [ (x,y) for x,y in pts ]
+                import collections
+                c = collections.Counter(pts)
+                for pt in c:
+                    index = unique_coords.index(pt)
+                    print("{}\t{}\t{}".format(index+1, c[pt], timeformatter(t)), file=casefile)
+
+        #with open(filename + ".geo", "w") as geofile:
+        #    for i, (x,y) in enumerate(self.data.coords.T):
+        #        print("{}\t{}\t{}".format(i, x, y), file=geofile)
+        #with open(filename + ".cas", "w") as casefile:
+        #    for i, (t) in enumerate(self.data.timestamps):
+        #        print("{}\t{}\t{}".format(i, 1, timeformatter(t)), file=casefile)
 
 
 class STSContinuousPrediction(predictors.ContinuousPrediction):
