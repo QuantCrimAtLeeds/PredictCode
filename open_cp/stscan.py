@@ -194,11 +194,13 @@ class STSTrainer(predictors.DataTrainer):
     def _possible_start_times(self, end_time, timestamps):
         """A generator returing all possible start times"""
         N = len(timestamps)
-        for st in _possible_start_times(timestamps,
-                                        self.time_max_interval, end_time):
+        times = _np.unique(timestamps)
+        for st in times:
+#        for st in _possible_start_times(timestamps,
+#                                        self.time_max_interval, end_time):
             events_in_time = (timestamps >= st) & (timestamps <= end_time)
             count = _np.sum(events_in_time)
-            if count / N <= self.time_population_limit:
+            if count <= self.time_population_limit * N:
                 yield st, count, events_in_time
                 
     def _disc_generator(self, discs, events):
@@ -216,7 +218,7 @@ class STSTrainer(predictors.DataTrainer):
             yield disc, count, space_counts
     
     def _possible_discs(self, events):
-        """Return all possible discs which satisfy our limits"""
+        """Yield all possible discs which satisfy our limits"""
         all_discs = _possible_space_clusters(events.coords, self.geographic_radius_limit)
         N = events.number_data_points
         for disc, count, space_counts in self._disc_generator(all_discs, events):
@@ -229,7 +231,37 @@ class STSTrainer(predictors.DataTrainer):
         stat += (total - actual) * (_np.log(total - actual) - _np.log(total - expected))
         return stat
     
+    def _thing(self, disc_times, events, end_time, N, times_lookup):
+        times = _np.unique(disc_times)
+        for start_time in times:
+            if end_time - start_time > self.time_max_interval:
+                continue
+            total_count = times_lookup.get(start_time)
+            if total_count is None or total_count > self.time_population_limit * N:
+                continue
+            count = _np.sum(disc_times >= start_time)
+            yield start_time, total_count, count
+    
     def _scan_all(self, end_time, events, discs_generator, disc_output=None, timestamps=None):
+        if timestamps is None:
+            timestamps = events.timestamps
+        best = (None, -_np.inf, None)
+        N = events.number_data_points
+        times_lookup = { time:count for time, count, _ in
+                        self._possible_start_times(end_time, timestamps) }
+
+        for disc, space_count, space_mask in discs_generator:
+            if disc_output is not None:
+                disc_output.append(disc)
+            for start, time_count, actual in self._thing(events.timestamps[space_mask], events, end_time, N, times_lookup):
+                expected = time_count * space_count / N
+                if actual > expected and actual > 1:
+                    stat = self._statistic(actual, expected, N)
+                    if stat > best[1]:
+                        best = (disc, stat, start)
+        return best
+
+    def _scan_all_old(self, end_time, events, discs_generator, disc_output=None, timestamps=None):
         if timestamps is None:
             timestamps = events.timestamps
         best = (None, -_np.inf, None)
