@@ -173,6 +173,7 @@ class AbstractSTScan():
                 (cluster.radius + cc.radius)**2 ]
     
     def find_all_clusters(self):
+        """Find all the disjoint clusters from most to least significant."""
         all_clusters = [self.Result(centre = c[0].centre,
             radius = _np.sqrt(c[0].radius_sq),
             mask = c[0].mask,
@@ -216,6 +217,7 @@ class AbstractSTScan():
                 for pt in c:
                     index = unique_coords.index(pt)
                     print("{}\t{}\t{}".format(index+1, c[pt], int(offset - t)), file=casefile)
+
 
 class SaTScanData():
     """Load and manipulate data in SaTScan format.  Currently assumes "generic
