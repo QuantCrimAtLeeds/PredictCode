@@ -326,12 +326,9 @@ class STScanNumpy():
         
         return mask[:,m], space_counts[m], unique_dists[m]
 
-    def score_all(self):
-        """Consider all possible space and time regions (which may include many
-        essentially repeated disks) and yield tuples of the centre of disk, the
-        radius squared of the disk, the time span of the region, and the 
-        statistic.
-        """
+    def faster_score_all(self):
+        """As :method:`score_all` but yields tuples (centre, distance_array,
+        time_array, statistic_array)."""
         time_masks, time_counts, times = self.make_time_ranges()
         N = self.timestamps.shape[0]
         for centre in self.coords.T:
@@ -350,24 +347,87 @@ class STScanNumpy():
             #uber_mask = uber_mask[:,_mask]
             stats = self._statistic(actual, expected, N)
 
+            yield centre, used_dists, used_times, stats
+
+    def score_all(self):
+        """Consider all possible space and time regions (which may include many
+        essentially repeated disks) and yield tuples of the centre of disk, the
+        radius squared of the disk, the time span of the region, and the 
+        statistic.
+        """
+        for centre, dists, times, stats in self.faster_score_all():
+            for d,t,s in zip(dists, times, stats):
+                yield centre, d, t, s
+
+    def fast_score_all(self):
+        """As :method:`score_all` but performs the entire computation in
+        memory in one go.  This is faster, but also uses a lot of RAM!
+        It can also lead to more repeats that the slower version, which e.g.
+        for gridded data might mean that it's not faster at all.
+        """
+        raise NotImplementedError()
+        N = self.timestamps.shape[0]
+        time_masks, time_counts, times = self.make_time_ranges()
+
+        distsq = _np.sum((self.coords[:,:,None] - self.coords[:,None,:])**2, axis=0)
+        distsq = distsq[ distsq <= self.geographic_radius_limit**2 ]
+        mask = distsq[:,:,None,None] <= distsq[None,None,:,:]
+        
+        limit = self.timestamps.shape[0] * self.geographic_population_limit
+        space_counts = _np.sum(mask, axis=0)
+        m = (space_counts > 1) & (space_counts <= limit)
+        
+        for centre in self.coords.T:
+            space_masks, space_counts, dists = self.find_discs(centre)
+
+            uber_mask = space_masks[:,:,None] & time_masks[:,None,:]
+        
+            actual = _np.sum(uber_mask, axis=0)
+            expected = space_counts[:,None] * time_counts[None,:] / N
+            _mask = (actual > 1) & (actual > expected)
+    
+            used_dists = _np.broadcast_to(dists[:,None], _mask.shape)[_mask]
+            used_times = _np.broadcast_to(times[None,:], _mask.shape)[_mask]
+            actual = actual[_mask]
+            expected = expected[_mask]
+            #uber_mask = uber_mask[:,_mask]
+            stats = self._statistic(actual, expected, N)
+
             for distance, time, statistic in zip(used_dists, used_times, stats):
                 yield centre, distance, time, statistic
+        
 
     @staticmethod
     def _not_intersecting(scores, centre, radius):
         return [cc for cc in scores if 
-                _np.sum((cc[0] - centre)**2) > (radius + cc[1])**2]
+                (cc[0] - centre[0])**2 + (cc[1] - centre[1])**2
+                > (radius + cc[2])**2]
 
     Result = _nt("Result", ["centre", "radius", "time", "statistic"])
 
     def find_all_clusters(self):
-        scores = [(c,_np.sqrt(d),t,s) for (c,d,t,s) in self.score_all()]
-        scores.sort(key = lambda x : x[3])
+        scores = []
+        for centre, dists, times, stats in self.faster_score_all():
+            dists = _np.sqrt(dists)
+            scores.extend(zip(_itertools.repeat(centre[0]),
+                            _itertools.repeat(centre[1]), dists, times, stats))
+        scores.sort(key = lambda x : -x[4])
+        # This bit below is very slow...
         while len(scores) > 0:
-            best = scores[-1]
-            yield self.Result(centre = best[0], radius = best[1],
-                    time = best[2], statistic = best[3])
-            scores = self._not_intersecting(scores, best[0], best[1])
+            best = scores[0]
+            centre = _np.asarray([best[0],best[1]])
+            radius = best[2]
+            yield self.Result(centre = centre, radius = radius,
+                              time = best[3], statistic = best[4])
+            scores = self._not_intersecting(scores, centre, radius)
+
+        #scores = np.asarray(scores)
+        #while len(scores) > 0:
+        #    best = scores[0,:]
+        #    yield self.Result(centre = best[0], radius = best[1],
+        #            time = best[2], statistic = best[3])
+        #    # Vectorise this...
+        #    scores = self._not_intersecting(scores, best[0], best[1])
 
     @staticmethod
     def _statistic(actual, expected, total):
