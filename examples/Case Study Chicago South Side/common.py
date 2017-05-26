@@ -45,7 +45,7 @@ def grid_for_south_side(xoffset=0, yoffset=0, xsize=250, ysize=250):
     :param xoffset: How much to move the left side by
     :param yoffset: How much to move the bottom side by
     """
-    grid = open_cp.data.Grid(xsize=xsize, ysize=ysize, xoffset=0, yoffset=0)
+    grid = open_cp.data.Grid(xsize=xsize, ysize=ysize, xoffset=xoffset, yoffset=yoffset)
     global south_side
     return open_cp.geometry.mask_grid_by_intersection(south_side, grid)
 

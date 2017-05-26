@@ -36,12 +36,13 @@ class AbstractSTScan():
         self.geographic_population_limit = 0.5
         self.time_max_interval = 28
         self.time_population_limit = 0.5
-        
+        self.only_full_disks = False
+
     def _sort_times_increasing(self):
-        args = _np.argsort(self.timestamps)
-        self.timestamps = self.timestamps[args]
-        self.coords = self.coords[:,args]
-        
+        self.arg_sort = _np.argsort(self.timestamps)
+        self.timestamps = self.timestamps[self.arg_sort]
+        self.coords = self.coords[:,self.arg_sort]
+
     def allowed_times_into_past(self):
         """Find the times into the past which satisfy the constraints of
         maximum time interval, and maximum time population.
@@ -62,9 +63,9 @@ class AbstractSTScan():
                 return []
             cutoff = times[index]
         return times[:index+1]
-    
+
     Disc = _nt("Disc", ["centre", "radius_sq", "mask"])
-    
+
     def _make_unique_points(self):
         """Return an array of the unique coordinates."""
         return _np.array(list(set((x,y) for x,y in self.coords.T))).T
@@ -84,6 +85,20 @@ class AbstractSTScan():
         Is a generator, yields pairs (radius**2, mask)
         """
         centre = _np.asarray(centre)
+        limit = self.timestamps.shape[0] * self.geographic_population_limit
+
+        if self.only_full_disks:
+            distsqun = _np.sum((self.coords - centre[:,None])**2, axis=0)
+            uniques = _np.unique(distsqun)
+            uniques = uniques[uniques <= self.geographic_radius_limit**2]
+            uniques.sort()
+            for d in uniques:
+                mask = distsqun <= d
+                if _np.sum(mask) > limit:
+                    return
+                yield (d, mask)
+            return
+        
         distsqun = _np.sum((self._unique_points - centre[:,None])**2, axis=0)
         index_array = _np.arange(len(distsqun))
         uniques = _np.unique(distsqun)
@@ -93,7 +108,6 @@ class AbstractSTScan():
         # Zero case
         mask = (self.coords[0] == centre[0]) & (self.coords[1] == centre[1])
         count = _np.sum(mask)
-        limit = self.timestamps.shape[0] * self.geographic_population_limit
         if count > 1:
             if count > limit:
                 return
@@ -249,4 +263,115 @@ class SaTScanData():
             for row in casfile:
                 i, count, t = row.split()
                 yield int(i), int(count), int(t)
+
+
+class STScanNumpy():
+    """For testing and verification; numpy accelerated.
+    Coordinates are as usual, but timestamps
+    are just float values, with 0 being the end time, and e.g. 10 being 10
+    units into the past.
+    """
+    def __init__(self, coords, timestamps):
+        self.coords = _np.asarray(coords)
+        self.timestamps = _np.asarray(timestamps)
+        if len(self.timestamps) != self.coords.shape[1]:
+            raise ValueError("Timestamps and Coordinates must be of same length.")
+        #self._unique_points = self._make_unique_points()
+        self.geographic_radius_limit = 100
+        self.geographic_population_limit = 0.5
+        self.time_max_interval = 28
+        self.time_population_limit = 0.5
         
+    def _make_unique_points(self):
+        """Return an array of the unique coordinates."""
+        return _np.array(list(set((x,y) for x,y in self.coords.T))).T
+    
+    def make_time_ranges(self):
+        """Compute the posssible time intervals.
+        
+        :return: Tuple of masks (of shape (N,k) where N is the number of data
+          points), counts (of length k) and the cutoff used for each count (of
+          length k).  Hence `masks[:,i]` corresponds to `count[i]` is given by
+          looking at event `<= cutoff[i]` before the end of time.
+        """
+        unique_times = _np.unique(self.timestamps)
+        unique_times = unique_times[unique_times <= self.time_max_interval]
+        unique_times.sort()
+        time_masks = self.timestamps[:,None] <= unique_times[None,:]
+        
+        limit = self.timestamps.shape[0] *self.time_population_limit
+        time_counts = _np.sum(time_masks, axis=0)
+        m = time_counts <= limit
+        
+        return time_masks[:,m], time_counts[m], unique_times[m]
+    
+    def find_discs(self, centre):
+        """Compute the possible disks.
+        
+        :return: Tuple of masks (of shape (N,k) where N is the number of data
+          points), counts (of length k) and the distances squared from the
+        centre point (of length k).  Hence `masks[:,i]` corresponds to
+        `count[i]` is given by looking at event `<= cutoff[i]` before the end
+        of time.
+        """
+        centre = _np.asarray(centre)
+        distsq = _np.sum( (self.coords - centre[:,None])**2, axis=0 )
+        unique_dists = _np.unique(distsq)
+        unique_dists = unique_dists[ unique_dists <= self.geographic_radius_limit**2 ]
+        mask = distsq[:,None] <= unique_dists[None,:]
+        
+        limit = self.timestamps.shape[0] * self.geographic_population_limit
+        space_counts = _np.sum(mask, axis=0)
+        m = (space_counts > 1) & (space_counts <= limit)
+        
+        return mask[:,m], space_counts[m], unique_dists[m]
+
+    def score_all(self):
+        """Consider all possible space and time regions (which may include many
+        essentially repeated disks) and yield tuples of the centre of disk, the
+        radius squared of the disk, the time span of the region, and the 
+        statistic.
+        """
+        time_masks, time_counts, times = self.make_time_ranges()
+        N = self.timestamps.shape[0]
+        for centre in self.coords.T:
+            space_masks, space_counts, dists = self.find_discs(centre)
+
+            uber_mask = space_masks[:,:,None] & time_masks[:,None,:]
+        
+            actual = _np.sum(uber_mask, axis=0)
+            expected = space_counts[:,None] * time_counts[None,:] / N
+            _mask = (actual > 1) & (actual > expected)
+    
+            used_dists = _np.broadcast_to(dists[:,None], _mask.shape)[_mask]
+            used_times = _np.broadcast_to(times[None,:], _mask.shape)[_mask]
+            actual = actual[_mask]
+            expected = expected[_mask]
+            #uber_mask = uber_mask[:,_mask]
+            stats = self._statistic(actual, expected, N)
+
+            for distance, time, statistic in zip(used_dists, used_times, stats):
+                yield centre, distance, time, statistic
+
+    @staticmethod
+    def _not_intersecting(scores, centre, radius):
+        return [cc for cc in scores if 
+                _np.sum((cc[0] - centre)**2) > (radius + cc[1])**2]
+
+    Result = _nt("Result", ["centre", "radius", "time", "statistic"])
+
+    def find_all_clusters(self):
+        scores = [(c,_np.sqrt(d),t,s) for (c,d,t,s) in self.score_all()]
+        scores.sort(key = lambda x : x[3])
+        while len(scores) > 0:
+            best = scores[-1]
+            yield self.Result(centre = best[0], radius = best[1],
+                    time = best[2], statistic = best[3])
+            scores = self._not_intersecting(scores, best[0], best[1])
+
+    @staticmethod
+    def _statistic(actual, expected, total):
+        """Calculate the log likelihood"""
+        stat = actual * (_np.log(actual) - _np.log(expected))
+        stat += (total - actual) * (_np.log(total - actual) - _np.log(total - expected))
+        return stat
