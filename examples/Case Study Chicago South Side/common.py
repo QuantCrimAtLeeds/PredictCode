@@ -10,6 +10,13 @@ import numpy as np
 import descartes
 import pandas as pd
 
+if not "GDAL_DATA" in os.environ:
+    home = os.path.join(os.path.expanduser("~"), "Anaconda3", "Library", "share", "gdal")
+    if "gcs.csv" in os.listdir(home):
+        os.environ["GDAL_DATA"] = home
+    else:
+        print("GDAL_DATA not set and failed to find suitable location...")
+
 import open_cp.sources.chicago as chicago
 import open_cp.predictors
 import open_cp.naive

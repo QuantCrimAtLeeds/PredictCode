@@ -1,6 +1,7 @@
 import pytest
 import tests.helpers as helpers
 from unittest.mock import patch
+import io
 
 import numpy as np
 
@@ -31,5 +32,24 @@ def test_MockOpen():
             next(file)
             
     with pytest.raises(FileNotFoundError):
+        with open("doesntexists.txt") as file:
+            pass
+
+def test_MockOpen_captureOutput():
+    capture = helpers.BytesIOWrapper()
+    with patch("builtins.open", helpers.MockOpen(capture)):
+        with open("somefile", "wb") as file:
+            file.write(b"test data")
+
+    assert capture.data == b"test data"
+
+def test_MockOpen_casesFilter():
+    with patch("builtins.open", helpers.MockOpen("ahsgs")) as mock_open:
+        mock_open.filter = helpers.ExactlyTheseFilter([2])
+
+        with pytest.raises(FileNotFoundError):
+            with open("doesntexists.txt") as file:
+                pass
+
         with open("doesntexists.txt") as file:
             pass
