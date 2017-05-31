@@ -11,18 +11,24 @@ import descartes
 import pandas as pd
 
 if not "GDAL_DATA" in os.environ:
-    home = os.path.join(os.path.expanduser("~"), "Anaconda3", "Library", "share", "gdal")
-    if "gcs.csv" in os.listdir(home):
-        os.environ["GDAL_DATA"] = home
-    else:
-        print("GDAL_DATA not set and failed to find suitable location...")
+    try:
+        home = os.path.join(os.path.expanduser("~"), "Anaconda3", "Library", "share", "gdal")
+        if "gcs.csv" in os.listdir(home):
+            os.environ["GDAL_DATA"] = home
+        else:
+            print("GDAL_DATA not set and failed to find suitable location...")
+    except:
+        print("GDAL_DATA not set and failed to find suitable location...  This is probably not a problem on linux.")
 
 import open_cp.sources.chicago as chicago
 import open_cp.predictors
 import open_cp.naive
 import open_cp.geometry
 import open_cp.plot
+import open_cp.pool
 import open_cp.evaluation
+
+import open_cp.retrohotspot as retro
 
 def load_data(datadir):
     """Load the data: Burglary, in the South side only, limit to events happening
@@ -67,3 +73,29 @@ def to_dataframe(rates):
     frame.columns.name = "% Coverage"
     return frame
     
+# ---------------------------------------------------------------------------
+# Retro hotspot stuff
+# Defining here allows us to use multi-process code in a notebook
+
+class RetroHotSpotEval(open_cp.evaluation.PredictionProvider):
+    def __init__(self, masked_grid, points, time_window_length = np.timedelta64(56, "D")):
+        self.time_window_length = time_window_length
+        self.masked_grid = masked_grid
+        self.points = points
+    
+    def predict(self, time):
+        grid_pred = retro.RetroHotSpotGrid(grid=self.masked_grid)
+        grid_pred.data = self.points
+        grid_pred.weight = retro.Quartic(bandwidth = 1000)
+        grid_risk = grid_pred.predict(start_time = time - self.time_window_length, end_time = time)
+        grid_risk.mask_with(self.masked_grid)
+        return grid_risk
+
+class RHS_Eval_Task(open_cp.pool.Task):
+    def __init__(self, masked_grid, points, key):
+        super().__init__(key)
+        self.evaluator = open_cp.evaluation.HitRateEvaluator(RetroHotSpotEval(masked_grid, points))
+        self.evaluator.data = points
+        
+    def __call__(self):
+        return self.evaluator.run(time_range(), range(0,51))
