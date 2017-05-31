@@ -19,3 +19,9 @@ def centre_window(window, width, height):
     x = (w - width) // 2
     y = (h - height) // 2
     window.geometry("{}x{}+{}+{}".format(width, height, x, y))
+
+def centre_window_percentage(window, width_percentage, height_percentage):
+    """Set the window to be the given percentages of the total screen size,
+    cented on the screen."""
+    w, h = screen_size(window)
+    centre_window(window, w * width_percentage // 100, h * height_percentage // 100)
