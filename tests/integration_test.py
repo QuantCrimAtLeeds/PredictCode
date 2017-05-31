@@ -22,9 +22,9 @@ def read_test_file(basename):
             
     return np.asarray(timestamps), np.asarray(coords).T
 
-def test_stscan():
+def test_stscan_slow():
     timestamps, points = read_test_file(os.path.join("tests", "sts_test_data"))
-    trainer = open_cp.stscan.STSTrainer()
+    trainer = open_cp.stscan.STSTrainerSlow()
     trainer.data = open_cp.TimedPoints.from_coords(timestamps, points[0], points[1])
     result = trainer.predict()
 
@@ -45,6 +45,33 @@ def test_stscan():
     assert(result.clusters[2].centre[0] == pytest.approx(0.77643025))
     assert(result.clusters[2].centre[1] == pytest.approx(0.80196054))
     assert(result.clusters[2].radius == pytest.approx(0.268662))
+    assert(result.statistics[2] == pytest.approx(0.81554083))
+    assert(result.time_ranges[2][0] == np.datetime64("2017-01-09"))
+    assert(result.time_ranges[2][1] == np.datetime64("2017-01-10"))
+    
+def test_stscan():
+    timestamps, points = read_test_file(os.path.join("tests", "sts_test_data"))
+    trainer = open_cp.stscan.STSTrainer()
+    trainer.data = open_cp.TimedPoints.from_coords(timestamps, points[0], points[1])
+    result = trainer.predict()
+
+    assert(result.clusters[0].centre[0] == pytest.approx(0.31681704))
+    assert(result.clusters[0].centre[1] == pytest.approx(0.26506492))
+    assert(result.clusters[0].radius == pytest.approx(0.1075716))
+    assert(result.statistics[0] == pytest.approx(1.8503078))
+    assert(result.time_ranges[0][0] == np.datetime64("2017-01-10"))
+    assert(result.time_ranges[0][1] == np.datetime64("2017-01-10"))
+
+    assert(result.clusters[1].centre[0] == pytest.approx(0.25221791))
+    assert(result.clusters[1].centre[1] == pytest.approx(0.9878925))
+    assert(result.clusters[1].radius == pytest.approx(0.1579029))
+    assert(result.statistics[1] == pytest.approx(1.2139669))
+    assert(result.time_ranges[1][0] == np.datetime64("2017-01-09"))
+    assert(result.time_ranges[1][1] == np.datetime64("2017-01-10"))
+
+    assert(result.clusters[2].centre[0] == pytest.approx(0.77643025))
+    assert(result.clusters[2].centre[1] == pytest.approx(0.80196054))
+    assert(result.clusters[2].radius == pytest.approx(0.2686593))
     assert(result.statistics[2] == pytest.approx(0.81554083))
     assert(result.time_ranges[2][0] == np.datetime64("2017-01-09"))
     assert(result.time_ranges[2][1] == np.datetime64("2017-01-10"))

@@ -71,11 +71,8 @@ def _possible_space_clusters(points, max_radius=_np.inf):
     return [discs[i] for i in masks]
 
 
-class STSTrainer(predictors.DataTrainer):
-    """From past events, produce an instance of :class:`STSResult` which
-    stores details of the found clusters.  Contains a variety of properties
-    which may be changed to affect the prediction behaviour.
-    """
+class _STSTrainerBase(predictors.DataTrainer):
+    """Internal class, abstracting out some common features."""
     def __init__(self):
         self.geographic_population_limit = 0.5
         self.geographic_radius_limit = 3000
@@ -83,7 +80,6 @@ class STSTrainer(predictors.DataTrainer):
         self.time_max_interval = _np.timedelta64(12, "W")
         self.data = None
         self.region = None
-        pass
     
     @property
     def region(self):
@@ -144,17 +140,12 @@ class STSTrainer(predictors.DataTrainer):
     @time_max_interval.setter
     def time_max_interval(self, value):
         self._time_max_len = _np.timedelta64(value)
-        
-    def clone(self):
-        """Return a new instance which has all the underlying settings
-        but with no data.
-        """
-        new = STSTrainer()
-        new.geographic_population_limit = self.geographic_population_limit
-        new.geographic_radius_limit = self.geographic_radius_limit
-        new.time_population_limit = self.time_population_limit
-        new.time_max_interval = self.time_max_interval
-        return new
+
+    def _copy_settings(self, other):
+        other.geographic_population_limit = self.geographic_population_limit
+        other.geographic_radius_limit = self.geographic_radius_limit
+        other.time_population_limit = self.time_population_limit
+        other.time_max_interval = self.time_max_interval
         
     def bin_timestamps(self, offset, bin_length):
         """Returns a new instance with the underlying timestamped data
@@ -190,14 +181,151 @@ class STSTrainer(predictors.DataTrainer):
         new = self.clone()
         new.data = data.TimedPoints(self.data.timestamps, newcoords)
         return new
+
+    @staticmethod        
+    def _statistic(actual, expected, total):
+        """Calculate the log likelihood"""
+        stat = actual * (_np.log(actual) - _np.log(expected))
+        stat += (total - actual) * (_np.log(total - actual) - _np.log(total - expected))
+        return stat
+
+    def maximise_clusters(self, clusters, time=None):
+        """The prediction method will return the smallest clusters (subject
+        to each cluster being centred on the coordinates of an event).  This
+        method will enlarge each cluster to the maxmimum radius it can be
+        without including further events.
+        
+        :param clusters: List-like object of :class:`Cluster` instances.
+        :param time: Only data up to and including this time is used when
+          computing clusters.  If `None` then use the last timestamp of the
+          data.
+        
+        :return: Array of clusters with larger radii.
+        """
+        events, time = self._events_time(time)
+        out = []
+        for disc in clusters:
+            distances = _np.sum((events.coords - disc.centre[:,None])**2, axis=0)
+            rr = disc.radius ** 2
+            new_radius = _np.sqrt(min( dd for dd in distances if dd > rr ))
+            out.append(Cluster(disc.centre, new_radius))
+        return out
+    
+    def to_satscan(self, filename):
+        """Writes the training data to two SaTScan compatible files.  Does
+        *not* currently write settings, so these will need to be entered
+        manually.
+        
+        :param filename: Saves files "filename.geo" and "filename.cas"
+          containing the geometry and "cases" repsectively.
+        """
+        def timeformatter(t):
+            t = _np.datetime64(t, "s")
+            return str(t)
+
+        unique_coords = list(set( (x,y) for x,y in self.data.coords.T ))
+        with open(filename + ".geo", "w") as geofile:
+            for i, (x,y) in enumerate(unique_coords):
+                print("{}\t{}\t{}".format(i+1, x, y), file=geofile)
+
+        unique_times = list(set( t for t in self.data.timestamps ))
+        with open(filename + ".cas", "w") as casefile:
+            for i, (t) in enumerate(unique_times):
+                pts = self.data.coords.T[self.data.timestamps == t]
+                pts = [ (x,y) for x,y in pts ]
+                import collections
+                c = collections.Counter(pts)
+                for pt in c:
+                    index = unique_coords.index(pt)
+                    print("{}\t{}\t{}".format(index+1, c[pt], timeformatter(t)), file=casefile)
+    
+    def _events_time(self, time=None):
+        """If time is `None` set to last event in data.  Return data clamped to
+        time range, and timestamp actually used."""
+        events = self.data.events_before(time)
+        if time is None:
+            time = self.data.timestamps[-1]
+        return events, time
+
+
+#import .stscan2 as _stscan2
+from . import stscan2 as _stscan2
+
+class STSTrainer(_STSTrainerBase):
+    """From past events, produce an instance of :class:`STSResult` which
+    stores details of the found clusters.  Contains a variety of properties
+    which may be changed to affect the prediction behaviour.
+    
+    This version uses numpy code, and is far faster.  As the *exact order* we
+    consider regions in is not stable, the clusters found will be slightly
+    different.
+    """
+    def __init__(self):
+        super().__init__()
+
+    def clone(self):
+        """Return a new instance which has all the underlying settings but with
+        no data.
+        """
+        new = STSTrainer()
+        self._copy_settings(new)
+        return new
+
+    def predict(self, time=None, max_clusters=None):
+        """Make a prediction.
+        
+        :param time: Timestamp of the prediction point.  Only data up to
+          and including this time is used when computing clusters.  If `None`
+          then use the last timestamp of the data.
+        :param max_clusters: If not `None` then return at most this many
+          clusters.
+        
+        :return: A instance of :class:`STSResult` giving the found clusters.
+        """
+        _TIME_UNIT = _np.timedelta64(1, "ms")
+        events, time = self._events_time(time)
+        times_into_past = (time - events.timestamps) / _TIME_UNIT
+        #times_into_past = _np.flipud(times_into_past)
+        #coords = _np.fliplr(events.coords)
+        scanner = _stscan2.STScanNumpy(events.coords, times_into_past)
+        self._copy_settings(scanner)
+        scanner.time_max_interval = self.time_max_interval / _TIME_UNIT
+
+        clusters = []
+        time_regions = []
+        stats = []
+        for cluster in scanner.find_all_clusters():
+            clusters.append(Cluster(cluster.centre, cluster.radius))
+            start_time = time - cluster.time * _TIME_UNIT
+            time_regions.append((start_time, time))
+            stats.append(cluster.statistic)
+
+        max_clusters = self.maximise_clusters(clusters, time)
+        return STSResult(self.region, clusters, max_clusters,
+                         time_ranges=time_regions, statistics=stats)
+
+
+class STSTrainerSlow(_STSTrainerBase):
+    """From past events, produce an instance of :class:`STSResult` which
+    stores details of the found clusters.  Contains a variety of properties
+    which may be changed to affect the prediction behaviour.
+    """
+    def __init__(self):
+        super().__init__()
+    
+    def clone(self):
+        """Return a new instance which has all the underlying settings but with
+        no data.
+        """
+        new = STSTrainerSlow()
+        self._copy_settings(new)
+        return new
     
     def _possible_start_times(self, end_time, timestamps):
         """A generator returing all possible start times"""
         N = len(timestamps)
         times = _np.unique(timestamps)
         for st in times:
-#        for st in _possible_start_times(timestamps,
-#                                        self.time_max_interval, end_time):
             events_in_time = (timestamps >= st) & (timestamps <= end_time)
             count = _np.sum(events_in_time)
             if count <= self.time_population_limit * N:
@@ -225,13 +353,7 @@ class STSTrainer(predictors.DataTrainer):
             if count <= N * self.geographic_population_limit:
                 yield disc, count, space_counts
     
-    def _statistic(self, actual, expected, total):
-        """Calculate the log likelihood"""
-        stat = actual * (_np.log(actual) - _np.log(expected))
-        stat += (total - actual) * (_np.log(total - actual) - _np.log(total - expected))
-        return stat
-    
-    def _thing(self, disc_times, events, end_time, N, times_lookup):
+    def _time_regions(self, disc_times, events, end_time, N, times_lookup):
         times = _np.unique(disc_times)
         for start_time in times:
             if end_time - start_time > self.time_max_interval:
@@ -253,27 +375,9 @@ class STSTrainer(predictors.DataTrainer):
         for disc, space_count, space_mask in discs_generator:
             if disc_output is not None:
                 disc_output.append(disc)
-            for start, time_count, actual in self._thing(events.timestamps[space_mask], events, end_time, N, times_lookup):
+            for start, time_count, actual in self._time_regions(
+                    events.timestamps[space_mask], events, end_time, N, times_lookup):
                 expected = time_count * space_count / N
-                if actual > expected and actual > 1:
-                    stat = self._statistic(actual, expected, N)
-                    if stat > best[1]:
-                        best = (disc, stat, start)
-        return best
-
-    def _scan_all_old(self, end_time, events, discs_generator, disc_output=None, timestamps=None):
-        if timestamps is None:
-            timestamps = events.timestamps
-        best = (None, -_np.inf, None)
-        N = events.number_data_points
-        possible_times = list(self._possible_start_times(end_time, timestamps))
-
-        for disc, space_count, space_mask in discs_generator:
-            if disc_output is not None:
-                disc_output.append(disc)
-            for start, time_count, time_mask in possible_times:
-                expected = time_count * space_count / N
-                actual = _np.sum(time_mask & space_mask)
                 if actual > expected and actual > 1:
                     stat = self._statistic(actual, expected, N)
                     if stat > best[1]:
@@ -284,12 +388,6 @@ class STSTrainer(predictors.DataTrainer):
         return [ d for d in all_discs
             if _np.sum((d.centre - disc.centre)**2) > (d.radius + disc.radius)**2
             ]
-
-    def _events_time(self, time=None):
-        events = self.data.events_before(time)
-        if time is None:
-            time = self.data.timestamps[-1]
-        return events, time
 
     def predict(self, time=None, max_clusters=None):
         """Make a prediction.
@@ -352,55 +450,6 @@ class STSTrainer(predictors.DataTrainer):
         stats.sort()
         return stats
 
-    def maximise_clusters(self, clusters, time=None):
-        """The prediction method will return the smallest clusters (subject
-        to each cluster being centred on the coordinates of an event).  This
-        method will enlarge each cluster to the maxmimum radius it can be
-        without including further events.
-        
-        :param clusters: List-like object of :class:`Cluster` instances.
-        :param time: Only data up to and including this time is used when
-          computing clusters.  If `None` then use the last timestamp of the
-          data.
-        
-        :return: Array of clusters with larger radii.
-        """
-        events, time = self._events_time(time)
-        out = []
-        for disc in clusters:
-            distances = _np.sum((events.coords - disc.centre[:,None])**2, axis=0)
-            rr = disc.radius ** 2
-            new_radius = _np.sqrt(min( dd for dd in distances if dd > rr ))
-            out.append(Cluster(disc.centre, new_radius))
-        return out
-    
-    def to_satscan(self, filename):
-        """Writes the training data to two SaTScan compatible files.  Does
-        *not* currently write settings, so these will need to be entered
-        manually.
-        
-        :param filename: Saves files "filename.geo" and "filename.cas"
-          containing the geometry and "cases" repsectively.
-        """
-        def timeformatter(t):
-            t = _np.datetime64(t, "s")
-            return str(t)
-
-        unique_coords = list(set( (x,y) for x,y in self.data.coords.T ))
-        with open(filename + ".geo", "w") as geofile:
-            for i, (x,y) in enumerate(unique_coords):
-                print("{}\t{}\t{}".format(i+1, x, y), file=geofile)
-
-        unique_times = list(set( t for t in self.data.timestamps ))
-        with open(filename + ".cas", "w") as casefile:
-            for i, (t) in enumerate(unique_times):
-                pts = self.data.coords.T[self.data.timestamps == t]
-                pts = [ (x,y) for x,y in pts ]
-                import collections
-                c = collections.Counter(pts)
-                for pt in c:
-                    index = unique_coords.index(pt)
-                    print("{}\t{}\t{}".format(index+1, c[pt], timeformatter(t)), file=casefile)
 
 
 class STSContinuousPrediction(predictors.ContinuousPrediction):
