@@ -27,6 +27,33 @@ class BytesIOWrapper():
         self._del.close()
 
 
+class StrIOWrapper():
+    """Minimal file-like object which wraps a :class:`io.StringIO` instance
+    internally, and grabs a copy of the buffer before it closes.  You may need
+    to add methods as necessary to make this more usable.
+    """
+    def __init__(self, initial=None):
+        self._initial = initial
+        self._del = io.StringIO(self._initial)
+
+    def write(self, *args):
+        self._del.write(*args)
+
+    def __enter__(self):
+        self._del = io.StringIO(self._initial)
+        return self._del.__enter__()
+
+    def __exit__(self, a, b, c):
+        self.data = self._del.getvalue()
+        print("__exit__ got '{}'".format(self.data))
+        self._del.__exit__(a, b, c)
+
+    def close(self):
+        self.data = self._del.getvalue()
+        print("close got '{}'".format(self.data))
+        self._del.close()
+
+
 class MockOpen():
     """Mock out the builtin function :func:`open`.  Typical usage is:
 
@@ -84,6 +111,15 @@ class ExactlyTheseFilter():
     def __call__(self, *args, **kwargs):
         self.count += 1
         return self.count in self.cases
+
+
+class FilenameFilter():
+    def __init__(self, end_of_filename):
+        self._name = end_of_filename
+        
+    def __call__(self, *args, **kwargs):
+        print(args)
+        return args[0][0].endswith(self._name)
 
 
 class RandomCyclicBuffer():

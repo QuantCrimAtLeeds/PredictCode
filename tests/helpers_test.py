@@ -53,3 +53,15 @@ def test_MockOpen_casesFilter():
 
         with open("doesntexists.txt") as file:
             pass
+
+def test_MockOpen_filenameFilter():
+    with patch("builtins.open", helpers.MockOpen("ahsgs")) as mock_open:
+        mock_open.filter = helpers.FilenameFilter("exists.txt")
+
+        with pytest.raises(FileNotFoundError):
+            with open("doesntexists_.txt") as file:
+                pass
+
+        with open("doesntexists.txt") as file:
+            pass
+    
