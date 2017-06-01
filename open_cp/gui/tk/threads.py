@@ -12,6 +12,9 @@ and communicating with the main GUI thread.
 
 import concurrent.futures as _futures
 import queue as _queue
+import traceback
+import logging
+import sys
 
 class BackgroundTasks():
     """Provides a way for multiple threads to queue up callable objects which
@@ -94,7 +97,13 @@ class Pool():
             raise ValueError("Need to specify a task to run on completion")
         
         def task_wrapper():
-            value = task()
+            try:
+                value = task()
+            except Exception as ex:
+                logger = logging.getLogger(__name__)
+                err = traceback.format_exception(*sys.exc_info())
+                logger.error("Exception: %s", err)
+                value = None
             def on_gui_thread_task():
                 at_finish(value)
             self._task_manager.submit(on_gui_thread_task)
