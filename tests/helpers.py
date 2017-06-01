@@ -1,5 +1,7 @@
 import io
 import numpy as np
+import datetime
+import time
 
 # ARGH: https://github.com/pytest-dev/pytest/issues/2180
 # See test for usage
@@ -140,3 +142,23 @@ class RandomCyclicBuffer():
         if size is None:
             return self._one_dimensional_array(1)[0]
         return self._one_dimensional_array(np.prod(size)).reshape(size)
+    
+    
+def wait_for_calls(mock, count, timeout_seconds):
+    """Wait for the call count on the mock to reach or exceed a threashold, or
+    a timeout occurs.  Useful for multi-threaded testing.
+    
+    :param mock: Object with `.call_count` property
+    :param count: Wait until `mock.call_count` is greater than or equal to this.
+    :param timeout_seconds: Give up after this many seconds.
+    
+    :return: True if the call count condition was met; False if a timeout
+      occurred.
+    """
+    timeout = datetime.datetime.now() + datetime.timedelta(seconds=timeout_seconds)
+    while mock.call_count < count:
+        time.sleep(0.01)
+        if datetime.datetime.now() > timeout:
+            return False
+    return True
+

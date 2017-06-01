@@ -1,9 +1,24 @@
 import pytest
 import tests.helpers as helpers
+
 from unittest.mock import patch
-import io
+import unittest.mock as mock
 
 import numpy as np
+
+def test_wait_for_calls():
+    m = mock.MagicMock()
+    
+    assert helpers.wait_for_calls(m.thing, 0, 1)
+    
+    m.thing(5)
+    assert helpers.wait_for_calls(m.thing, 1, 1)
+    
+    m.thing(6)
+    assert helpers.wait_for_calls(m.thing, 1, 1)
+
+    assert not helpers.wait_for_calls(m.thing, 3, .1)
+
 
 @patch("numpy.random.random", helpers.RandomCyclicBuffer([.1,.2,.3,.4]))
 def test_RandomCyclicBuffer_single():

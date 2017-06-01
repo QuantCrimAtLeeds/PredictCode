@@ -40,6 +40,14 @@ class SimpleSheet():
         xs = ttk.Scrollbar(parent, orient=tk.HORIZONTAL, command=self._tree.xview)
         self._tree["xscrollcommand"] = xs.set
         return xs
+    
+    @property
+    def height(self):
+        return self._tree["height"]
+    
+    @height.setter
+    def height(self, value):
+        self._tree["height"] = value
         
     def yscrollbar(self, parent):
         """Make a vertical scroll bar which is correctly linked to this widget.
@@ -97,6 +105,14 @@ class SimpleSheet():
         self._tree["columns"] = tuple(range(len(self._column_names)))
         for i, name in enumerate(self._column_names):
             self._tree.heading(i, text=name)
+
+    def set_column_width(self, column, width):
+        """Set the width of the column
+        
+        :param column: Number of the column
+        :param width: The new width
+        """
+        self._tree.column(column, width=width)
 
     def set_entry(self, row, column, value):
         """Set the entry in a cell.

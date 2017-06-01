@@ -5,6 +5,10 @@ util
 Various utility routines for working with `tkinter`.
 """
 
+import tkinter as tk
+
+NSEW = tk.N + tk.S + tk.E + tk.W
+
 def screen_size(root):
     """Returns (width, height).
     

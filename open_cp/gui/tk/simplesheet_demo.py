@@ -4,9 +4,18 @@ import simplesheet
 import util
 
 root = tk.Tk()
+root.columnconfigure(0, weight=1)
+root.rowconfigure(0, weight=1)
+
+frame = tk.Frame(root)
+frame.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
+realroot, root = root, frame
+
+
 for i in range(3):
     root.columnconfigure(i, weight=1)
 root.rowconfigure(0, weight=1)
+
 
 sheet = simplesheet.SimpleSheet(root)
 print(tk, type(tk))
@@ -60,6 +69,6 @@ b.grid(row=3, column=1)
 
 sheet.set_row_labels(["Row 1", "Row 2", "Row 3"])
 
-util.centre_window_percentage(root, 60, 30)
+util.centre_window_percentage(realroot, 60, 30)
 
 root.mainloop()
