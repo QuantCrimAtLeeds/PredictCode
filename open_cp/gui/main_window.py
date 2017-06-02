@@ -28,10 +28,10 @@ class MainWindow():
         self.view = main_window_view.MainWindowView(self)
         
     def load_csv(self):
-        filename = tkinter.filedialog.askopenfilename(defaultextension=".csv",
-            filetypes = [("csv", "*.csv")],
-            title="Please select a CSV file to open")
-        #filename = "../Open data sets/2017-01-cumbria-street.csv"
+        #filename = tkinter.filedialog.askopenfilename(defaultextension=".csv",
+        #    filetypes = [("csv", "*.csv")],
+        #    title="Please select a CSV file to open")
+        filename = "../Open data sets/2017-01-cumbria-street.csv"
         if filename == "":
             return
         self.view.destroy()

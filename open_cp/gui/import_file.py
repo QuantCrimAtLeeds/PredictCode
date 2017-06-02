@@ -11,7 +11,7 @@ from open_cp.gui import locator
 import csv
 import collections
 
-InitialData = collections.namedtuple("InitialData", ["header", "firstrows", "rowcount"])
+InitialData = collections.namedtuple("InitialData", ["header", "firstrows", "rowcount", "filename"])
 
 class Data():
     def __init__(self):
@@ -32,7 +32,7 @@ class ImportFile():
     def run(self):
         self._load_file()
         self.view = import_file_view.ImportFileView(self.initial_data)
-        self.view.master.wait_window(self.view)
+        self.view.wait_window(self.view)
         
     def _load_file(self):
         self.view = import_file_view.LoadFileProgress()
@@ -51,7 +51,7 @@ class ImportFile():
                 row_count += 1
             for row in reader:
                 row_count += 1
-        return InitialData(header, rows, row_count)    
+        return InitialData(header, rows, row_count, self._filename)
         
     def _done_process_file(self, value):
         self.initial_data = value
