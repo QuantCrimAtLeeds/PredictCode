@@ -2,7 +2,7 @@ numpy
 scipy
 pyproj
 shapely
-dateutil
+python-dateutil
 
 pytest
 codecov
