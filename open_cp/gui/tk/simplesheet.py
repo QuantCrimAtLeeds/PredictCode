@@ -61,8 +61,7 @@ class SimpleSheet():
         return ys
 
     def add_row(self, pos=-1):
-        """Insert a new row into the given position.  Returns an id number of
-        the row.
+        """Insert a new row into the given position.
         
         :param pos: 0 for insert at very top.  1 to insert as the (new) 2nd
           row, -1 to insert at the end (which is the default)
@@ -79,12 +78,20 @@ class SimpleSheet():
         :param row: The number of the row to move.
         :param new_pos: The new position of this row.
         """
-        print(self._rows)
         row_name = str(self._rows[row])
         self._rows.insert(new_pos, self._rows.pop(row))
         self._tree.move(row_name, "", new_pos)
-        print(self._rows)
         
+    def remove_row(self, row):
+        row_name = str(self._rows[row])
+        del self._rows[row]
+        self._tree.delete(row_name)
+
+    def remove_rows(self):
+        for r in self._rows:
+            self._tree.delete(r)
+        self._rows = []
+
     def callback_to_column_heading(self, column, callback):
         """Attach a callback when the user clicks on the column heading.
         
@@ -105,6 +112,7 @@ class SimpleSheet():
         self._tree["columns"] = tuple(range(len(self._column_names)))
         for i, name in enumerate(self._column_names):
             self._tree.heading(i, text=name)
+            self._tree.column(i, stretch=False)
 
     def set_column_width(self, column, width):
         """Set the width of the column

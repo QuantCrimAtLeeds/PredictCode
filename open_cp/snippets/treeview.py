@@ -1,3 +1,5 @@
+# How the columns get resized (or not) in a `Treeview`
+
 import tkinter as tk
 import tkinter.ttk as ttk
 
@@ -9,6 +11,7 @@ tree = ttk.Treeview(root)
 tree["show"] = "headings"
 tree["columns"] = list(range(3))
 for i in range(3):
+    tree.column(i, stretch=False)
     tree.heading(i, text="Column {}".format(i))
 
 for i in range(5):
