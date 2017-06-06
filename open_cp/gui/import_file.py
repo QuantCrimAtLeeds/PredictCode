@@ -2,29 +2,33 @@
 import_file
 ~~~~~~~~~~~
 
-The model and controller of the "import data" dialog.
+The controller of the "import data" dialog.
 """
 
 from . import import_file_model
+from . import process_file
 import open_cp.gui.tk.import_file_view as import_file_view
 from open_cp.gui import locator
 import csv
+import array
 
 
 class ImportFile():
     def __init__(self, filename):
         self._filename = filename
-        pass
-    
-    @property
-    def data(self):
-        """Get the data after the load and process sequence has completed."""
+        self.datetime_field = None
+        self.xcoord_field = None
+        self.ycoord_field = None
+        self.okay = False
         pass
     
     def run(self):
         self._load_file()
-        self.view = import_file_view.ImportFileView(self.initial_data, self)
+        self.view = import_file_view.ImportFileView(self.model, self)
         self.view.wait_window(self.view)
+        if self.okay:
+            print("WOULD NOW GO TO NEXT STAGE")
+            
         
     def _load_file(self):
         self.view = import_file_view.LoadFileProgress()
@@ -32,50 +36,73 @@ class ImportFile():
         pool.submit(self._process_file, self._done_process_file)
         self.view.wait_window(self.view)
         
-    def _process_file(self):
+    def _yield_rows(self):
         with open(self._filename, encoding="UTF8", mode="rt") as f:
             reader = csv.reader(f)
-            header = next(reader)
-            row_count = 0
-            rows = []
-            for i, row in zip(range(5), reader):
-                rows.append(row)
-                row_count += 1
-            for row in reader:
-                row_count += 1
+            yield from reader
+        
+    def _process_file(self):
+        reader = self._yield_rows()
+        header = next(reader)
+        row_count = 0
+        rows = []
+        for i, row in zip(range(5), reader):
+            rows.append(row)
+            row_count += 1
+        for row in reader:
+            row_count += 1
         return import_file_model.InitialData(header, rows, row_count, self._filename)
         
     def _done_process_file(self, value):
-        self.initial_data = import_file_model.Model(value)
+        self.model = import_file_model.Model(value)
         self.view.destroy()
 
-    def notify_time_format(self, format_string):
-        print("New time format", format_string)
-        self._try_parse()
+    def notify_time_format(self, format_string, initial=False):
+        self.time_format = format_string
+        if not initial:
+            self._try_parse()
 
-    def notify_coord_format(self, coord_format):
-        print("Coord format", coord_format)
-        self._try_parse()
+    def notify_coord_format(self, coord_format, initial=False):
+        self.model.coord_type = coord_format
+        if not initial:
+            self._try_parse()
 
-    def notify_meters_conversion(self, to_meters):
-        print("Meters conversion", to_meters)
-        self._try_parse()
+    def notify_meters_conversion(self, to_meters, initial=False):
+        self.model.meters_conversion = to_meters
+        if not initial:
+            self._try_parse()
 
-    def notify_datetime_field(self, field_number):
-        print("Timestamp field is", field_number)
-        self._try_parse()
+    def notify_datetime_field(self, field_number, initial=False):
+        self.datetime_field = field_number
+        if not initial:
+            self._try_parse()
 
-    def notify_xcoord_field(self, field_number):
-        print("X coord field is", field_number)
-        self._try_parse()
+    def notify_xcoord_field(self, field_number, initial=False):
+        self.xcoord_field = field_number
+        if not initial:
+            self._try_parse()
 
-    def notify_ycoord_field(self, field_number):
-        print("Y coord field is", field_number)
-        self._try_parse()
+    def notify_ycoord_field(self, field_number, initial=False):
+        self.ycoord_field = field_number
+        if not initial:
+            self._try_parse()
+
+    def cancel(self):
+        self.view.destroy()
+        self.okay = False
+        
+    def contin(self):
+        processor = self.model.load_full_dataset(self.time_format,
+                self.datetime_field, self.xcoord_field, self.ycoord_field)
+        code = process_file.ProcessFile(self._filename, processor, self.view).run()
+        if code is None:
+            return
+        self.okay = code
+        self.view.destroy()
 
     def _try_parse(self):
-        error = self.initial_data.try_parse(self.view.time_format, self.view.datetime_field,
-            self.view.xcoord_field, self.view.ycoord_field)
+        error = self.model.try_parse(self.time_format, self.datetime_field,
+            self.xcoord_field, self.ycoord_field)
         if error is None:
             self.view.allow_continue(True)
             error = ""

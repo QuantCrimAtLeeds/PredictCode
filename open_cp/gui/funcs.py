@@ -20,3 +20,17 @@ def string_ellipse(string, maxlen):
         raise ValueError("maxlen too small")
     
     return "... " + string[4-maxlen:]
+
+
+_null_logger = None
+
+def null_logger():
+    global _null_logger
+    if _null_logger is None:
+        _null_logger = NullLogger()
+    return _null_logger
+
+
+class NullLogger():
+    def debug(self, *args, **kwargs):
+        pass

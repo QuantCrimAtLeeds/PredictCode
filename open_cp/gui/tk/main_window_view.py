@@ -7,7 +7,6 @@ import tkinter as tk
 import tkinter.ttk as ttk
 from . import util
 import traceback
-import tkinter.messagebox
 import logging
 
 class TopWindow(tk.Tk):
@@ -20,7 +19,6 @@ class TopWindow(tk.Tk):
         self.grid()
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
-        self.protocol("WM_DELETE_WINDOW", self.end)
         self.title("OpenCP")
         import uuid
         self._uuid = uuid.uuid4()
@@ -57,6 +55,7 @@ class MainWindowView(tk.Frame):
         for i in range(2):
             self.rowconfigure(i, weight=1)
         self.createWidgets()
+        self.master.protocol("WM_DELETE_WINDOW", self.end)
         
     def createWidgets(self):
         self.load_csv_button = ttk.Button(self, text="Load CSV File",

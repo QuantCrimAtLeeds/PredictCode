@@ -4,24 +4,62 @@ import_file_view
 """
 
 import tkinter as tk
-import tkinter.font as tkfont
 import tkinter.filedialog as tk_fd
 import tkinter.ttk as ttk
 from . import util
 from . import simplesheet
+from . import tooltips
 from .. import funcs
-from ..import_file_model import InitialData, CoordType
+from ..import_file_model import CoordType
 import functools
+
+_text = {
+    "getfile" : "Please select a CSV file to open",
+    "cancel" : "Cancel",
+    "continue" : "Continue",
+    "inputfn" : "Input filename: ",
+    "rows" : "Rows of data:",
+    "out_cols" : ["Timestamp", "X Coord", "Y Coord"],
+    "headings" : ["Timestamp heading:", "X Coordinate heading:", "Y Coordinate heading:"],
+    "error_msgs" : "Error messages",
+    "tsformat" : "Timestamp format:",
+    "autodetect" : "Leave blank to attempt auto-detection",
+    "lonlat" : "Longitude/Latitude",
+    "proj" : "Projected coordinates",
+    "meters" : "Meters",
+    "feet" : "Feet",
+    "scale" : "Scale to meters:",
+    "input" : "Input file",
+    "con" : "Conversion options",
+    "proc" : "Processed data",
+    "input_tt" : "The input comma separated file.",
+    "rows_tt" : "The total number of rows in the input file.  We display only the first five.",
+    "output_tt" : "The timestamps and coordinates as processed from the input file using the current settings.  Check that these appear to be correct.",
+    "headers_tt" : ["Select the header which corresponds to the timestamp of the crime event",
+                    "Select the header which corresponds to the X coordinate or longitude of the crime event",
+                    "Select the header which corresponds to the Y coordinate or latitude of the crime event"],
+    "tsformat_tt" : ("Specify the format of the timestamps, or leave blank to attempt auto-detecting.\n" +
+                     "If you need to specify, then use the standard format.  For example, '%Y-%m' would specify" +
+                     "that the input gives only the year and month as '2016-03' or '1978-11'.\n" +
+                     "Standard identifiers are:\n" +
+                     "%Y / %y for year as 2017 or 17\n"),
+    "lonlat_tt" : "Select to show that the input data is in longitude/latitude format.",
+    "proj_tt" :  "Select to show that the input data is in meters, feet, or some other length unit.",
+    "meters_tt" : "The input data is in meters",
+    "feet_tt" : "The input data is in feet (12 inches)",
+    "proj_con_tt" : ("Specify a custom value.  The coordinates will be multiplied by this value to convert to meters.  " +
+                     "For example, if the input data is in kilometers, enter '1000' here."),
+    "error_tt" : "A message describing the current problem when trying to process the input data, along with a hint as to how to fix the problem."
+}
 
 
 def get_file_name():
-    return tk_fd.askopenfilename(defaultextension=".csv",
-                                 title="Please select a CSV file to open")
+    return tk_fd.askopenfilename(defaultextension=".csv", title=_text["getfile"])
 
 
 class LoadFileProgress(tk.Frame):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self.grid()
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
@@ -31,8 +69,6 @@ class LoadFileProgress(tk.Frame):
         bar.start()
 
 
-
-
 class ImportFileView(tk.Frame):
     def __init__(self, model, controller):
         super().__init__()
@@ -40,26 +76,30 @@ class ImportFileView(tk.Frame):
         self.controller = controller
         util.centre_window_percentage(self.master, 80, 60)
         self.master.minsize(400, 300)
+        self.master.protocol("WM_DELETE_WINDOW", self._cancel)
         self.grid(sticky=util.NSEW)
         util.stretchy_columns(self, [0])
         self._add_widgets()
-                
+        self.controller.notify_coord_format(CoordType.LonLat, initial=True)
+        self.controller.notify_meters_conversion(1.0, initial=True)
+        self.controller.notify_time_format("", initial=True)
+
     def _add_top_treeview(self, parent):
-        text = funcs.string_ellipse("Input filename: " + self.model.filename, 100)
+        text = funcs.string_ellipse(_text["inputfn"] + self.model.filename, 100)
         label = ttk.Label(parent, anchor=tk.W, text=text)
         label.grid(row=0, column=0, sticky=tk.W, pady=5, padx=5)
-        text = "Rows of data: {}".format(self.model.rowcount)
+        text = _text["rows"] + " {}".format(self.model.rowcount)
         label = ttk.Label(parent, anchor=tk.W, text=text)
         label.grid(row=0, column=1, sticky=tk.W)
+        tooltips.ToolTipYellow(label, _text["rows_tt"])
         
         self.unprocessed = simplesheet.SimpleSheet(parent)
         self.unprocessed.grid(row=1, column=0, columnspan=3, sticky=util.NSEW, padx=5)
         self.unprocessed.set_columns(self.model.header)
-        font = tkfont.Font()
+        
+        measurer = util.TextMeasurer()
         for c, _ in enumerate(self.model.header):
-            width = max(font.measure(r[c]) for r in self.model.firstrows)
-            width = int(width * 0.9)
-            width = max(30, width)
+            width = measurer.measure(r[c] for r in self.model.firstrows)
             self.unprocessed.set_column_width(c, width)
         for r, row_data in enumerate(self.model.firstrows):
             self.unprocessed.add_row()
@@ -68,16 +108,18 @@ class ImportFileView(tk.Frame):
         self.unprocessed.height = len(self.model.firstrows)
         sx = self.unprocessed.xscrollbar(parent)
         sx.grid(row=2, column=0, columnspan=3, sticky=(tk.E, tk.W), padx=5)
+        tooltips.ToolTipYellow(self.unprocessed.widget, _text["input_tt"])
 
     def _add_bottom_treeview(self, parent):
         self.processed = simplesheet.SimpleSheet(parent)
         self.processed.grid(row=0, column=0, sticky=util.NSEW, padx=5)#, pady=5)
-        self.processed.set_columns(["Timestamp", "X Coord", "Y Coord"])
+        self.processed.set_columns(_text["out_cols"])
         for c in range(3):
             self.processed.set_column_width(c, 70)
         self.new_parse_data()
         sx = self.processed.xscrollbar(parent)
         sx.grid(row=1, column=0, sticky=(tk.E, tk.W), padx=5)
+        tooltips.ToolTipYellow(self.processed.widget, _text["output_tt"])
 
     def _widget_changed(self, e, our_index):
         w = e.widget
@@ -93,19 +135,20 @@ class ImportFileView(tk.Frame):
 
     def _add_options(self, parent):
         util.stretchy_columns(parent, [3])
-        for r, t in enumerate(["Timestamp heading:", "X Coordinate heading:", "Y Coordinate heading:"]):
+        for r, t in enumerate(_text["headings"]):
             label = ttk.Label(parent, text=t)
             label.grid(row=r, column=0, sticky=tk.W, padx=5, pady=5)
         timestamp_header = tk.StringVar()
         xcoord_header = tk.StringVar()
         ycoord_header = tk.StringVar()
         self._widget_selections = []
-        for r, t in enumerate([timestamp_header, xcoord_header, ycoord_header]):
+        for r, (t, tttext) in enumerate(zip([timestamp_header, xcoord_header, ycoord_header], _text["headers_tt"])):
             cbox = ttk.Combobox(parent, height=5, state="readonly", textvariable=t)
             cbox["values"] = self.model.header
             cbox.bind("<<ComboboxSelected>>", functools.partial(self._widget_changed, our_index=r))
             self._widget_selections.append(None)
             cbox.grid(row=r, column=1, padx=5)
+            tooltips.ToolTipYellow(cbox, tttext)
 
         frame = ttk.Frame(parent)
         frame.grid(row=0, column=2, sticky=tk.W)
@@ -119,8 +162,9 @@ class ImportFileView(tk.Frame):
         frame.grid(row=2, column=2, sticky=tk.W)
         self._proj_coord_options(frame)
 
-        frame = ttk.LabelFrame(parent, text="Error messages")
+        frame = ttk.LabelFrame(parent, text=_text["error_msgs"])
         frame.grid(row=0, column=3, rowspan=3, sticky=util.NSEW, padx=5, pady=5)
+        tooltips.ToolTipYellow(frame, _text["error_tt"])
         util.stretchy_columns(frame, [0])
         self._error_message = ttk.Label(frame, text="", wraplength=250)
         self._error_message.grid(row=0, column=0, sticky=util.NSEW)
@@ -130,22 +174,24 @@ class ImportFileView(tk.Frame):
         self.controller.notify_time_format(self.time_format)
 
     def _ts_format_options(self, frame):
-        label = ttk.Label(frame, text="Timestamp format:")
+        label = ttk.Label(frame, text=_text["tsformat"])
         label.grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
         self._ts_format = tk.StringVar()
         tmft_entry = ttk.Entry(frame, width=20, textvariable=self._ts_format)
         util.Validator(tmft_entry, self._ts_format, callback=self._time_format_changed)
         tmft_entry.grid(row=0, column=1, sticky=tk.W, padx=5, pady=5)
-        text = "Leave blank to attempt auto-detection"
-        label = ttk.Label(frame, text=text)
+        tooltips.ToolTipYellow(tmft_entry, _text["tsformat_tt"])
+        label = ttk.Label(frame, text=_text["autodetect"])
         label.grid(row=0, column=2, sticky=tk.W, padx=5, pady=5)
 
     def _coord_options(self, frame):
         self._coord_type = tk.IntVar()
-        radio1 = ttk.Radiobutton(frame, text="Longitude/Latitude", value=CoordType.LonLat.value, variable=self._coord_type, command=self._coord_type_cmd)
+        radio1 = ttk.Radiobutton(frame, text=_text["lonlat"], value=CoordType.LonLat.value, variable=self._coord_type, command=self._coord_type_cmd)
         radio1.grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
-        radio2 = ttk.Radiobutton(frame, text="Projected coordinates", value=CoordType.XY.value, variable=self._coord_type, command=self._coord_type_cmd)
+        tooltips.ToolTipYellow(radio1, _text["lonlat_tt"])
+        radio2 = ttk.Radiobutton(frame, text=_text["proj"], value=CoordType.XY.value, variable=self._coord_type, command=self._coord_type_cmd)
         radio2.grid(row=0, column=1, sticky=tk.W, padx=5, pady=5)
+        tooltips.ToolTipYellow(radio2, _text["proj_tt"])
         self._coord_type.set(CoordType.LonLat.value)
 
     def _to_meters(self):
@@ -161,21 +207,25 @@ class ImportFileView(tk.Frame):
         self.controller.notify_meters_conversion(self.meters_conversion)
 
     def _proj_coord_options(self, frame):
-        b = ttk.Button(frame, text="Meters", command=self._to_meters)
+        b = ttk.Button(frame, text=_text["meters"], command=self._to_meters)
         b.grid(row=0, column=0, padx=5, pady=5)
+        tooltips.ToolTipYellow(b, _text["meters_tt"])
         self._coord_type_widgets = [b]
-        b = ttk.Button(frame, text="Feet", command=self._to_feet)
+        b = ttk.Button(frame, text=_text["feet"], command=self._to_feet)
         b.grid(row=0, column=1, padx=5, pady=5)
+        tooltips.ToolTipYellow(b, _text["feet_tt"])
         self._coord_type_widgets.append(b)
-        label = ttk.Label(frame, text="Scale to meters:")
+        label = ttk.Label(frame, text=_text["scale"])
         label.grid(row=0, column=2, padx=5, pady=5)
         self._coord_type_widgets.append(label)
         self._proj_convert = tk.StringVar()
         entry = ttk.Entry(frame, width=20, textvariable=self._proj_convert)
+        tooltips.ToolTipYellow(entry, _text["proj_con_tt"])
         util.FloatValidator(entry, self._proj_convert, callback=self._meters_conversion_changed)
         entry.grid(row=0, column=3, pady=5)
         self._coord_type_widgets.append(entry)
         self._proj_convert.set("1.0")
+        self._coord_type_state(tk.DISABLED)
 
     def _coord_type_state(self, state):
         for w in self._coord_type_widgets:
@@ -192,16 +242,16 @@ class ImportFileView(tk.Frame):
         self.controller.notify_coord_format(value)
 
     def _add_widgets(self):
-        frame = ttk.LabelFrame(self, text="Input file")
+        frame = ttk.LabelFrame(self, text=_text["input"])
         frame.grid(row=0, column=0, columnspan=2, sticky=util.NSEW, padx=5, pady=5)
         util.stretchy_columns(frame, [0,1,2])
         self._add_top_treeview(frame)
 
-        frame = ttk.LabelFrame(self, text="Conversion options")
+        frame = ttk.LabelFrame(self, text=_text["con"])
         frame.grid(row=1, column=0, columnspan=2, sticky=util.NSEW, padx=5, pady=5)
         self._add_options(frame)
 
-        frame = ttk.LabelFrame(self, text="Processed data")
+        frame = ttk.LabelFrame(self, text=_text["proc"])
         frame.grid(row=2, column=0, sticky=util.NSEW, padx=5, pady=5)
         self._add_bottom_treeview(frame)
         util.stretchy_columns(frame, [0])
@@ -209,29 +259,35 @@ class ImportFileView(tk.Frame):
 
         frame = ttk.Frame(self)
         frame.grid(row=2, column=1, padx=5, pady=5)
-        self.okay_button = ttk.Button(frame, text="Continue")
+        self.okay_button = ttk.Button(frame, text=_text["continue"], command=self.controller.contin)
         self.allow_continue(False)
         self.okay_button.grid(row=0, padx=5, pady=15)
-        self.cancel_button = ttk.Button(frame, text="Cancel")
+        self.cancel_button = ttk.Button(frame, text=_text["cancel"], command=self._cancel)
         self.cancel_button.grid(row=1, padx=5, pady=15)
         
+    def _cancel(self):
+        self.controller.cancel()
+        
     def new_parse_data(self):
-        self.processed.remove_rows()
-        if self.model.processed is None:
+        new_data = (self.processed.row_count == 0)
+        if not new_data:
+            self.processed.remove_rows()
+        data = self.model.processed_data
+        if data is None:
             self.processed.height = 2
         else:
-            timestamps, xcoords, ycoords = self.model.processed
-            font = tkfont.Font()
+            timestamps, xcoords, ycoords = data
             for i, ts in enumerate(timestamps):
                 self.processed.add_row()
                 self.processed.set_entry(i, 0, ts)
             for i, (x, y) in enumerate(zip(xcoords, ycoords)):
                 self.processed.set_entry(i, 1, x)
                 self.processed.set_entry(i, 2, y)
-            for c, source in enumerate([timestamps, xcoords, ycoords]):
-                width = max(font.measure(s) for s in source)
-                width = max(90, int(width * 0.9))
-                self.processed.set_column_width(c, width)
+            if new_data:
+                measurer = util.TextMeasurer()
+                for c, source in enumerate([timestamps, xcoords, ycoords]):
+                    width = measurer.measure(source)
+                    self.processed.set_column_width(c, width)
             self.processed.height = len(timestamps)
 
     def allow_continue(self, allow):

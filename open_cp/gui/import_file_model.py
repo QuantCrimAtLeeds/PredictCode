@@ -3,20 +3,27 @@ import open_cp.gui.enum as enum
 import dateutil.parser
 import datetime
 import logging
+from . import funcs
 
 InitialData = collections.namedtuple("InitialData", ["header", "firstrows", "rowcount", "filename"])
 CoordType = enum.IntEnum("CoordType", "LonLat XY")
 
-class Data():
-    def __init__(self):
-        pass
+#class Data():
+#    def __init__(self):
+#        pass
 
 
 class ParseError(Exception):
+    """Indicate a problem is parsing the input data.  Convert to string for a
+    human readable reason."""
     pass
 
 
 class Model():
+    """The model.
+    
+    :param initial_data: An instance of :class:`InitialData`
+    """
     def __init__(self, initial_data):
         self._initial_data = initial_data
         self._parsed = None
@@ -36,12 +43,47 @@ class Model():
     @property
     def filename(self):
         return self._initial_data.filename
+    
+    @property
+    def coord_type(self):
+        """Lon/Lat or XY coords?
+
+        :return: :class:`CoordType` enum
+        """
+        return self._coord_type
+
+    @coord_type.setter
+    def coord_type(self, value):
+        if not isinstance(value, CoordType):
+            raise ValueError("Must be instance of :class:`CoordType`")
+        self._coord_type = value
 
     @property
-    def processed(self):
+    def meters_conversion(self):
+        """If in XY coords, return the factor to multiple the values by to get
+        to meters.
+        """
+        return self._proj_convert
+
+    @meters_conversion.setter
+    def meters_conversion(self, value):
+        self._proj_convert = value
+
+    @property
+    def processed_data(self):
         """Returns `None` if parsing failed, or a triple of lists
-        `(timestamps, xcoords, ycoords)`"""
-        return self._parsed
+        `(timestamps, xcoords, ycoords)`.  Applies any necessary scaling to the
+        coordinates."""
+        if self._parsed is None:
+            return None
+        ts, xc, yc = self._parsed
+        if self.coord_type == CoordType.XY:
+            coord_scale = self.meters_conversion
+        else:
+            coord_scale = 1.0
+        xc = [x * coord_scale for x in xc]
+        yc = [y * coord_scale for y in yc]
+        return ts, xc, yc
 
     def try_parse(self, time_format, time_field, x_field, y_field):
         """Attempt to parse the initial data.
@@ -50,74 +92,89 @@ class Model():
           :attr:`processed` will be updated.)
         """
         self._parsed = None
-        from collections import namedtuple
-        View = namedtuple("View", "time_format datetime_field xcoord_field ycoord_field")
-        view = View(time_format, time_field, x_field, y_field)
-        tp = TryParse(view, data=self._initial_data)
+        
+        if time_field is None:
+            return "Need to select a field for the timestamps"
+        if x_field is None:
+            return "Need to select a field for the X coordinates"
+        if y_field is None:
+            return "Need to select a field for the Y coordinates"
+
+        logger = logging.getLogger(__name__)
+        logger.debug("Attempting to parse the initial input data")
+        tp = _TryParse(time_format, time_field, x_field, y_field, logger)
         try:
-            tp.try_parse()
-        except ParseError as ex:
-            return str(ex)
-        self._parsed = tp.parsed_data
+            ts, xs, ys = [], [], []
+            for row in self._initial_data.firstrows:
+                t,x,y = tp.try_parse(row)
+                ts.append(t)
+                xs.append(x)
+                ys.append(y)
+        except ParseErrorData as ex:
+            if ex.reason == "time":
+                return ("Cannot understand the data/time string '{}'.\n" +
+                    "Make sure you have selected the correct field for the timestamps.  " +
+                    "If necessary, try entering a specific timestamp format.").format(ex.data)
+            else:
+                return ("Cannot understand the {} coordinate string '{}'.\n" +
+                    "Make sure you have selected the correct field for the {} coordinates."
+                    ).format(ex.reason, ex.data, ex.reason)
+        self._parsed = ts, xs, ys
 
+    def load_full_dataset(self, time_format, time_field, x_field, y_field):
+        """A coroutine.  On error, yields the exception for that row."""
+        if time_format is None or x_field is None or y_field is None:
+            raise ValueError()
+        logger = logging.getLogger(__name__)
+        logger.debug("Attempting to parse the whole data-set")
+        tp = _TryParse(time_format, time_field, x_field, y_field, logger)
 
-class TryParse():
-    def __init__(self, view, data=None, file=None):
-        self.view = view
-        self._logger = logging.getLogger(__name__+".TryParse")
-        if data is not None:
-            if file is not None:
-                raise ValueError("Must specify one of `data` and `file`")
-            self.data = data.firstrows
-        else:
-            if file is None:
-                raise ValueError("Can only specify one of `data` and `file`")
-            raise NotImplementedError
-
-    def try_parse(self):
-        """Attempt to parse the data.  Raises :class:`ParseError` on error."""
-        self._parsed_data = None
-        timestamps = self._try_parse_timestamps()
-        xcoords = self._try_parse_coords(self.view.xcoord_field, "X")
-        ycoords = self._try_parse_coords(self.view.ycoord_field, "Y")
-        self._parsed_data = (timestamps, xcoords, ycoords)
-
-    @property
-    def parsed_data(self):
-        """Returns `None` if parsing failed, or a triple of lists
-        `(timestamps, xcoords, ycoords)`"""
-        return self._parsed_data
-
-    def _try_parse_coords(self, field, coord_name):
-        if field is None:
-            raise ParseError("Need to select a field for the {} coordinates".format(coord_name))
-        coords = []
-        for row in self.data:
+        row = yield
+        row_number = 0
+        while True:
+            row_number += 1
             try:
-                coords.append(float(row[field]))
-            except:
-                raise ParseError(("Cannot understand the {} coordinate string '{}'.\n" +
-                    "Make sure you have selected the correct field for the {} coordinates.")
-                    .format(coord_name, row[field], coord_name))
-        return coords
+                data = tp.try_parse(row)
+            except Exception as ex:
+                data = (row_number, ex)
+            row = yield data
 
-    def _try_parse_timestamps(self):
-        if self.view.time_format == "":
+
+class ParseErrorData(Exception):
+    def __init__(self, reason, data):
+        self.reason = reason
+        self.data = data
+
+
+class _TryParse():
+    def __init__(self, time_format, time_field, x_field, y_field, logger=funcs.null_logger()):
+        self.time_format = time_format
+        self.time_field = time_field
+        self.x_field = x_field
+        self.y_field = y_field
+        self._logger = logger
+            
+    def try_parse(self, row):
+        """Attempt to parse the row.  Raises :class:`ParseError` on error."""
+        time_parser = self._time_parser()
+        try:
+            timestamp = time_parser(row[self.time_field])
+        except Exception as ex:
+            self._logger.debug("Timestamp parsing error was %s / %s", type(ex), ex)
+            raise ParseErrorData("time", row[self.time_field])
+        x = self._get_coord(row, self.x_field, "X")
+        y = self._get_coord(row, self.y_field, "Y")
+        return (timestamp, x, y)
+
+    def _time_parser(self):
+        if self.time_format == "":
             parser = dateutil.parser.parse
         else:
-            parser = lambda s : datetime.datetime.strptime(s, self.view.time_format)
-        
-        field = self.view.datetime_field
-        if field is None:
-            raise ParseError("Need to select a field for the timestamps")
-        
-        ts = []
-        for row in self.data:
-            try:
-                ts.append(parser(row[field]))
-            except Exception as ex:
-                self._logger.debug("Timestamp parsing error was %s / %s", type(ex), ex)
-                raise ParseError(("Cannot understand the data/time string '{}'.\n" +
-                    "Make sure you have selected the correct field for the timestamps.  " +
-                    "If necessary, try entering a specific timestamp format.").format(row[field]))
-        return ts
+            parser = lambda s : datetime.datetime.strptime(s, self.time_format)
+        return parser
+
+    def _get_coord(self, row, field, name):
+        try:
+            return float( row[field] )
+        except:
+            raise ParseErrorData(name, row[field])

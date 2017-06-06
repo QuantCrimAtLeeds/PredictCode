@@ -6,6 +6,7 @@ Various utility routines for working with `tkinter`.
 """
 
 import tkinter as tk
+import tkinter.font as tkfont
 
 NSEW = tk.N + tk.S + tk.E + tk.W
 
@@ -22,6 +23,10 @@ def centre_window(window, width, height):
     w, h = screen_size(window)
     x = (w - width) // 2
     y = (h - height) // 2
+    minw, minh = window.minsize()
+    minw = min(minw, width)
+    minh = min(minh, height)
+    window.minsize(minw, minh)
     window.geometry("{}x{}+{}+{}".format(width, height, x, y))
 
 def centre_window_percentage(window, width_percentage, height_percentage):
@@ -122,3 +127,111 @@ def auto_wrap_label(label, padding=0):
     def callback(event):
         event.widget["wraplength"] = event.width - padding
     label.bind("<Configure>", callback)
+
+
+class TextMeasurer():
+    """Simplify measuring the size of text.  I find that this does not work
+    terribly well, but it's better than guessing.
+    """
+    def __init__(self, font=None, scale=1.1, min=30, max=200):
+        if font is None:
+            font = "TkTextFont"
+        if isinstance(font, str):
+            font = tkfont.nametofont(font)
+        self._font = font
+        self._scale = scale
+        self._minimum = min
+        self._maximum = max
+        
+    @property
+    def scale(self):
+        """Factor the scale the estimated width by."""
+        return self._scale
+    
+    @scale.setter
+    def scale(self, value):
+        self._scale = value
+        
+    @property
+    def minimum(self):
+        """Cap returned widths to this minimum value."""
+        return self._minimum
+    
+    @minimum.setter
+    def minimum(self, value):
+        self._minimum = value
+        
+    @property
+    def maximum(self):
+        """Cap returned widths to this maximum value."""
+        return self._maximum
+    
+    @maximum.setter
+    def maximum(self, value):
+        self._maximum = value
+        
+    def _measure_one(self, text):
+        width = self._font.measure(text)
+        width = int(width * self._scale)
+        width = min(self._maximum, max(self._minimum, width))
+        return width
+        
+    def measure(self, text):
+        """Return the (very much estimated) width of the text.
+        
+        :param text: Either a string, or an iterable of strings.
+        
+        :return: Width of the text, or if passed an iterable, the maximum of
+          the widths.
+        """
+        if isinstance(text, str):
+            return self._measure_one(text)
+        return max(self._measure_one(t) for t in text)
+
+
+class ModalWindow(tk.Toplevel):
+    """A simple modal window abstract base class.
+    
+    Ideas from http://effbot.org/tkinterbook/tkinter-dialog-windows.htm
+    
+    :param parent: The parent window from which to construct the dialog.
+    :param title: Title for the modal window.
+    """
+    def __init__(self, parent, title):
+        super().__init__(parent)
+        self.transient(parent)
+        self.title(title)
+        self.grab_set()
+        self.resizable(width=False, height=False)
+        self.add_widgets()
+
+    def set_size(self, width, height):
+        """Set the size of the main window, and centre on the screen."""
+        centre_window(self, width, height)
+        self.update_idletasks()
+        
+    def set_size_percentage(self, width, height):
+        """Set the size of the main window, as percentages of the screen size,
+        and centre on the screen."""
+        centre_window_percentage(self, width, height)
+        self.update_idletasks()
+
+    def set_to_actual_height(self):
+        """Set the window the height required to fit its contents."""
+        self.update_idletasks()
+        centre_window(self, self.winfo_width(), self.winfo_reqheight())
+
+    def set_to_actual_width(self):
+        """Set the window the width required to fit its contents."""
+        self.update_idletasks()
+        centre_window(self, self.winfo_reqwidth(), self.winfo_height())
+
+    def set_to_actual_size(self):
+        """Set the window the size required to fit its contents."""
+        self.update_idletasks()
+        centre_window(self, self.winfo_reqwidth(), self.winfo_reqheight())
+
+    def add_widgets(self):
+        """Override to add widgets."""
+        raise NotImplementedError()
+

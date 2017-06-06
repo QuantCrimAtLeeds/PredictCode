@@ -83,14 +83,29 @@ class SimpleSheet():
         self._tree.move(row_name, "", new_pos)
         
     def remove_row(self, row):
+        """Remove the row from the sheet.
+        
+        :param row: The index of the row to remove.
+        """
         row_name = str(self._rows[row])
         del self._rows[row]
         self._tree.delete(row_name)
 
     def remove_rows(self):
+        """Remove all rows from the sheet."""
         for r in self._rows:
             self._tree.delete(r)
         self._rows = []
+        
+    @property
+    def row_count(self):
+        """The number of rows in the sheet."""
+        return len(self._rows)
+
+    @property
+    def widget(self):
+        """The underlying widget."""
+        return self._tree
 
     def callback_to_column_heading(self, column, callback):
         """Attach a callback when the user clicks on the column heading.

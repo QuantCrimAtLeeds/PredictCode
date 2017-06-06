@@ -17,7 +17,6 @@ class MainWindow():
         self._logger.debug("tkinter version in use: %s", _tk.Tcl().eval('info patchlevel'))
         self._user_quit = False
         self._root = root
-        root.resize(30, 20)
         self.init()
         
     def run(self):
@@ -29,14 +28,16 @@ class MainWindow():
         return self._user_quit
 
     def init(self):
+        self._root.resize(30, 20)
         self.view = main_window_view.MainWindowView(self)
         
     def load_csv(self):
-        #filename = tkinter.filedialog.askopenfilename(defaultextension=".csv",
-        #    filetypes = [("csv", "*.csv")],
-        #    title="Please select a CSV file to open")
-        filename = "../Open data sets/2017-01-cumbria-street.csv"
-        filename = "../../Crime Predict Project/Open data sets/2017-01-cumbria-street.csv"
+        filename = tkinter.filedialog.askopenfilename(defaultextension=".csv",
+            filetypes = [("csv", "*.csv")],
+            title="Please select a CSV file to open")
+        #import os.path
+        #filename = os.path.join("..", "Open data sets", "2017-01-cumbria-street.csv")
+        #filename = "../../Crime Predict Project/Open data sets/2017-01-cumbria-street.csv"
         if filename == "":
             return
         self.view.destroy()
