@@ -95,6 +95,12 @@ class Pool():
         self._task_manager = BackgroundTasks(root)
         self._executor = _futures.ThreadPoolExecutor(max_threads)
         
+    def submit_gui_task(self, task):
+        """Directly submit a task to be run on the main GUI thread.  Can be
+        called from any thread (hence the point...)
+        """
+        self._task_manager.submit(task)
+        
     def submit(self, task, at_finish=None):
         """Submit a task to be run by the thread pool.
         
@@ -117,7 +123,7 @@ class Pool():
         def task_wrapper():
             try:
                 value = task()
-            except Exception as ex:
+            except Exception:
                 logger = logging.getLogger(__name__)
                 err = traceback.format_exception(*sys.exc_info())
                 logger.error("Exception: %s", err)

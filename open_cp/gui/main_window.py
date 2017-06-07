@@ -35,7 +35,7 @@ class MainWindow():
         filename = tkinter.filedialog.askopenfilename(defaultextension=".csv",
             filetypes = [("csv", "*.csv")],
             title="Please select a CSV file to open")
-        if filename == "":
+        if filename is None or filename == "" or len(filename) == 0:
             return
         self.view.destroy()
         import_file.ImportFile(filename).run()

@@ -1,12 +1,11 @@
 import collections
-import open_cp.gui.enum as enum
 import dateutil.parser
 import datetime
 import logging
 from . import funcs
+from .common import CoordType
 
 InitialData = collections.namedtuple("InitialData", ["header", "firstrows", "rowcount", "filename"])
-CoordType = enum.IntEnum("CoordType", "LonLat XY")
 
 #class Data():
 #    def __init__(self):
@@ -70,20 +69,18 @@ class Model():
         self._proj_convert = value
 
     @property
+    def coordinate_scaling(self):
+        if self.coord_type == CoordType.XY:
+            return self.meters_conversion
+        else:
+            return 1.0
+
+    @property
     def processed_data(self):
         """Returns `None` if parsing failed, or a triple of lists
         `(timestamps, xcoords, ycoords)`.  Applies any necessary scaling to the
         coordinates."""
-        if self._parsed is None:
-            return None
-        ts, xc, yc = self._parsed
-        if self.coord_type == CoordType.XY:
-            coord_scale = self.meters_conversion
-        else:
-            coord_scale = 1.0
-        xc = [x * coord_scale for x in xc]
-        yc = [y * coord_scale for y in yc]
-        return ts, xc, yc
+        return self._parsed
 
     def try_parse(self, time_format, time_field, x_field, y_field):
         """Attempt to parse the initial data.
@@ -102,7 +99,8 @@ class Model():
 
         logger = logging.getLogger(__name__)
         logger.debug("Attempting to parse the initial input data")
-        tp = _TryParse(time_format, time_field, x_field, y_field, logger)
+        tp = _TryParse(time_format, time_field, x_field, y_field,
+                       scale=self.coordinate_scaling, logger=logger)
         try:
             ts, xs, ys = [], [], []
             for row in self._initial_data.firstrows:
@@ -122,13 +120,14 @@ class Model():
         self._parsed = ts, xs, ys
 
     @staticmethod
-    def load_full_dataset(time_format, time_field, x_field, y_field):
+    def load_full_dataset(time_format, time_field, x_field, y_field, scaling):
         """A coroutine.  On error, yields the exception for that row."""
         if time_format is None or x_field is None or y_field is None:
             raise ValueError()
         logger = logging.getLogger(__name__)
         logger.debug("Attempting to parse the whole data-set")
-        tp = _TryParse(time_format, time_field, x_field, y_field, logger)
+        tp = _TryParse(time_format, time_field, x_field, y_field,
+                       scale=scaling, logger=logger)
 
         row = yield
         row_number = 0
@@ -148,12 +147,13 @@ class ParseErrorData(Exception):
 
 
 class _TryParse():
-    def __init__(self, time_format, time_field, x_field, y_field, logger=funcs.null_logger()):
+    def __init__(self, time_format, time_field, x_field, y_field, scale=1.0, logger=funcs.null_logger()):
         self.time_format = time_format
         self.time_field = time_field
         self.x_field = x_field
         self.y_field = y_field
         self._logger = logger
+        self.scale = scale
             
     def try_parse(self, row):
         """Attempt to parse the row.  Raises :class:`ParseError` on error."""
@@ -165,7 +165,7 @@ class _TryParse():
             raise ParseErrorData("time", row[self.time_field])
         x = self._get_coord(row, self.x_field, "X")
         y = self._get_coord(row, self.y_field, "Y")
-        return (timestamp, x, y)
+        return (timestamp, x * self.scale, y * self.scale)
 
     def _time_parser(self):
         if self.time_format == "":

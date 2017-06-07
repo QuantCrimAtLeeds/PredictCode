@@ -28,3 +28,20 @@ def get(object_name):
             raise ValueError("Unknown object '{}' to locate".format(object_name))
         _LOOKUP[object_name]()
         return _CACHE[object_name]
+
+
+class GuiThreadTask():
+    """Mixin class which adds ability to run a task on the gui thread (which
+    is a common pattern in this code base).
+    """
+    _lock = RLock()
+    _pool = None
+    
+    @staticmethod
+    def submit_gui_task(task):
+        if GuiThreadTask._pool is None:
+            with GuiThreadTask._lock:
+                if GuiThreadTask._pool is None:
+                    GuiThreadTask._pool = get("pool")
+        
+        GuiThreadTask._pool.submit_gui_task(task)

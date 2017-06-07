@@ -11,10 +11,10 @@ import open_cp.gui.tk.process_file_view as process_file_view
 import open_cp.gui.locator as locator
 from open_cp.gui.import_file_model import ParseErrorData
 import open_cp.gui.tk.threads as threads
+from collections import namedtuple
+from . import locator
 
-class Model():
-    def __init__(self):
-        pass
+Model = namedtuple("Model", "errors empties data")
 
 
 class ProcessFile():
@@ -60,14 +60,12 @@ class ProcessFile():
             raise ValueError()
         
     def done_process_whole_file(self, value):
-        model = Model()
-        model.errors, model.empties, times, xcs, ycs = value    
-        model.data = (times, xcs, ycs)
+        errors, empties, times, xcs, ycs = value
+        self.model = Model(errors=errors, empties=empties, data=(times, xcs, ycs))
         self._view.destroy()
-        self.model = model
 
 
-class LoadTask(threads.OffThreadTask):
+class LoadTask(threads.OffThreadTask, locator.GuiThreadTask):
     """Actually load the data.  Parameters as for :class:`ProcessFile`
 
     :param parent: The instance of :class:`ProcessFile` to send the result
@@ -121,7 +119,7 @@ class LoadTask(threads.OffThreadTask):
                     return
                 row_count += 1
                 if row_count % 1000 == 0 and self._view is not None:
-                    self._view.notify(row_count, self._total_rows)
+                    self.submit_gui_task(lambda : self._view.notify(row_count, self._total_rows))
                 data = self._processor.send(row)
                 if isinstance(data[1], Exception):
                     self._handle_exception(*data, errors, empties)
@@ -130,7 +128,7 @@ class LoadTask(threads.OffThreadTask):
                     times.append(t)
                     xcs.append(x)
                     ycs.append(y)
-        finally:    
+        finally:
             self._processor.close()
         return errors, empties, times, xcs, ycs
 

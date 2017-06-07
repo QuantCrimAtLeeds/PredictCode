@@ -32,7 +32,8 @@ def jump_to_analysis(root):
     xcoord_field = 4
     ycoord_field = 5
     from . import import_file_model
-    processor = import_file_model.Model.load_full_dataset(time_format, time_field, xcoord_field, ycoord_field)
+    processor = import_file_model.Model.load_full_dataset(time_format,
+        time_field, xcoord_field, ycoord_field, 1.0)
 
     from . import process_file
     task = process_file.LoadTask(filename, 100000, processor, None)
@@ -42,6 +43,8 @@ def jump_to_analysis(root):
     model = analysis.Model(filename, (times, xcs, ycs))
     model.num_empty_rows = len(empties)
     model.num_error_rows = len(errors)
+    from open_cp.gui.import_file_model import CoordType
+    model.coord_type = CoordType.LonLat
     analysis.Analysis(model, root).run()
 
 def run():
@@ -52,8 +55,8 @@ def run():
     root = main_window_view.TopWindow()
     locator._make_pool(root)
     
-    jump_to_analysis(root)
-    os._exit(0)
+    #jump_to_analysis(root)
+    #os._exit(0)
 
     mw = main_window.MainWindow(root)
     mw.run()

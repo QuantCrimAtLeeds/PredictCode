@@ -44,9 +44,10 @@ class LoadFullFile(util.ModalWindow):
         self.set_to_actual_size()
     
     def notify(self, current, maximum):
-        pos = current * 100 / maximum
-        self.bar.step(pos - self.bar_pos)
-        self.bar_pos = pos
+        if not self.cancelled:
+            pos = current * 100 / maximum
+            self.bar.step(pos - self.bar_pos)
+            self.bar_pos = pos
 
     def cancel(self):
         self.cancelled = True

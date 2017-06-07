@@ -3,4 +3,9 @@
 
 # GUI
 
-- Next stage...
+- Date picker
+- Select time range
+- Session saving/loading
+   - Should better encapsulate the file data (filename, coord type, scale factor, fields etc.) into an object
+- Quite button
+- Load new file button

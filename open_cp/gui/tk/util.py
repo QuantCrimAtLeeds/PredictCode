@@ -201,11 +201,24 @@ class ModalWindow(tk.Toplevel):
     def __init__(self, parent, title):
         super().__init__(parent)
         self.transient(parent)
+        self._parent = parent
         self.title(title)
         self.grab_set()
         self.resizable(width=False, height=False)
         self.add_widgets()
         self.protocol("WM_DELETE_WINDOW", self.cancel)
+        self.bind("<Button-1>", self._flash)
+        self.bind("<Unmap>", self._minim)
+
+    def _minim(self, event):
+        # If we're being minimised then also minimise the parent!
+        self._parent.master.iconify()
+
+    def _flash(self, event):
+        over_win = self.winfo_containing(event.x_root, event.y_root)
+        if over_win != self:
+            # Drag the focus back to us after a brief pause.
+            self.after(100, lambda : self.focus_force())
 
     def set_size(self, width, height):
         """Set the size of the main window, and centre on the screen."""
@@ -238,5 +251,5 @@ class ModalWindow(tk.Toplevel):
         raise NotImplementedError()
 
     def cancel(self):
-        """Override to do something extract on closing the window."""
+        """Override to do something extra on closing the window."""
         self.destroy()

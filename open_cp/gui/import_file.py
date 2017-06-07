@@ -20,16 +20,20 @@ class ImportFile():
         self.datetime_field = None
         self.xcoord_field = None
         self.ycoord_field = None
-        self.okay = False
+        self._process_model = None
         pass
     
     def run(self):
         self._load_file()
         self.view = import_file_view.ImportFileView(self.model, self)
         self.view.wait_window(self.view)
-        if self.okay:
-            self.view.destroy()
-            analysis.Analysis().run()
+        if self._process_model is not None:
+            model = analysis.Model.init_from_process_file_model(self._filename,
+                self._process_model, self.model.coord_type)
+            analysis.Analysis(model, None).run()
+        else:
+            # Return control to main window...
+            pass
         
     def _load_file(self):
         self.view = import_file_view.LoadFileProgress()
@@ -93,12 +97,15 @@ class ImportFile():
         self.okay = False
         
     def contin(self):
-        processor = self.model.load_full_dataset(self.time_format,
-                self.datetime_field, self.xcoord_field, self.ycoord_field)
-        code = process_file.ProcessFile(self._filename, self.model.rowcount, processor, self.view).run()
+        processor = import_file_model.Model.load_full_dataset(self.time_format,
+                self.datetime_field, self.xcoord_field, self.ycoord_field,
+                self.model.coordinate_scaling)
+        process = process_file.ProcessFile(self._filename, self.model.rowcount, processor, self.view)
+        code = process.run()
         if code is None:
             return
-        self.okay = code
+        if code:
+            self._process_model = process.model
         self.view.destroy()
 
     def _try_parse(self):

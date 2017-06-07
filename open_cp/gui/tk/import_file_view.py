@@ -311,7 +311,8 @@ class ImportFileView(tk.Frame):
 
         :return: :class:`CoordType` enum
         """
-        return CoordType.fromvalue( self._coord_type.get() )
+        #return CoordType.fromvalue( self._coord_type.get() )
+        return CoordType(self._coord_type.get())
 
     @property
     def meters_conversion(self):
