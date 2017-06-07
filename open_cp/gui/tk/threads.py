@@ -12,6 +12,7 @@ and communicating with the main GUI thread.
 
 import concurrent.futures as _futures
 import queue as _queue
+import threading as _threading
 import traceback
 import logging
 import sys
@@ -55,7 +56,24 @@ class OffThreadTask():
     """Abstract base class for tasks to be run off the main GUI thread, and
     then whose return value should be passed to a (small) task to run on the
     GUI thread.
+    
+    Also provides a standard way to cancel a task: the running task should call
+    the constructor, and then periodcally poll the :attr:`cancelled'.
     """
+    def __init__(self):
+        self._cancelled = False
+        self._cancelling_lock = _threading.RLock()
+
+    def cancel(self):
+        with self._cancelling_lock:
+            self._cancelled = True
+
+    @property
+    def cancelled(self):
+        if hasattr(self, "_cancelling_lock"):
+            with self._cancelling_lock:
+                return self._cancelled
+
     def __call__(self):
         """Task to be run off thread"""
         raise NotImplementedError

@@ -52,6 +52,9 @@ _text = {
     "error_tt" : "A message describing the current problem when trying to process the input data, along with a hint as to how to fix the problem."
 }
 
+_COORD_FORMAT = "{:0.2f}"
+_LONLAT_FORMAT = "{:0.6f}"
+_TIME_FORMAT = "%d %b %Y %H:%M:%S"
 
 def get_file_name():
     return tk_fd.askopenfilename(defaultextension=".csv", title=_text["getfile"])
@@ -60,7 +63,7 @@ def get_file_name():
 class LoadFileProgress(tk.Frame):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.grid()
+        self.grid(sticky=tk.W+tk.E)
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
 
@@ -279,10 +282,15 @@ class ImportFileView(tk.Frame):
             timestamps, xcoords, ycoords = data
             for i, ts in enumerate(timestamps):
                 self.processed.add_row()
-                self.processed.set_entry(i, 0, ts)
+                self.processed.set_entry(i, 0, ts.strftime(_TIME_FORMAT))
+            
+            if self.coord_type == CoordType.LonLat:
+                fmt = _LONLAT_FORMAT
+            else:
+                fmt = _COORD_FORMAT
             for i, (x, y) in enumerate(zip(xcoords, ycoords)):
-                self.processed.set_entry(i, 1, x)
-                self.processed.set_entry(i, 2, y)
+                self.processed.set_entry(i, 1, fmt.format(x))
+                self.processed.set_entry(i, 2, fmt.format(y))
             if new_data:
                 measurer = util.TextMeasurer()
                 for c, source in enumerate([timestamps, xcoords, ycoords]):

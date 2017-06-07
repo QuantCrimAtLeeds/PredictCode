@@ -121,7 +121,8 @@ class Model():
                     ).format(ex.reason, ex.data, ex.reason)
         self._parsed = ts, xs, ys
 
-    def load_full_dataset(self, time_format, time_field, x_field, y_field):
+    @staticmethod
+    def load_full_dataset(time_format, time_field, x_field, y_field):
         """A coroutine.  On error, yields the exception for that row."""
         if time_format is None or x_field is None or y_field is None:
             raise ValueError()

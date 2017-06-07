@@ -25,22 +25,32 @@ _text = {
 }
 
 class LoadFullFile(util.ModalWindow):
-    def __init__(self, parent):
+    def __init__(self, parent, task):
         super().__init__(parent, _text["loading"])
+        self.cancelled = False
+        self._task = task
+        self._task.set_view(self)
         
     def add_widgets(self):
         self.set_size_percentage(20, 10)
         label = ttk.Label(self, text=_text["loading2"],
                           wraplength = self.winfo_width() - 20)
-        label.grid(padx=10, pady=10)
-        bar = ttk.Progressbar(self, mode="indeterminate")
-        bar.start()
-        bar.grid(pady=5, padx=10, sticky=tk.E+tk.W)
-        button = ttk.Button(self, text=_text["cancel"], command=self._cancel)
+        label.grid(padx=10, pady=5)
+        self.bar = ttk.Progressbar(self, mode="determinate")
+        self.bar_pos = 0
+        self.bar.grid(pady=5, padx=10, sticky=tk.E+tk.W)
+        button = ttk.Button(self, text=_text["cancel"], command=self.cancel)
         button.grid(pady=5)
-        self.set_to_actual_height()
+        self.set_to_actual_size()
+    
+    def notify(self, current, maximum):
+        pos = current * 100 / maximum
+        self.bar.step(pos - self.bar_pos)
+        self.bar_pos = pos
 
-    def _cancel(self):
+    def cancel(self):
+        self.cancelled = True
+        self._task.cancel()
         self.destroy()
 
 
@@ -77,12 +87,12 @@ class DisplayResult(util.ModalWindow):
         frame = ttk.Frame(self)
         frame.grid(row=3, column=0, sticky=util.NSEW, padx=5, pady=5)
         ttk.Button(frame, text=_text["continue"], command=self._go).grid(column=0, row=0, padx=5)
-        ttk.Button(frame, text=_text["back"], command=self._back).grid(column=1, row=0, padx=5)
+        ttk.Button(frame, text=_text["back"], command=self.cancel).grid(column=1, row=0, padx=5)
         ttk.Button(frame, text=_text["quit"], command=self._quit).grid(column=2, row=0, padx=5)
         
         self.set_to_actual_size()
 
-    def _back(self):
+    def cancel(self):
         self.destroy()
         
     def _go(self):

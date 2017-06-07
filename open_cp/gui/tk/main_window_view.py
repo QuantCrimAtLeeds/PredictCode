@@ -9,6 +9,15 @@ from . import util
 import traceback
 import logging
 
+_text = {
+    "name" : "OpenCP",
+    "load" : "Load CSV File",
+    "exit" : "Exit",
+    "ss" : "Load a saved session",
+    "exp" : "Export settings",
+    "about" : "About"
+}
+
 class TopWindow(tk.Tk):
     """A single top-level window.  Should be a singleton, but we'll enforce
     this via creating once and then injecting into clients.  Having a constant
@@ -19,7 +28,7 @@ class TopWindow(tk.Tk):
         self.grid()
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
-        self.title("OpenCP")
+        self.title(_text["name"])
         import uuid
         self._uuid = uuid.uuid4()
         
@@ -51,19 +60,20 @@ class MainWindowView(tk.Frame):
         super().__init__()
         self.controller = controller
         self.grid(sticky=util.NSEW)
-        self.columnconfigure(0, weight=1)
-        for i in range(2):
-            self.rowconfigure(i, weight=1)
+        util.stretchy_columns(self, [0])
+        util.stretchy_rows(self, range(5))
         self.createWidgets()
         self.master.protocol("WM_DELETE_WINDOW", self.end)
+        util.centre_window_percentage(self.master, 30, 30)
         
     def createWidgets(self):
-        self.load_csv_button = ttk.Button(self, text="Load CSV File",
-                                          command = self.controller.load_csv)
-        self.load_csv_button.grid(sticky=(tk.N, tk.S, tk.E, tk.W), padx=10, pady=10)
-        
-        self.quit_button = ttk.Button(self, text="Exit", command = self.end)
-        self.quit_button.grid(sticky=(tk.N, tk.S, tk.E, tk.W), padx=10, pady=10)
+        for name, cmd in [(_text["load"], self.controller.load_csv),
+                        (_text["ss"], None),
+                        (_text["exp"], None),
+                        (_text["about"], None),
+                        (_text["exit"], self.end)
+                        ]:
+            ttk.Button(self, text=name, command=cmd).grid(sticky=util.NSEW, padx=10, pady=3)
 
     def end(self):
         self.destroy()

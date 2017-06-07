@@ -44,13 +44,13 @@ def stretchy_columns(window, columns):
     for i in columns:
         window.columnconfigure(i, weight=1)
 
-def stretchy_rows(window, columns):
+def stretchy_rows(window, rows):
     """Set all the rows to have a "weight" of 1
     
     :param window: Window like object to call rowconfigure on
-    :param columns: Iterable of rows to set
+    :param rows: Iterable of rows to set
     """
-    for i in columns:
+    for i in rows:
         window.rowconfigure(i, weight=1)
 
 class Validator():
@@ -189,6 +189,7 @@ class TextMeasurer():
         return max(self._measure_one(t) for t in text)
 
 
+# TODO: See if https://stackoverflow.com/questions/28541381 works on linux at all...??
 class ModalWindow(tk.Toplevel):
     """A simple modal window abstract base class.
     
@@ -204,6 +205,7 @@ class ModalWindow(tk.Toplevel):
         self.grab_set()
         self.resizable(width=False, height=False)
         self.add_widgets()
+        self.protocol("WM_DELETE_WINDOW", self.cancel)
 
     def set_size(self, width, height):
         """Set the size of the main window, and centre on the screen."""
@@ -235,3 +237,6 @@ class ModalWindow(tk.Toplevel):
         """Override to add widgets."""
         raise NotImplementedError()
 
+    def cancel(self):
+        """Override to do something extract on closing the window."""
+        self.destroy()

@@ -8,6 +8,7 @@ The controller of the "import data" dialog.
 from . import import_file_model
 from . import process_file
 import open_cp.gui.tk.import_file_view as import_file_view
+import open_cp.gui.analysis as analysis
 from open_cp.gui import locator
 import csv
 import array
@@ -27,8 +28,8 @@ class ImportFile():
         self.view = import_file_view.ImportFileView(self.model, self)
         self.view.wait_window(self.view)
         if self.okay:
-            print("WOULD NOW GO TO NEXT STAGE")
-            
+            self.view.destroy()
+            analysis.Analysis().run()
         
     def _load_file(self):
         self.view = import_file_view.LoadFileProgress()
@@ -94,7 +95,7 @@ class ImportFile():
     def contin(self):
         processor = self.model.load_full_dataset(self.time_format,
                 self.datetime_field, self.xcoord_field, self.ycoord_field)
-        code = process_file.ProcessFile(self._filename, processor, self.view).run()
+        code = process_file.ProcessFile(self._filename, self.model.rowcount, processor, self.view).run()
         if code is None:
             return
         self.okay = code
