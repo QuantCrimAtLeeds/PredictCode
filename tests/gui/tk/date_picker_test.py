@@ -1,5 +1,6 @@
 import pytest
 import unittest.mock as mock
+import datetime
 
 import open_cp.gui.tk.date_picker as date_picker
 
@@ -53,7 +54,6 @@ def test_month_year(dp):
         dp.month_year = (13, 1982)
 
 def test_set_selected(dp):
-    import datetime
     d = datetime.date.today()
     assert d == dp.selected_date
 
@@ -64,3 +64,15 @@ def test_set_selected(dp):
     with pytest.raises(ValueError):
         dp.selected_date = 5        
         
+def test_command(dp):
+    cmd = mock.MagicMock()
+    dp.command = cmd
+
+    d = datetime.date(year=2011, month=5, day=23)
+    dp.selected_date = d
+    cmd.assert_called_once_with(d)
+
+def test_set_colour(dp):
+    dp.selected_colour = "#aa66ff"
+    assert dp.selected_colour == "#aa66ff"
+    dp._view.make_date_grid.assert_called_once_with()

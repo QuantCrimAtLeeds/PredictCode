@@ -3,9 +3,8 @@
 
 # GUI
 
-- Date picker
 - Select time range
+- Select crime type(s) to use
 - Session saving/loading
-   - Should better encapsulate the file data (filename, coord type, scale factor, fields etc.) into an object
-- Quite button
+- Quit button
 - Load new file button

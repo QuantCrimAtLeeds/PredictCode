@@ -49,7 +49,12 @@ _text = {
     "feet_tt" : "The input data is in feet (12 inches)",
     "proj_con_tt" : ("Specify a custom value.  The coordinates will be multiplied by this value to convert to meters.  " +
                      "For example, if the input data is in kilometers, enter '1000' here."),
-    "error_tt" : "A message describing the current problem when trying to process the input data, along with a hint as to how to fix the problem."
+    "error_tt" : "A message describing the current problem when trying to process the input data, along with a hint as to how to fix the problem.",
+    "main_ct" : "Main crime type field:",
+    "2nd_ct" : "Secondary crime type field:",
+    "main_tt" : "Optionally, select the field which describes the crime type.",
+    "2nd_tt" : "Optionally, select a second field which describes the crime sub-type.",
+    "crime_type" : "Crime type "
 }
 
 _COORD_FORMAT = "{:0.2f}"
@@ -133,6 +138,10 @@ class ImportFileView(tk.Frame):
             self.controller.notify_xcoord_field(self.xcoord_field)
         elif our_index == 2:
             self.controller.notify_ycoord_field(self.ycoord_field)
+        elif our_index == 3:
+            self.controller.notify_crime_field(0, self.main_crime_field)
+        elif our_index == 4:
+            self.controller.notify_crime_field(1, self.second_crime_field)
         else:
             raise ValueError()
 
@@ -141,12 +150,9 @@ class ImportFileView(tk.Frame):
         for r, t in enumerate(_text["headings"]):
             label = ttk.Label(parent, text=t)
             label.grid(row=r, column=0, sticky=tk.W, padx=5, pady=5)
-        timestamp_header = tk.StringVar()
-        xcoord_header = tk.StringVar()
-        ycoord_header = tk.StringVar()
         self._widget_selections = []
-        for r, (t, tttext) in enumerate(zip([timestamp_header, xcoord_header, ycoord_header], _text["headers_tt"])):
-            cbox = ttk.Combobox(parent, height=5, state="readonly", textvariable=t)
+        for r, tttext in enumerate(_text["headers_tt"]):
+            cbox = ttk.Combobox(parent, height=5, state="readonly")
             cbox["values"] = self.model.header
             cbox.bind("<<ComboboxSelected>>", functools.partial(self._widget_changed, our_index=r))
             self._widget_selections.append(None)
@@ -172,6 +178,19 @@ class ImportFileView(tk.Frame):
         self._error_message = ttk.Label(frame, text="", wraplength=250)
         self._error_message.grid(row=0, column=0, sticky=util.NSEW)
         util.auto_wrap_label(self._error_message, 5)
+
+        frame = tk.Frame(parent)
+        frame.grid(row=4, column=0, columnspan=3, sticky=tk.NSEW)
+        options = ["<<None>>"] + list(self.model.header)
+        for i, (tt, tttext) in enumerate(zip([_text["main_ct"], _text["2nd_ct"]],
+                    [_text["main_tt"], _text["2nd_tt"]])):
+            ttk.Label(frame, text=tt).grid(row=0, column=i+i, sticky=tk.E, padx=5, pady=5)
+            cbox = ttk.Combobox(frame, height=5, state="readonly")
+            cbox["values"] = options
+            cbox.bind("<<ComboboxSelected>>", functools.partial(self._widget_changed, our_index=i+3))
+            cbox.grid(row=0, column=i+i+1, sticky=tk.W, padx=5)
+            self._widget_selections.append(None)
+            tooltips.ToolTipYellow(cbox, tttext)
 
     def _time_format_changed(self):
         self.controller.notify_time_format(self.time_format)
@@ -272,6 +291,7 @@ class ImportFileView(tk.Frame):
         self.controller.cancel()
         
     def new_parse_data(self):
+        current_num_columns = self.processed.column_count
         new_data = (self.processed.row_count == 0)
         if not new_data:
             self.processed.remove_rows()
@@ -279,8 +299,7 @@ class ImportFileView(tk.Frame):
         if data is None:
             self.processed.height = 2
         else:
-            timestamps, xcoords, ycoords = data
-            for i, ts in enumerate(timestamps):
+            for i, ts in enumerate(data[0]):
                 self.processed.add_row()
                 self.processed.set_entry(i, 0, ts.strftime(_TIME_FORMAT))
             
@@ -288,15 +307,35 @@ class ImportFileView(tk.Frame):
                 fmt = _LONLAT_FORMAT
             else:
                 fmt = _COORD_FORMAT
-            for i, (x, y) in enumerate(zip(xcoords, ycoords)):
+            for i, (x, y) in enumerate(zip(data[1], data[2])):
                 self.processed.set_entry(i, 1, fmt.format(x))
                 self.processed.set_entry(i, 2, fmt.format(y))
-            if new_data:
+
+            num_crime_type_cols = 0
+            if len(data[3]) > 0:
+                num_crime_type_cols = len(data[3][0])
+                if 3 + num_crime_type_cols != current_num_columns:
+                    cols = list(_text["out_cols"])
+                    for i in range(num_crime_type_cols):
+                        cols.append(_text["crime_type"] + str(i + 1))
+                    self.processed.set_columns(cols)
+                for row, ctypes in enumerate(data[3]):
+                    for col, t in enumerate(ctypes):
+                        self.processed.set_entry(row, col + 3, str(t))
+            else:
+                if current_num_columns != 3:
+                    self.processed.set_columns(_text["out_cols"])
+
+            if new_data or current_num_columns != 3 + num_crime_type_cols:
                 measurer = util.TextMeasurer()
-                for c, source in enumerate([timestamps, xcoords, ycoords]):
+                for c, source in enumerate(data[:3]):
                     width = measurer.measure(source)
                     self.processed.set_column_width(c, width)
-            self.processed.height = len(timestamps)
+                if num_crime_type_cols > 0:
+                    for c in range(num_crime_type_cols):
+                        width = measurer.measure( x[c] for x in data[3] )
+                        self.processed.set_column_width(c + 3, width)
+            self.processed.height = len(data[0])
 
     def allow_continue(self, allow):
         """Should we allow the continue button to be pressed?"""
@@ -342,6 +381,22 @@ class ImportFileView(tk.Frame):
     def ycoord_field(self):
         """Which field has the user selected for the Y coord?  Maybe `None`."""
         return self._widget_selections[2]
+
+    @property
+    def main_crime_field(self):
+        """Which field has the user selected for the main crime type?  -1 == None"""
+        sel = self._widget_selections[3]
+        if sel is None:
+            sel = 0
+        return sel - 1
+
+    @property
+    def second_crime_field(self):
+        """Which field has the user selected for the secondary crime type?  -1 == None"""
+        sel = self._widget_selections[4]
+        if sel is None:
+            sel = 0
+        return sel - 1
 
     def set_error(self, error):
         self._error_message["text"] = error

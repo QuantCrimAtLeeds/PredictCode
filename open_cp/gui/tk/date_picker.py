@@ -16,7 +16,20 @@ import open_cp.gui.tk.util as util
 import datetime
 
 class DatePicker():
+    """A implementation of the classic "date picker" widget.  The underlying
+    widget, accessible as a property, is a :class:`tk.Frame`.  All the
+    sub-widgets will scale with the size of this frame.
+
+    Various properties can be changed to change the styling of the widget.
+
+    The selected date can be retrieved from :attr:`selected_date` (this
+    property can also be set).   Set the :attr:`command` to get a callback
+    when the selection changes.
+
+    :param parent: The parent `tk` widget of the frame.
+    """
     def __init__(self, parent=None):
+        self._command = None
         self._first_day = "Mon"
         now = datetime.date.today()
         self._month_year = (now.month, now.year)
@@ -31,6 +44,17 @@ class DatePicker():
             raise ValueError()
         d = datetime.date(year=2017, month=6, day=5+day)
         return d.strftime("%a")
+
+    @property
+    def command(self):
+        """A callable with signature `selected(date)` to be called when a new
+        date is selected.  Here `date` will be a :class:`datetime.date` object.
+        """
+        return self._command
+
+    @command.setter
+    def command(self, value):
+        self._command = value
 
     @property
     def widget(self):
@@ -85,17 +109,36 @@ class DatePicker():
             raise ValueError("Not a valid date")
         self._selected_date = value
         self._view.refresh_month_year()
+        if self._command is not None:
+            self._command(value)
 
     @property
     def selected_colour(self):
         """The colour of the button which indicates the selected date."""
         return self._selected_colour
 
+    @selected_colour.setter
+    def selected_colour(self, value):
+        self._selected_colour = value
+        self._view.make_date_grid()
+
+    def show_selected_date(self):
+        """Add a final row to the widget showing the currently selected date.
+        Will rescale the height of the widget to accommodate the extra row.
+        """
+        self._view.show_date()
+
+    def hide_selected_date(self):
+        """Hide the selected date.  Will rescale the height of the widget to
+        take account of the now missing bottom row."""
+        self._view.hide_date()
+
 
 class _DatePickerView(tk.Frame):
     def __init__(self, parent, model):
         super().__init__(parent)
         self._model = model
+        self._show = False
         util.stretchy_columns(self, range(7))
         util.stretchy_rows(self, range(7))
         self._add_widgets()
@@ -107,6 +150,28 @@ class _DatePickerView(tk.Frame):
         self.grid_propagate(0)
         self["width"] = int(height * 1.3)
         self["height"] = height
+
+    def show_date(self):
+        if not self._show:
+            self._show = True
+            self._selected_label = ttk.Label(self, anchor=tk.CENTER)
+            self._selected_label.grid(row=7, column=0, columnspan=7, sticky=tk.EW)
+            util.stretchy_rows(self, range(8))
+            self._update_date()
+            self["height"] = int(self["height"] * 8/7)
+
+    def _update_date(self):
+        if self._show:
+            fmt = "%A %d %B %Y"
+            self._selected_label["text"] = self._model.selected_date.strftime(fmt)
+
+    def hide_date(self):
+        if self._show:
+            self._selected_label.destroy()
+            self._selected_label = None
+            util.stretchy_rows(self, range(7))
+            self["height"] = int(self["height"] * 7/8)
+        self._show = False
 
     def _left(self):
         """Move one month into past."""
@@ -179,14 +244,11 @@ class _DatePickerView(tk.Frame):
             b = self._day_buttons[ self._model.selected_date.day - 1 ]
             b["bg"] = self._model.selected_colour
 
+        self._update_date()
+
     def _date_selected(self, day):
         m, y = self._model.month_year
-        self._model._selected_date = datetime.date(year=y, month=m, day=day)
-        for i, b in enumerate(self._day_buttons):
-            if i + 1 == day:
-                b["bg"] = self._model.selected_colour
-            else:
-                b["bg"] = self._bg_colour
+        self._model.selected_date = datetime.date(year=y, month=m, day=day)
 
     def refresh_month_year(self):
         m, y = self._model.month_year
@@ -205,6 +267,7 @@ class _DatePickerView(tk.Frame):
 
         self._day_buttons = []
         self.refresh_month_year()
+
 
 if __name__ == "__main__":
     root = tk.Tk()
@@ -226,11 +289,24 @@ if __name__ == "__main__":
     def select_tomorrow():
         d = datetime.datetime.now() + datetime.timedelta(days=1)
         dp.selected_date = d
+    def blue():
+        dp.selected_colour = "#6666ff"
+    def green():
+        dp.selected_colour = "#66ff66"
 
     ttk.Button(frame, text="Quit", command=root.quit).grid(row=0, column=0)
     ttk.Button(frame, text="Sunday", command=sunday).grid(row=1, column=0)
     ttk.Button(frame, text="Monday", command=monday).grid(row=1, column=1)
     ttk.Button(frame, text="Jan 2016", command=go_month).grid(row=2, column=0)
     ttk.Button(frame, text="Tomorrow", command=select_tomorrow).grid(row=2, column=1)
+    ttk.Button(frame, text="Blue", command=blue).grid(row=3, column=0)
+    ttk.Button(frame, text="Green", command=green).grid(row=3, column=1)
+    ttk.Button(frame, text="Show", command=dp.show_selected_date).grid(row=4, column=0)
+    ttk.Button(frame, text="Hide", command=dp.hide_selected_date).grid(row=4, column=1)
+    label = ttk.Label(frame)
+    label.grid(row=5, column=0)
+    def selected(d):
+        label["text"] = str(d)
+    dp.command = selected
 
     root.mainloop()

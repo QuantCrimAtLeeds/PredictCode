@@ -17,9 +17,7 @@ import array
 class ImportFile():
     def __init__(self, filename):
         self._filename = filename
-        self.datetime_field = None
-        self.xcoord_field = None
-        self.ycoord_field = None
+        self.parse_settings = import_file_model.ParseSettings()
         self._process_model = None
         pass
     
@@ -29,7 +27,7 @@ class ImportFile():
         self.view.wait_window(self.view)
         if self._process_model is not None:
             model = analysis.Model.init_from_process_file_model(self._filename,
-                self._process_model, self.model.coord_type)
+                    self._process_model)
             analysis.Analysis(model, None).run()
         else:
             # Return control to main window...
@@ -63,32 +61,40 @@ class ImportFile():
         self.view.destroy()
 
     def notify_time_format(self, format_string, initial=False):
-        self.time_format = format_string
+        self.parse_settings.timestamp_format = format_string
         if not initial:
             self._try_parse()
 
     def notify_coord_format(self, coord_format, initial=False):
-        self.model.coord_type = coord_format
+        self.parse_settings.coord_type = coord_format
         if not initial:
             self._try_parse()
 
+    def notify_crime_field(self, order, field):
+        current = self.parse_settings.crime_type_fields
+        while len(current) < order + 1:
+            current.append(-1)
+        current[order] = field
+        self.parse_settings.crime_type_fields = current
+        self._try_parse()
+
     def notify_meters_conversion(self, to_meters, initial=False):
-        self.model.meters_conversion = to_meters
+        self.parse_settings.meters_conversion = to_meters
         if not initial:
             self._try_parse()
 
     def notify_datetime_field(self, field_number, initial=False):
-        self.datetime_field = field_number
+        self.parse_settings.timestamp_field = field_number
         if not initial:
             self._try_parse()
 
     def notify_xcoord_field(self, field_number, initial=False):
-        self.xcoord_field = field_number
+        self.parse_settings.xcoord_field = field_number
         if not initial:
             self._try_parse()
 
     def notify_ycoord_field(self, field_number, initial=False):
-        self.ycoord_field = field_number
+        self.parse_settings.ycoord_field = field_number
         if not initial:
             self._try_parse()
 
@@ -97,10 +103,8 @@ class ImportFile():
         self.okay = False
         
     def contin(self):
-        processor = import_file_model.Model.load_full_dataset(self.time_format,
-                self.datetime_field, self.xcoord_field, self.ycoord_field,
-                self.model.coordinate_scaling)
-        process = process_file.ProcessFile(self._filename, self.model.rowcount, processor, self.view)
+        process = process_file.ProcessFile(self._filename, self.model.rowcount,
+                self.parse_settings, parent_view = self.view)
         code = process.run()
         if code is None:
             return
@@ -109,11 +113,11 @@ class ImportFile():
         self.view.destroy()
 
     def _try_parse(self):
-        error = self.model.try_parse(self.time_format, self.datetime_field,
-            self.xcoord_field, self.ycoord_field)
+        error = self.model.try_parse(self.parse_settings)
         if error is None:
-            self.view.allow_continue(True)
             error = ""
+        if error == "":
+            self.view.allow_continue(True)
         else:
             self.view.allow_continue(False)
         self.view.set_error(error)

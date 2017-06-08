@@ -16,16 +16,22 @@ _text = {
     "processing" : "Processing result",
     "loaded" : "Loaded {} rows of data, out of a possible {} rows.",
     "empty" : "Empty rows",
+    "noempties" : "No empty rows",
     "error" : "Rows with errors",
+    "noerrors" : "No rows with errors",
     "fur_empties" : "And a further {} empty rows",
     "fur_errors" : "And a further {} error rows",
     "continue" : "Continue to analysis",
     "quit" : "Quit to main menu",
-    "back" : "Go back to import options"
+    "back" : "Go back to import options",
+    "ct" : "Crime types",
+    "nullct" : "No crime types imported",
+    "ct1" : "Crime type field {} has {} unique types"
 }
 
 class LoadFullFile(util.ModalWindow):
     def __init__(self, parent, task):
+        print("LoadFullFile parent is", parent)
         super().__init__(parent, _text["loading"])
         self.cancelled = False
         self._task = task
@@ -75,6 +81,8 @@ class DisplayResult(util.ModalWindow):
         if len(self.model.empties) > 5:
             text.append(_text["fur_empties"].format(len(self.model.empties)-5))
         text = "\n".join(text)
+        if len(self.model.empties) == 0:
+            text = _text["noempties"]
         ttk.Label(frame, text=text).grid(sticky=util.NSEW, padx=5, pady=5)
         
         frame = ttk.LabelFrame(self, text=_text["error"])
@@ -83,10 +91,24 @@ class DisplayResult(util.ModalWindow):
         if len(self.model.errors) > 5:
             text.append(_text["fur_errors"].format(len(self.model.errors)-5))
         text = "\n".join(text)
+        if len(self.model.errors) == 0:
+            text = _text["noerrors"]
         ttk.Label(frame, text=text).grid(sticky=util.NSEW, padx=5, pady=5)
         
-        frame = ttk.Frame(self)
+        frame = ttk.LabelFrame(self, text=_text["ct"])
         frame.grid(row=3, column=0, sticky=util.NSEW, padx=5, pady=5)
+        ctypes = self.model.data[3]
+        if len(ctypes[0]) == 0:
+            ttk.Label(frame, text=_text["nullct"]).grid(sticky=util.NSEW, padx=5, pady=5)
+        else:
+            text = []
+            for fnum in range(len(ctypes[0])):
+                count = len(set( x[fnum] for x in ctypes ))
+                text.append( _text["ct1"].format(fnum + 1, count) )
+            ttk.Label(frame, text="\n".join(text)).grid(sticky=util.NSEW, padx=5, pady=5)
+
+        frame = ttk.Frame(self)
+        frame.grid(row=4, column=0, sticky=util.NSEW, padx=5, pady=5)
         ttk.Button(frame, text=_text["continue"], command=self._go).grid(column=0, row=0, padx=5)
         ttk.Button(frame, text=_text["back"], command=self.cancel).grid(column=1, row=0, padx=5)
         ttk.Button(frame, text=_text["quit"], command=self._quit).grid(column=2, row=0, padx=5)

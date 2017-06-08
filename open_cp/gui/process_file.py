@@ -10,11 +10,12 @@ import array
 import open_cp.gui.tk.process_file_view as process_file_view
 import open_cp.gui.locator as locator
 from open_cp.gui.import_file_model import ParseErrorData
+import open_cp.gui.import_file_model as import_file_model
 import open_cp.gui.tk.threads as threads
 from collections import namedtuple
 from . import locator
 
-Model = namedtuple("Model", "errors empties data")
+Model = namedtuple("Model", "errors empties data settings")
 
 
 class ProcessFile():
@@ -28,10 +29,10 @@ class ProcessFile():
       which will yield data back
     :param parent_view: The window from which to construct our modal dialog.
     """
-    def __init__(self, filename, total_rows, processor, parent_view):
+    def __init__(self, filename, total_rows, parse_settings, parent_view):
         self._filename = filename
         self._total_rows = total_rows
-        self._processor = processor
+        self._parse_settings = parse_settings
         self._parent = parent_view
     
     def run(self):
@@ -41,7 +42,7 @@ class ProcessFile():
           `True` means continue,
           `False` means quit to main menu
         """
-        task = LoadTask(self._filename, self._total_rows, self._processor, self)
+        task = LoadTask(self._filename, self._total_rows, self._parse_settings, self)
         locator.get("pool").submit(task)
         self._view = process_file_view.LoadFullFile(self._parent, task)
         self._view.wait_window(self._view)
@@ -60,8 +61,9 @@ class ProcessFile():
             raise ValueError()
         
     def done_process_whole_file(self, value):
-        errors, empties, times, xcs, ycs = value
-        self.model = Model(errors=errors, empties=empties, data=(times, xcs, ycs))
+        errors, empties, times, xcs, ycs, ctypes = value
+        self.model = Model(errors=errors, empties=empties, data=(times, xcs, ycs, ctypes),
+                settings = self._parse_settings)
         self._view.destroy()
 
 
@@ -71,10 +73,10 @@ class LoadTask(threads.OffThreadTask, locator.GuiThreadTask):
     :param parent: The instance of :class:`ProcessFile` to send the result
       back to.
     """
-    def __init__(self, filename, total_rows, processor, parent):
+    def __init__(self, filename, total_rows, parse_settings, parent):
         super().__init__()
         self._filename = filename
-        self._processor = processor
+        self._parse_settings = parse_settings
         self._controller = parent
         self._total_rows = total_rows
         self._view = None
@@ -106,13 +108,14 @@ class LoadTask(threads.OffThreadTask, locator.GuiThreadTask):
             errors.append("Unexpected exception: {}/{}".format(type(ex), str(ex)))
 
     def __call__(self):
+        processor = import_file_model.Model.load_full_dataset(self._parse_settings)
         reader = self._yield_rows()
         header = next(reader)
-        next(self._processor)
-        times = []
+        times, ctypes = [], []
         xcs, ycs = array.array("d"), array.array("d")
         errors, empties = [], []
         row_count = 0
+        next(processor)
         try:
             for row in reader:
                 if self.cancelled:
@@ -120,17 +123,19 @@ class LoadTask(threads.OffThreadTask, locator.GuiThreadTask):
                 row_count += 1
                 if row_count % 1000 == 0 and self._view is not None:
                     self.submit_gui_task(lambda : self._view.notify(row_count, self._total_rows))
-                data = self._processor.send(row)
+                data = processor.send(row)
                 if isinstance(data[1], Exception):
                     self._handle_exception(*data, errors, empties)
                 else:
-                    t,x,y = data
+                    
+                    t,x,y,*ct = data
                     times.append(t)
                     xcs.append(x)
                     ycs.append(y)
+                    ctypes.append(ct)
         finally:
-            self._processor.close()
-        return errors, empties, times, xcs, ycs
+            processor.close()
+        return errors, empties, times, xcs, ycs, ctypes
 
     def set_view(self, view):
         self._view = view

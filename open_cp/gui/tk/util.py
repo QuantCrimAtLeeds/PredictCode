@@ -135,7 +135,7 @@ class TextMeasurer():
     """
     def __init__(self, font=None, scale=1.1, min=30, max=200):
         if font is None:
-            font = "TkTextFont"
+            font = "TkDefaultFont"#"TkTextFont"
         if isinstance(font, str):
             font = tkfont.nametofont(font)
         self._font = font
@@ -171,7 +171,7 @@ class TextMeasurer():
         self._maximum = value
         
     def _measure_one(self, text):
-        width = self._font.measure(text)
+        width = self._font.measure(str(text))
         width = int(width * self._scale)
         width = min(self._maximum, max(self._minimum, width))
         return width

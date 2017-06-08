@@ -22,20 +22,22 @@ class Model():
     """The model
 
     :param filename: Name of the file we loaded
-    :param data: A triple `(timestamps, xcoords, ycoords)`
+    :param data: A triple `(timestamps, xcoords, ycoords, crime_types)`
+    :param parse_settings: An instance of :class:`import_file_model.ParseSettings`
     """
-    def __init__(self, filename, data):
+    def __init__(self, filename, data, parse_settings):
         self.filename = filename
         self.times = data[0]
         self.xcoords = data[1]
         self.ycoords = data[2]
+        self.crime_types = data[3]
+        self._parse_settings = parse_settings
 
     @staticmethod
-    def init_from_process_file_model(filename, model, coord_type):
-        new_model = Model(filename, model.data)
+    def init_from_process_file_model(filename, model):
+        new_model = Model(filename, model.data, model.settings)
         new_model.num_empty_rows = len(model.empties)
         new_model.num_error_rows = len(model.errors)
-        new_model.coord_type = coord_type
         return new_model
 
     @property
@@ -60,9 +62,5 @@ class Model():
 
     @property
     def coord_type(self):
-        return self._coord_type
-    
-    @coord_type.setter
-    def coord_type(self, value):
-        self._coord_type = value
+        return self._parse_settings.coord_type
     

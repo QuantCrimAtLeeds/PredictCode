@@ -119,7 +119,8 @@ class SimpleSheet():
         self._tree.heading(column, text=name, command=callback)
         
     def set_columns(self, columns):
-        """Set the column names to given iterable, and drop all callbacks.
+        """Set the column names to given iterable.  Note that this will drop
+        all callbacks, and reset column widths to the default.
         
         :param columns: Iterable of strings giving the column names.
         """
@@ -128,6 +129,11 @@ class SimpleSheet():
         for i, name in enumerate(self._column_names):
             self._tree.heading(i, text=name)
             self._tree.column(i, stretch=False)
+
+    @property
+    def column_count(self):
+        """The number of columns in the sheet."""
+        return len(self._tree["columns"])
 
     def set_column_width(self, column, width):
         """Set the width of the column

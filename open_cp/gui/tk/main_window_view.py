@@ -29,8 +29,6 @@ class TopWindow(tk.Tk):
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
         self.title(_text["name"])
-        import uuid
-        self._uuid = uuid.uuid4()
         
     def resize(self, width_per, height_per):
         util.centre_window_percentage(self, width_per, height_per)
@@ -38,12 +36,6 @@ class TopWindow(tk.Tk):
     def end(self):
         self.destroy()
         self.quit()
-
-    def __repr__(self):
-        return "TopWindow(uuid={})".format(self._uuid)
-
-    def __str__(self):
-        return self.__repr__()
 
     def report_callback_exception(self, *args):
         """Make the application exit with a log and dump of stack trace."""
