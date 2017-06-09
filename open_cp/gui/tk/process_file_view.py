@@ -31,7 +31,6 @@ _text = {
 
 class LoadFullFile(util.ModalWindow):
     def __init__(self, parent, task):
-        print("LoadFullFile parent is", parent)
         super().__init__(parent, _text["loading"])
         self.cancelled = False
         self._task = task

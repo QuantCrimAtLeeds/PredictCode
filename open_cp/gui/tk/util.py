@@ -7,6 +7,7 @@ Various utility routines for working with `tkinter`.
 
 import tkinter as tk
 import tkinter.font as tkfont
+import datetime as _datetime
 
 NSEW = tk.N + tk.S + tk.E + tk.W
 
@@ -116,6 +117,24 @@ class FloatValidator(Validator):
         return True
 
 
+class DateTimeValidator(Validator):
+    """A :class:`Validator` which only accepts values which parse using the
+    given `strptime` string.
+
+    :param format: The `strptime` format string.
+    """
+    def __init__(self, widget, variable, format, callback=None):
+        super().__init__(widget, variable, callback)
+        self._format = format
+
+    def validate(self, value):
+        try:
+            _datetime.datetime.strptime(value, self._format)
+        except:
+            return False
+        return True
+
+
 def auto_wrap_label(label, padding=0):
     """Add a binding to a :class:`tk.Label` or :class:`ttk.Label` object so
     that when the label is resized, the text wrap length is automatically
@@ -214,11 +233,24 @@ class ModalWindow(tk.Toplevel):
         # If we're being minimised then also minimise the parent!
         self._parent.master.iconify()
 
-    def _flash(self, event):
+    def _over_self(self, event):
         over_win = self.winfo_containing(event.x_root, event.y_root)
-        if over_win != self:
+        # Hopefully, true when the over_win is a child of us
+        return str(over_win).startswith(str(self))
+
+    def _flash(self, event):
+        if not self._over_self(event):
             # Drag the focus back to us after a brief pause.
             self.after(100, lambda : self.focus_force())
+
+    def _flash_close(self, event):
+        if not self._over_self(event):
+            self.cancel()
+
+    def close_on_click_away(self):
+        """Change behaviour so that the window is `destroy`ed when the user
+        clicks off it."""
+        self.bind("<Button-1>", self._flash_close)
 
     def set_size(self, width, height):
         """Set the size of the main window, and centre on the screen."""

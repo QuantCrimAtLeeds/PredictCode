@@ -269,6 +269,66 @@ class _DatePickerView(tk.Frame):
         self.refresh_month_year()
 
 
+class PopUpDatePickerView(util.ModalWindow):
+    """View for PopUpDatePicker"""
+    def __init__(self, parent):
+        super().__init__(parent, "")
+        self.wm_overrideredirect(True)
+        x, y = parent.winfo_pointerx() + 15, parent.winfo_pointery() + 5
+        self.wm_geometry("+{}+{}".format(x, y))
+        self.close_on_click_away()
+
+    def add_widgets(self):
+        frame = tk.Frame(self, bd=2, relief="ridge")
+        frame.grid(sticky=tk.NSEW)
+        self._dp = DatePicker(frame)
+        self._dp.widget.grid(sticky=tk.NSEW)
+
+    @property
+    def date_picker(self):
+        return self._dp
+
+
+class PopUpDatePicker():
+    """Display a date picker in a modal, popup dialog which closes immediately
+    the user clicks away, or selects a date.
+
+    :param parent: The parent window to be modal from
+    :param widget: The widget to bind to: clicking in this widget will open
+      the pop-up
+    :param source_callable: A callable object which returns a `date` object
+      which is the date the pop-up should initially display
+    :param result_callable: A callable with signature `result_callable(date)`
+      which is called if the user selects a date.  If the user clicks away,
+      this is not called.
+    """
+    def __init__(self, parent, widget, source_callable, result_callable):
+        self._window = None
+        self._parent = parent
+        self._widget = widget
+        self._widget.bind("<Button-1>", self._show)
+        self._source = source_callable
+        self._sink = result_callable
+
+    def _cmd(self, date):
+        self._date = date
+        self._dp_widget.destroy()
+
+    def _show(self, e):
+        self._dp_widget = PopUpDatePickerView(self._parent)
+        self._date = None
+        date = self._source()
+        self._dp_widget.date_picker.selected_date = date
+        self._dp_widget.date_picker.month_year =(date.month, date.year)
+        self._dp_widget.date_picker.command = self._cmd
+        self._dp_widget.wait_window(self._dp_widget)
+        if self._date is not None:
+            self._sink(self._date)
+        # Seems that I need to do this to stop the keyboard focus being lost
+        # forever to the now hidden top window!
+        self._widget.focus_force()
+
+
 if __name__ == "__main__":
     root = tk.Tk()
     util.stretchy_columns(root, [0])
