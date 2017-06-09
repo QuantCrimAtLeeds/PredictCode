@@ -7,14 +7,19 @@ Ah, for a Dependency Injection framework...
 
 from open_cp.gui.tk import threads
 from threading import RLock
+import open_cp.gui.settings as settings
 
 def _make_pool(root=None):
     if root is None:
         raise ValueError("Must be initialised with a root window.")
     _CACHE["pool"] = threads.Pool(root)
 
+def _make_settings():
+    _CACHE["settings"] = settings.Settings()
+
 _LOOKUP = {
-    "pool": _make_pool
+    "pool": _make_pool,
+    "settings" : _make_settings
     }
 
 _CACHE = dict()

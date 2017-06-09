@@ -67,6 +67,17 @@ class ProcessFile():
         self._view.destroy()
 
 
+def rows_in_csv(filename):
+    """Helper function to quickly count the number of rows in the passed csv
+    file."""
+    with open(filename, encoding="UTF8", mode="rt") as f:
+        reader = csv.reader(f)
+        count = 0
+        for _ in reader:
+            count += 1
+        return count - 1
+
+
 class LoadTask(threads.OffThreadTask, locator.GuiThreadTask):
     """Actually load the data.  Parameters as for :class:`ProcessFile`
 

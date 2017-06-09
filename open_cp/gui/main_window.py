@@ -6,10 +6,10 @@ The main menu which is displayed at the start.
 """
 
 from .tk import main_window_view as main_window_view
-import tkinter.filedialog
 from . import import_file
 import logging
 import tkinter as _tk
+import open_cp.gui.tk.util as util
 
 class MainWindow():
     def __init__(self, root):
@@ -32,10 +32,10 @@ class MainWindow():
         self.view = main_window_view.MainWindowView(self)
         
     def load_csv(self):
-        filename = tkinter.filedialog.askopenfilename(defaultextension=".csv",
+        filename = util.ask_open_filename(defaultextension=".csv",
             filetypes = [("csv", "*.csv")],
             title="Please select a CSV file to open")
-        if filename is None or filename == "" or len(filename) == 0:
+        if filename is None:
             return
         self.view.destroy()
         import_file.ImportFile(filename).run()

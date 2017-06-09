@@ -45,6 +45,12 @@ class ParseSettings():
     def meters_conversion(self, value):
         self._proj_convert = value
 
+    @staticmethod
+    def feet():
+        """Conversion from feet to meters, see
+        https://en.wikipedia.org/wiki/Foot_(unit)"""
+        return 0.3048
+
     @property
     def timestamp_format(self):
         """The format to use to decode the timestamp.  Either "" to attempt

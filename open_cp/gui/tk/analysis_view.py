@@ -8,6 +8,7 @@ The view for the analysis panel.
 import tkinter as tk
 import tkinter.ttk as ttk
 import tkinter.messagebox
+import tkinter.filedialog
 import datetime
 from . import util
 from .. import funcs
@@ -47,7 +48,18 @@ _text = {
     "start_ass_tt" : "The start date/time of the 'assessment' data.",
     "end_ass_tt" : "The end date/time of the 'assessment' data.",
     "train_count" : "Events in training range: {}",
-    "ass_count" : "Events in assessment range: {}"
+    "ass_count" : "Events in assessment range: {}",
+    "sel_ct" : "Select crime types",
+    "no_types" : "No crime types",
+    "all" : "All",
+    "clear" : "Clear",
+    "ct_count" : "Events of selected crime type(s): {}",
+    "tc" : "Selected data",
+    "tcc" : "Overall training data: {}\nOverall assessment data: {}",
+    "loadnew" : "Load new input file?",
+    "ln_msg" : ("Loading a new input file will replace the data with new data.  " +
+                "The new file must be in the same format as the current file!"),
+    "ln_pick_msg" : "Select a new CSV file"
 }
 
 class AnalysisView(tk.Frame):
@@ -57,7 +69,7 @@ class AnalysisView(tk.Frame):
         self._controller = controller
         self.grid(sticky=util.NSEW)
         self.master.protocol("WM_DELETE_WINDOW", self.cancel)
-        util.centre_window_percentage(self.master, 70, 50)
+        util.centre_window_percentage(self.master, 70, 80)
         self.add_widgets()
 
     def _info_frame(self, parent):
@@ -75,24 +87,23 @@ class AnalysisView(tk.Frame):
         return info
 
     def _plot_frame(self, parent):
-        frame = ttk.LabelFrame(parent, text=_text["plot"])
-        #canvas = tk.Canvas(frame)
-        #canvas.grid()
-        #canvas["width"] = 300
-        #canvas["height"] = 300
-        #canvas.create_text(150, 150, text="TODO: Plot of points here")
-        fig, ax = mtp.plt.subplots()
-        ax.scatter(self._model.xcoords, self._model.ycoords, marker="+", color="black", alpha=0.2)
-        fig.set_size_inches(3, 3)
-        fig.tight_layout()
-        mtp.figure_to_canvas(fig, frame).grid()
-        return frame
+        self._plot_widget = None
+        self._plot_frame = ttk.LabelFrame(parent, text=_text["plot"])
+        return self._plot_frame
 
     def _data_buttons(self, parent):
         frame = ttk.Frame(parent)
-        ttk.Button(frame, text=_text["new_input"]).grid(row=0, column=0, sticky=tk.NSEW, padx=5, pady=2)
+        ttk.Button(frame, text=_text["new_input"], command=self._new_input_file
+                ).grid(row=0, column=0, sticky=tk.NSEW, padx=5, pady=2)
         ttk.Button(frame, text=_text["with_basemap"]).grid(row=1, column=0, sticky=tk.NSEW, padx=5, pady=2)
         return frame
+
+    def _new_input_file(self):
+        if tkinter.messagebox.askokcancel(_text["loadnew"], _text["ln_msg"], default=tkinter.messagebox.CANCEL):
+            filename = util.ask_open_filename(defaultextension=".csv",
+                filetypes=[("CSV", "*.csv")], title=_text["ln_pick_msg"])
+            if filename is not None:
+                self._controller.new_input_file(filename)
 
     def _time_range_select(self, parent):
         frame = ttk.LabelFrame(parent, text=_text["time_select"])
@@ -172,6 +183,59 @@ class AnalysisView(tk.Frame):
         c.grid(row=1, column=0)
         c["height"] = 150
 
+    def _crime_types_all(self, index):
+        box = self._crime_type_boxes[index]
+        box.current_selection = range(box.size)
+
+    def _crime_types_none(self, index):
+        box = self._crime_type_boxes[index]
+        box.current_selection = []
+
+    def _add_crime_types_box(self, frame, row):
+        index = len(self._crime_type_boxes)
+        box = util.ListBox(frame, width=25, height=4,
+                command=lambda s : self._controller.notify_crime_type_selection(s, level=index))
+        self._crime_type_boxes.append( box )
+        box.grid(row=row, column=0, rowspan=2, padx=2, pady=2, sticky=tk.NSEW)
+        b = ttk.Button(frame, text=_text["all"], command=lambda : self._crime_types_all(index))
+        b.grid(row=row, column=1, padx=3, pady=3, sticky=tk.EW)
+        b = ttk.Button(frame, text=_text["clear"], command=lambda : self._crime_types_none(index))
+        b.grid(row=row+1, column=1, padx=3, pady=3, sticky=tk.EW)
+
+    def _crime_types_level_1(self, frame):
+        self._crime_type_boxes = []
+        self._add_crime_types_box(frame, 0)
+        box = self._crime_type_boxes[0]
+        box.grid(row=0, column=0, rowspan=2, padx=2, pady=2, sticky=tk.NSEW)
+        cts = list(self._model.unique_crime_types(None))
+        cts.sort()
+        box.add_rows(cts)
+
+    def _crime_types_level_2(self, frame):
+        self._add_crime_types_box(frame, 2)
+
+    def _crime_type_select(self, parent):
+        frame = ttk.LabelFrame(parent, text=_text["sel_ct"])
+        if self._model.num_crime_type_levels == 0:
+            ttk.Label(frame, _text["no_types"]).grid()
+        if self._model.num_crime_type_levels >= 1:
+            self._crime_types_level_1(frame)
+        if self._model.num_crime_type_levels == 2:
+            self._crime_types_level_2(frame)
+        if self._model.num_crime_type_levels > 2:
+            raise NotImplementedError()
+
+        self._crime_type_count_label = ttk.Label(frame)
+        self._crime_type_count_label.grid(row=10, column=0, columnspan=2, padx=3, pady=3, sticky=tk.W)
+
+        return frame
+
+    def _total_counts(self, parent):
+        frame = ttk.LabelFrame(parent, text=_text["tc"])
+        self._total_count_label = ttk.Label(frame)
+        self._total_count_label.grid()
+        return frame
+
     def add_widgets(self):
         # TODO: Maybe make column 1 fixed size??
         #self.columnconfigure(0, weight=2)
@@ -186,8 +250,10 @@ class AnalysisView(tk.Frame):
         self._data_buttons(sub_frame).grid(row=0, column=1)
         sub_frame = ttk.Frame(frame)
         sub_frame.grid(row=1, column=0, sticky=tk.N + tk.EW)
-        self._plot_frame(sub_frame).grid(row=0, column=0, sticky=tk.N)
-        self._time_range_select(sub_frame).grid(row=0, column=1, sticky=tk.N)
+        self._plot_frame(sub_frame).grid(row=0, column=0, sticky=tk.NSEW, padx=1)
+        self._time_range_select(sub_frame).grid(row=0, column=1, sticky=tk.NSEW, padx=1)
+        self._crime_type_select(sub_frame).grid(row=1, column=1, sticky=tk.NSEW, padx=1)
+        self._total_counts(sub_frame).grid(row=1, column=0, sticky=tk.NSEW, padx=1)
 
         frame = ttk.LabelFrame(self, text=_text["tasks"])
         frame.grid(row=0, column=1, sticky=util.NSEW, padx=3, pady=3)
@@ -197,6 +263,16 @@ class AnalysisView(tk.Frame):
         if tkinter.messagebox.askokcancel("Quit to main menu?",
                 "Quit to the main menu?  Settings will be lost if not saved."):
             self.destroy()
+
+    def refresh_plot(self):
+        fig, ax = mtp.plt.subplots()
+        ax.scatter(self._model.xcoords, self._model.ycoords, marker="+", color="black", alpha=0.2)
+        fig.set_size_inches(3, 3)
+        fig.tight_layout()
+        if self._plot_widget is not None:
+            self._plot_widget.destroy()
+        self._plot_widget = mtp.figure_to_canvas(fig, self._plot_frame)
+        self._plot_widget.grid()
 
     def _datetime_from(self, date, time):
         return datetime.datetime(date.year, date.month, date.day, time.hour, time.minute)
@@ -245,9 +321,35 @@ class AnalysisView(tk.Frame):
         self.assess_end_date_entry.date = dt
         self.assess_end_time_entry.time = dt
 
+    def crime_type_selections(self, level):
+        if level < 0 or level >= self._model.num_crime_type_levels:
+            raise ValueError()
+        return self._crime_type_boxes[level].current_selection
+
+    def crime_type_selection_text(self, level, index):
+        if level < 0 or level >= self._model.num_crime_type_levels:
+            raise ValueError()
+        return self._crime_type_boxes[level].text(index)
+
+    def set_crime_type_selections(self, selections, level):
+        self._crime_type_boxes[level].current_selection = selections
+
+    def set_crime_type_options(self, level, options):
+        if level != 1:
+            raise ValueError()
+        self._crime_type_boxes[level].clear_rows()
+        self._crime_type_boxes[level].add_rows(options)
+        self._crime_type_boxes[level].current_selection = []
+
     def update_time_counts(self, train_count, assess_count):
         self.train_count_label["text"] = _text["train_count"].format(train_count)
         self.assess_count_label["text"] = _text["ass_count"].format(assess_count)
+
+    def update_crime_type_count(self, count):
+        self._crime_type_count_label["text"] = _text["ct_count"].format(count)
+
+    def update_total_count(self, train_count, assess_count):
+        self._total_count_label["text"] = _text["tcc"].format(train_count, assess_count)
 
 
 def _find_command(kwargs):

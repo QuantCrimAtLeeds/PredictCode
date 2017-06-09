@@ -7,6 +7,7 @@ Various utility routines for working with `tkinter`.
 
 import tkinter as tk
 import tkinter.font as tkfont
+import tkinter.filedialog
 import datetime as _datetime
 
 NSEW = tk.N + tk.S + tk.E + tk.W
@@ -53,6 +54,15 @@ def stretchy_rows(window, rows):
     """
     for i in rows:
         window.rowconfigure(i, weight=1)
+
+def ask_open_filename(*args, **kwargs):
+    """As :func:`tkinter.filedialog.askopenfilename` but filters the returned
+    file to be valid or `None`."""
+    filename = tkinter.filedialog.askopenfilename(*args, **kwargs)
+    if filename is None or filename == "" or len(filename) == 0:
+        return None
+    return filename
+
 
 class Validator():
     """Provide some user-friendly way to validate the contents of a
@@ -285,3 +295,81 @@ class ModalWindow(tk.Toplevel):
     def cancel(self):
         """Override to do something extra on closing the window."""
         self.destroy()
+
+
+class ListBox(tk.Frame):
+    """Friendly version of `tk.ListBox` with vertical scrollbar, sensible
+    default options, and a callback on changes.
+
+    Common options are:
+      - "width" / "height" : In characters/line respectively
+      - "command" : Callback with signature `command(selection)`
+    """
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent)
+        args = {"selectmode" : tk.MULTIPLE,
+            "exportselection" : 0,
+            "activestyle" : "dotbox"}
+        args.update(kwargs)
+        if "command" in args:
+            self._command = args["command"]
+            del args["command"]
+        else:
+            self._command = None
+        self._box = tk.Listbox(self, **args)
+        self._box.grid(row=0, column=0, sticky=tk.NSEW)
+        stretchy_columns(self, [0])
+        self._yscroll = tk.Scrollbar(self, orient=tk.VERTICAL)
+        self._yscroll.grid(row=0, column=1, sticky=tk.NS + tk.E)
+        self._box["yscrollcommand"] = self._yscroll.set
+        self._yscroll["command"] = self._box.yview
+        self._closed = False
+        if self._command is not None:
+            self._old_selection = []
+            self._poll()
+
+    def clear_rows(self):
+        self._box.delete(0, self.size - 1)
+
+    def add_rows(self, rows):
+        """Add one or more rows to the end of the list.
+
+        :param rows: Either a string, or an iterable of strings.
+        """
+        try:
+            for r in rows:
+                self._box.insert(tk.END, r)
+        except:
+            self._box.insert(tk.END, rows)
+
+    @property
+    def current_selection(self):
+        """A list of the selected rows, with 0 as the first row."""
+        return list(self._box.curselection())
+
+    @current_selection.setter
+    def current_selection(self, new_selection):
+        self._box.selection_clear(0, self.size - 1)
+        for r in new_selection:
+            self._box.selection_set(r)
+
+    @property
+    def size(self):
+        return self._box.size()
+
+    def text(self, index):
+        """The text of the entry at the index."""
+        return self._box.get(index)
+
+    def _poll(self):
+        if self._closed:
+            return
+        sel = self.current_selection
+        if sel != self._old_selection:
+            self._old_selection = sel
+            self._command(sel)
+        self.after(250, self._poll)
+    
+    def destroy(self):
+        self._closed = True
+        super().destroy()

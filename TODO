@@ -3,6 +3,5 @@
 
 # GUI
 
-- Select crime type(s) to use
 - Session saving/loading
-- Load new file button
+   - New dialog box to display virtual file names, delete them, select etc.
