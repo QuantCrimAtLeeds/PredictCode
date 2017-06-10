@@ -3,6 +3,7 @@ scipy
 pyproj
 shapely
 python-dateutil
+matplotlib
 
 pytest
 codecov
