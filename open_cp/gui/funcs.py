@@ -5,6 +5,8 @@ funcs
 Misc functions
 """
 
+import datetime
+
 def string_ellipse(string, maxlen):
     """Clamp the string to be no longer than the maximum length.  If the string
     is too long, we write it as "... []" where "[]" is the final part of the
@@ -19,8 +21,16 @@ def string_ellipse(string, maxlen):
     if maxlen <= 4:
         raise ValueError("maxlen too small")
     
+
     return "... " + string[4-maxlen:]
 
+_DT_FORMAT = "%Y-%m-%dT%H:%M:%S"
+
+def datetime_to_string(dt):
+    return dt.strftime(_DT_FORMAT)
+
+def string_to_datetime(string):
+    return datetime.datetime.strptime(string, _DT_FORMAT)
 
 _null_logger = None
 

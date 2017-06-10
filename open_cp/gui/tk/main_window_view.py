@@ -5,6 +5,7 @@ main_window_view
 
 import tkinter as tk
 import tkinter.ttk as ttk
+import tkinter.messagebox
 from . import util
 import traceback
 import logging
@@ -14,8 +15,8 @@ _text = {
     "load" : "Load CSV File",
     "exit" : "Exit",
     "ss" : "Load a saved session",
-    "exp" : "Export settings",
-    "about" : "About"
+    "about" : "About",
+    "recent" : "Reload a recent session"
 }
 
 class TopWindow(tk.Tk):
@@ -52,21 +53,27 @@ class MainWindowView(tk.Frame):
         super().__init__()
         self.controller = controller
         self.grid(sticky=util.NSEW)
-        util.stretchy_columns(self, [0])
-        util.stretchy_rows(self, range(5))
+        util.stretchy_columns(self, range(3))
+        util.stretchy_rows(self, range(4))
         self.createWidgets()
         self.master.protocol("WM_DELETE_WINDOW", self.end)
         util.centre_window_percentage(self.master, 30, 30)
         
     def createWidgets(self):
-        for name, cmd in [(_text["load"], self.controller.load_csv),
-                        (_text["ss"], None),
-                        (_text["exp"], None),
-                        (_text["about"], None),
-                        (_text["exit"], self.end)
-                        ]:
-            ttk.Button(self, text=name, command=cmd).grid(sticky=util.NSEW, padx=10, pady=3)
+        b = ttk.Button(self, text=_text["load"], command=self.controller.load_csv)
+        b.grid(sticky=util.NSEW, padx=10, pady=3, row=0, column=0, columnspan=3)
+        b = ttk.Button(self, text=_text["ss"], command=self.controller.load_session)
+        b.grid(sticky=util.NSEW, padx=10, pady=3, row=1, column=0, columnspan=2)
+        b = ttk.Button(self, text=_text["recent"], command=None)
+        b.grid(sticky=util.NSEW, padx=10, pady=3, row=1, column=2)
+        b = ttk.Button(self, text=_text["about"], command=None)
+        b.grid(sticky=util.NSEW, padx=10, pady=3, row=2, column=0, columnspan=3)
+        b = ttk.Button(self, text=_text["exit"], command=self.end)
+        b.grid(sticky=util.NSEW, padx=10, pady=3, row=3, column=0, columnspan=3)
 
     def end(self):
         self.destroy()
         self.quit()
+
+    def alert(self, message):
+        tkinter.messagebox.showerror("Error", message)

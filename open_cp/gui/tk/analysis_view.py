@@ -167,7 +167,7 @@ class AnalysisView(tk.Frame):
         button_frame = ttk.Frame(frame)
         button_frame.grid(row=0, column=0, sticky=tk.EW)
         util.stretchy_columns(button_frame, [0])
-        ttk.Button(button_frame, text=_text["save"]).grid(row=0, column=0, sticky=tk.NSEW, padx=5, pady=3)
+        ttk.Button(button_frame, text=_text["save"], command=self._save).grid(row=0, column=0, sticky=tk.NSEW, padx=5, pady=3)
         ttk.Button(button_frame, text=_text["back"], command=self.cancel).grid(row=1, column=0, sticky=tk.NSEW, padx=5, pady=3)
         pred_frame = ttk.LabelFrame(master=frame, text=_text["preds"])
         pred_frame.grid(row=1, column=0, sticky=tk.NSEW, padx=5, pady=3)
@@ -207,7 +207,7 @@ class AnalysisView(tk.Frame):
         self._add_crime_types_box(frame, 0)
         box = self._crime_type_boxes[0]
         box.grid(row=0, column=0, rowspan=2, padx=2, pady=2, sticky=tk.NSEW)
-        cts = list(self._model.unique_crime_types(None))
+        cts = self._model.unique_crime_types(None)
         cts.sort()
         box.add_rows(cts)
 
@@ -215,9 +215,10 @@ class AnalysisView(tk.Frame):
         self._add_crime_types_box(frame, 2)
 
     def _crime_type_select(self, parent):
+        self._crime_type_boxes = None
         frame = ttk.LabelFrame(parent, text=_text["sel_ct"])
         if self._model.num_crime_type_levels == 0:
-            ttk.Label(frame, _text["no_types"]).grid()
+            ttk.Label(frame, text=_text["no_types"]).grid()
         if self._model.num_crime_type_levels >= 1:
             self._crime_types_level_1(frame)
         if self._model.num_crime_type_levels == 2:
@@ -235,6 +236,15 @@ class AnalysisView(tk.Frame):
         self._total_count_label = ttk.Label(frame)
         self._total_count_label.grid()
         return frame
+
+    def _save(self):
+        filename = util.ask_save_filename(filetypes = [("JSON session", "*.json")],
+            title="Please select a session file to save to")
+        if filename is not None:
+            self._controller.save(filename)
+
+    def alert(self, message):
+        tkinter.messagebox.showerror("Error", message)
 
     def add_widgets(self):
         # TODO: Maybe make column 1 fixed size??
@@ -276,6 +286,9 @@ class AnalysisView(tk.Frame):
 
     def _datetime_from(self, date, time):
         return datetime.datetime(date.year, date.month, date.day, time.hour, time.minute)
+
+    def new_model(self, model):
+        self._model = model
 
     @property
     def training_start(self):
@@ -332,6 +345,8 @@ class AnalysisView(tk.Frame):
         return self._crime_type_boxes[level].text(index)
 
     def set_crime_type_selections(self, selections, level):
+        if self._crime_type_boxes is None:
+            return
         self._crime_type_boxes[level].current_selection = selections
 
     def set_crime_type_options(self, level, options):

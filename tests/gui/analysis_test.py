@@ -13,20 +13,20 @@ def model():
 
 def test_crime_types(model):
     assert model.num_crime_type_levels == 1
-    assert model.unique_crime_types(None) == { "One", "Two", "Three", "Four" }
+    assert model.unique_crime_types(None) == [ "Four", "One", "Three", "Two" ]
 
 def test_crime_types_2_levels(model):
     model.crime_types = [["One", "A"], ["Two", "B"], ["Three", "C"], ["Four", "D"],
         ["One", "B"], ["Two", "C"], ["Three", "D"], ["Four", "C"], ["One", "A"], ["Two", "B"]]
 
     assert model.num_crime_type_levels == 2
-    assert model.unique_crime_types(None) == { "One", "Two", "Three", "Four" }
-    assert model.unique_crime_types(["One"]) == { "A", "B" }
-    assert model.unique_crime_types(["Two"]) == { "B", "C" }
-    assert model.unique_crime_types(["Three"]) == { "C", "D" }
-    assert model.unique_crime_types(["Four"]) == { "C", "D" }
-    assert model.unique_crime_types({"One", "Four"}) == { "C", "D", "A", "B" }
-    assert model.unique_crime_types({"Two", "One"}) == { "C", "A", "B" }
+    assert model.unique_crime_types(None) == [ "Four", "One", "Three", "Two" ]
+    assert model.unique_crime_types(["One"]) == [ "A", "B" ]
+    assert model.unique_crime_types(["Two"]) == [ "B", "C" ]
+    assert model.unique_crime_types(["Three"]) == [ "C", "D" ]
+    assert model.unique_crime_types(["Four"]) == [ "C", "D" ]
+    assert model.unique_crime_types({"One", "Four"}) == [ "A", "B", "C", "D" ]
+    assert model.unique_crime_types({"Two", "One"}) == [ "A", "B", "C" ]
 
 def test_crime_types_3_levels(model):
     model.crime_types = [["One", "A", "a"], ["Two", "B", "b"], ["Three", "C", "a"],
@@ -34,15 +34,15 @@ def test_crime_types_3_levels(model):
         ["Four", "C", "a"], ["One", "A", "b"], ["Two", "B", "a"]]
 
     assert model.num_crime_type_levels == 3
-    assert model.unique_crime_types(None) == { "One", "Two", "Three", "Four" }
-    assert model.unique_crime_types(["One"]) == { "A", "B" }
-    assert model.unique_crime_types({("One", "A")}) == { "a", "b" }
+    assert model.unique_crime_types(None) == [ "Four", "One", "Three", "Two" ]
+    assert model.unique_crime_types(["One"]) == [ "A", "B" ]
+    assert model.unique_crime_types({("One", "A")}) == [ "a", "b" ]
     
 def test_crime_type_selection(model):
     assert model.selected_crime_types is None
 
     model.selected_crime_types = [["a"], ["b"], ["c"], ["a"]]
-    assert model.selected_crime_types == { ("a",), ("b",), ("c",)}
+    assert model.selected_crime_types == { ("a",), ("b",), ("c",) }
 
     with pytest.raises(ValueError):
         model.selected_crime_types = ["a", "b"]
@@ -64,3 +64,12 @@ def test_counts_by_crime_type(model):
 
     model.selected_crime_types = [("Three",), ("One",)]
     assert model.counts_by_crime_type() == 5
+
+def test_crime_type_to_selection(model):
+    assert model.crime_type_to_selection(["One"]) == [1]
+
+    model.crime_types = [["One", "A"], ["Two", "B"], ["Three", "C"], ["Four", "D"],
+        ["One", "B"], ["Two", "C"], ["Three", "D"], ["Four", "C"], ["One", "A"], ["Two", "B"]]
+
+    assert model.crime_type_to_selection(["One", "B"]) == [1, 1]
+    assert model.crime_type_to_selection(["Four", "C"]) == [0, 0]

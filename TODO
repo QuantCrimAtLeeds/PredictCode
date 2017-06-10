@@ -4,4 +4,10 @@
 # GUI
 
 - Session saving/loading
-   - New dialog box to display virtual file names, delete them, select etc.
+   - Still need to load crime selections correctly
+   - New dialog to select a recent session
+- Analysis.Model now has _errors.  Consume/display these.
+   - Add error(s) if we have too many crime types.
+- Change process_file so that:
+   - If we don't know the row count, compute it first
+   - Allow changing the buttons at the bottom to be more suitable for reloading...

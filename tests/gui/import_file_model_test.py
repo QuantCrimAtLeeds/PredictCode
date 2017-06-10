@@ -11,9 +11,9 @@ def test_settings_json():
     ps.xcoord_field = 7
     ps.ycoord_field = 6
     ps.crime_type_fields = [1,2]
-    s = ps.to_json()
+    s = ps.to_dict()
 
-    ps = import_file_model.ParseSettings.from_json(s)
+    ps = import_file_model.ParseSettings.from_dict(s)
     assert ps.coord_type == import_file_model.CoordType.XY
     assert ps.meters_conversion == 1.23
     assert ps.timestamp_format == "abcbdags"

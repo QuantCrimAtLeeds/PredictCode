@@ -31,7 +31,7 @@ def cumbria():
     parse_settings.timestamp_field = 1
     parse_settings.xcoord_field = 4
     parse_settings.ycoord_field = 5
-    parse_settings.crime_type_fields = [9]
+    parse_settings.crime_type_fields = []#9]
     return filename, parse_settings
 
 def chicago():
@@ -64,8 +64,8 @@ def run():
     root = main_window_view.TopWindow()
     locator._make_pool(root)
 
-    jump_to_analysis(root)
-    os._exit(0)
+    #jump_to_analysis(root)
+    #os._exit(0)
 
     mw = main_window.MainWindow(root)
     mw.run()

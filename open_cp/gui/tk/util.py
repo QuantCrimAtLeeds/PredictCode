@@ -63,6 +63,14 @@ def ask_open_filename(*args, **kwargs):
         return None
     return filename
 
+def ask_save_filename(*args, **kwargs):
+    """As :func:`tkinter.filedialog.asksaveasfilename` but filters the returned
+    file to be valid or `None`."""
+    filename = tkinter.filedialog.asksaveasfilename(*args, **kwargs)
+    if filename is None or filename == "" or len(filename) == 0:
+        return None
+    return filename
+
 
 class Validator():
     """Provide some user-friendly way to validate the contents of a

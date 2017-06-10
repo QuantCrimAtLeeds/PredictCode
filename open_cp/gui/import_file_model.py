@@ -108,9 +108,9 @@ class ParseSettings():
         else:
             return 1.0
 
-    def to_json(self):
-        """Return a representation in json, suitable for storing."""
-        data = { "coord_type" : self.coord_type.name,
+    def to_dict(self):
+        """Return a dictionary storing the settings."""
+        return { "coord_type" : self.coord_type.name,
                 "meters_conversion" : self.meters_conversion,
                 "timestamp_field" : self.timestamp_field,
                 "xcoord_field" : self.xcoord_field,
@@ -118,11 +118,9 @@ class ParseSettings():
                 "crime_type_fields" : self.crime_type_fields,
                 "timestamp_format" : self.timestamp_format
             }
-        return json.dumps(data)
 
     @staticmethod
-    def from_json(json_string):
-        data = json.loads(json_string)
+    def from_dict(data):
         out = ParseSettings()
         out.coord_type = CoordType[data["coord_type"]]
         out.meters_conversion = data["meters_conversion"]
