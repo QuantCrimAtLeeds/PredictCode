@@ -118,7 +118,17 @@ class LoadTask(threads.OffThreadTask, locator.GuiThreadTask):
         else:
             errors.append("Unexpected exception: {}/{}".format(type(ex), str(ex)))
 
+    def _calc_total_rows(self):
+        count = 0
+        for row in self._yield_rows():
+            count += 1
+        return count - 1
+
     def __call__(self):
+        if self._total_rows is None:
+            self.submit_gui_task(lambda : self._view.start_indet_progress())
+            self._total_rows = self._calc_total_rows()
+            self.submit_gui_task(lambda : self._view.start_det_progress())
         processor = import_file_model.Model.load_full_dataset(self._parse_settings)
         reader = self._yield_rows()
         header = next(reader)

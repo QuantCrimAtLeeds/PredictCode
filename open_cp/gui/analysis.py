@@ -11,25 +11,35 @@ from open_cp.gui.import_file_model import CoordType
 import open_cp.gui.funcs as funcs
 
 class Analysis():
-    def __init__(self, model, root, init=True):
+    def __init__(self, model, root):
         self.model = model
         self._root = root
         self._logger = logging.getLogger(__name__)
         self.view = analysis_view.AnalysisView(self.model, self, self._root)
-        if init:
-            self._init()
-        else:
-            self._repaint()
+        self._init()
 
     def _init(self):
-        self.view.set_crime_type_selections([], 0)
-        self.notify_crime_type_selection([], 0)
-        self._repaint()
-
-    def _repaint(self):
+        self._crime_types_model_to_view()
+        self.notify_crime_type_selection(None, 0)
         self._repaint_times()
         self.view.refresh_plot()
         self.recalc_total_count()
+
+    def _crime_types_model_to_view(self):
+        if self.model.num_crime_type_levels == 0:
+            return
+        elif self.model.num_crime_type_levels == 1:
+            self._ct_mtv_level(0)
+        elif self.model.num_crime_type_levels == 2:
+            self._ct_mtv_level(0)
+            self.notify_crime_type_selection(None, 0)
+            self._ct_mtv_level(1)
+            
+    def _ct_mtv_level(self, level):
+        options = self.view.crime_type_selections_text(level=level)
+        selected = [ options.index(ctypes[level])
+            for ctypes in self.model.selected_crime_types ]
+        self.view.set_crime_type_selections(selected, level=level)
 
     def _update_times(self, force=False):
         """Update the model to the view, and if necessary or `force`d redraw."""
@@ -84,8 +94,16 @@ class Analysis():
         self._repaint_times()
 
     def notify_crime_type_selection(self, selection, level):
+        """Called by view when the crime type selection changes.
+        Updates the model with the selections and recalcultes totals (and
+        displays them).
+
+        :param selection: The new selection.  If `None` then fetch from view.        
+        """
         if self.model.num_crime_type_levels == 0:
             return
+        if selection is None:
+            selection = self.view.crime_type_selections(level)
         if self.model.num_crime_type_levels == 1:
             if level != 0:
                 raise ValueError()
@@ -123,6 +141,7 @@ class Analysis():
             self._logger.exception("Failed to save")
             self.view.alert("Failed to save session.\nCause: {}/{}".format(type(e), e))
 
+
 class Model():
     """The model
 
@@ -140,8 +159,9 @@ class Model():
             raise ValueError("Cannot handle more than 2 crime types.")
         self._parse_settings = parse_settings
         self._time_range = None
-        self._crime_types = None
+        self._crime_types = []
         self._errors = []
+        self._logger = logging.getLogger(__name__)
         self.reset_times()
 
     @staticmethod
@@ -176,38 +196,23 @@ class Model():
         
         sel_ctypes = []
         for ctype in data["selected_crime_types"]:
-            index = self.crime_type_to_selection(ctype)
-            if index is None:
+            le = len(ctype)
+            if le > self.num_crime_type_levels:
+                self._errors.append("Crime type selection {} doesn't make sense for input file as we don't have that many selected crime type fields!".format(ctype))
+                continue
+            if not any(x[:le] == ctype for x in self.crime_types):
                 self._errors.append("Crime type selection {} doesn't make sense for input file".format(ctype))
-            else:
-                sel_ctypes.append(ctype)
+                continue
+            sel_ctypes.append(ctype)
+        self._logger.warn("Errors in loading saved settings: %s", self._errors)
         self.selected_crime_types = sel_ctypes
 
     def __iter__(self):
         yield from zip(self.times, self.xcoords, self.ycoords, self.crime_types)
 
-    def crime_type_to_selection(self, crime_type):
-        """Map the crime type string(s) to selections.
-
-        :param crime_type: Iterable of crime string(s) giving the selections
-          at various levels.
-
-        :return: List/Tuple of indexes into selection lists.  Or None if cannot
-          be mapped.
-        """
-        try:
-            crime_type = list(crime_type)
-            out = [self.unique_crime_types(None).index(crime_type[0])]
-            for i in range(1, len(crime_type)):
-                options = self.unique_crime_types(crime_type[:i])
-                out.append( options.index(crime_type[i]) )
-            return out
-        except ValueError:
-            return None
-
     @property
     def num_crime_type_levels(self):
-        """Zero if no crime type field was selected, 1 is one field selected,
+        """Zero if no crime type field was selected, 1 if one field selected,
         etc."""
         return len(self.crime_types[0])
 
@@ -217,8 +222,8 @@ class Model():
 
         :param previous_level_selections: If `None` then return all crime types
           in level 0.  If iterable of lists/tuples of length 1, then return all
-          crime types in level 1 which are paired with some crime in the set,
-          and so forth.
+          crime types in level 1 which are paired with some crime in the set;
+          and so forth for longer tuples (not currently used.)
         """
         if previous_level_selections is None:
             out = list(set(x[0] for x in self.crime_types))
@@ -291,8 +296,8 @@ class Model():
 
     @property
     def selected_crime_types(self):
-        """The selected crime types.  If `None` then all.  Otherwise a list/set
-        of tuples of selected crime types."""
+        """The selected crime types.  Otherwise a list/set
+        of tuples of selected crime types (as text)."""
         return self._crime_types
 
     @selected_crime_types.setter

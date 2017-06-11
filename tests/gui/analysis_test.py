@@ -1,10 +1,11 @@
 import pytest
 
 import open_cp.gui.analysis as analysis
+import datetime
 
 @pytest.fixture
 def model():
-    ts = [0 for _ in range(10)]
+    ts = [datetime.datetime.now() for _ in range(10)]
     xcs = [0 for _ in range(10)]
     ycs = [0 for _ in range(10)]
     ctypes = [["One"], ["Two"], ["Three"], ["Four"], ["One"], ["Two"], ["Three"], ["Four"], ["One"], ["Two"]]
@@ -64,12 +65,4 @@ def test_counts_by_crime_type(model):
 
     model.selected_crime_types = [("Three",), ("One",)]
     assert model.counts_by_crime_type() == 5
-
-def test_crime_type_to_selection(model):
-    assert model.crime_type_to_selection(["One"]) == [1]
-
-    model.crime_types = [["One", "A"], ["Two", "B"], ["Three", "C"], ["Four", "D"],
-        ["One", "B"], ["Two", "C"], ["Three", "D"], ["Four", "C"], ["One", "A"], ["Two", "B"]]
-
-    assert model.crime_type_to_selection(["One", "B"]) == [1, 1]
-    assert model.crime_type_to_selection(["Four", "C"]) == [0, 0]
+    

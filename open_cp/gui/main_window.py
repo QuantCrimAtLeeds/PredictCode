@@ -65,9 +65,10 @@ class MainWindow():
             data = json.load(f)
         filename = data["filename"]
         parse_settings = import_file_model.ParseSettings.from_dict(data["parse_settings"])
-        pf = process_file.ProcessFile(filename, 100000, parse_settings, self._root)
-        # TODO: Change this!
-        assert pf.run()
+        pf = process_file.ProcessFile(filename, None, parse_settings, self._root)
+        loaded = pf.run()
+        if not loaded:
+            raise Exception("Loading was cancelled or aborted.")
         model = analysis.Model.init_from_process_file_model(filename, pf.model)
         model.settings_from_dict(data)
         return model

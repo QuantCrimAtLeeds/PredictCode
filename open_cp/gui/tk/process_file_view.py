@@ -40,12 +40,11 @@ class LoadFullFile(util.ModalWindow):
         self.set_size_percentage(20, 10)
         label = ttk.Label(self, text=_text["loading2"],
                           wraplength = self.winfo_width() - 20)
-        label.grid(padx=10, pady=5)
-        self.bar = ttk.Progressbar(self, mode="determinate")
-        self.bar_pos = 0
-        self.bar.grid(pady=5, padx=10, sticky=tk.E+tk.W)
+        label.grid(row=0, column=0, padx=10, pady=5)
+        self.bar = None
+        self.start_det_progress()
         button = ttk.Button(self, text=_text["cancel"], command=self.cancel)
-        button.grid(pady=5)
+        button.grid(row=2, column=0, pady=5)
         self.set_to_actual_size()
     
     def notify(self, current, maximum):
@@ -53,6 +52,19 @@ class LoadFullFile(util.ModalWindow):
             pos = current * 100 / maximum
             self.bar.step(pos - self.bar_pos)
             self.bar_pos = pos
+
+    def start_indet_progress(self):
+        self.bar.destroy()
+        self.bar = ttk.Progressbar(self, mode="indeterminate")
+        self.bar.grid(row=1, column=0, pady=5, padx=10, sticky=tk.E+tk.W)
+        self.bar.start()
+
+    def start_det_progress(self):
+        if self.bar is not None:
+            self.bar.destroy()
+        self.bar = ttk.Progressbar(self, mode="determinate")
+        self.bar_pos = 0
+        self.bar.grid(row=1, column=0, pady=5, padx=10, sticky=tk.E+tk.W)
 
     def cancel(self):
         self.cancelled = True

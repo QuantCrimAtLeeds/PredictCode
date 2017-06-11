@@ -1,3 +1,8 @@
+# Main code
+
+- Sort out convergence issues in SEPP code
+   - See comment on github
+- Look at the grid-based SEPP method which seems to perform badly
 
 
 
@@ -5,9 +10,11 @@
 
 - Session saving/loading
    - Still need to load crime selections correctly
+   - Actually, I think the current display system for 2 levels doesn't really make sense...
+     - It's broken, as we store the cartesian product.  We could fix this, but it stil leaves the interface in a confusing way.
+     - Would be better to make the widget wider, and display all pairs.  This simplifies the view / controller
    - New dialog to select a recent session
 - Analysis.Model now has _errors.  Consume/display these.
    - Add error(s) if we have too many crime types.
 - Change process_file so that:
-   - If we don't know the row count, compute it first
    - Allow changing the buttons at the bottom to be more suitable for reloading...

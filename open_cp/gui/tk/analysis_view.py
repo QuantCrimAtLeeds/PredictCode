@@ -239,7 +239,8 @@ class AnalysisView(tk.Frame):
 
     def _save(self):
         filename = util.ask_save_filename(filetypes = [("JSON session", "*.json")],
-            title="Please select a session file to save to")
+            title="Please select a session file to save to",
+            defaultextension=".json")
         if filename is not None:
             self._controller.save(filename)
 
@@ -335,21 +336,39 @@ class AnalysisView(tk.Frame):
         self.assess_end_time_entry.time = dt
 
     def crime_type_selections(self, level):
+        """For the given level, which rows in the crime types box are currently
+        selected?"""
         if level < 0 or level >= self._model.num_crime_type_levels:
             raise ValueError()
         return self._crime_type_boxes[level].current_selection
 
-    def crime_type_selection_text(self, level, index):
-        if level < 0 or level >= self._model.num_crime_type_levels:
-            raise ValueError()
-        return self._crime_type_boxes[level].text(index)
-
     def set_crime_type_selections(self, selections, level):
+        """Set which rows are selected in the given level of crime type box."""
         if self._crime_type_boxes is None:
             return
         self._crime_type_boxes[level].current_selection = selections
 
+    def crime_type_selection_text(self, level, index):
+        """For the given level and index/row, what is the text displayed in
+        the crime type box?"""
+        if level < 0 or level >= self._model.num_crime_type_levels:
+            raise ValueError()
+        return self._crime_type_boxes[level].text(index)
+
+    def crime_type_selections_text(self, level):
+        """For the given level, return a list of the text for each row in the
+        crime type selection box."""
+        if level < 0 or level >= self._model.num_crime_type_levels:
+            raise ValueError()
+        box = self._crime_type_boxes[level]
+        return [box.text(i) for i in range(box.size)]
+
     def set_crime_type_options(self, level, options):
+        """For the given level (currently must be 1) set the _text_ which
+        should appear in all the rows.
+
+        :param options: Iterable of strings.
+        """
         if level != 1:
             raise ValueError()
         self._crime_type_boxes[level].clear_rows()
