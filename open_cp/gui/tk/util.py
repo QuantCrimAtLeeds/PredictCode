@@ -6,6 +6,7 @@ Various utility routines for working with `tkinter`.
 """
 
 import tkinter as tk
+import tkinter.ttk as ttk
 import tkinter.font as tkfont
 import tkinter.filedialog
 import datetime as _datetime
@@ -345,7 +346,7 @@ class ListBox(tk.Frame):
         self._box = tk.Listbox(self, **args)
         self._box.grid(row=0, column=0, sticky=tk.NSEW)
         stretchy_columns(self, [0])
-        self._yscroll = tk.Scrollbar(self, orient=tk.VERTICAL)
+        self._yscroll = ttk.Scrollbar(self, orient=tk.VERTICAL)
         self._yscroll.grid(row=0, column=1, sticky=tk.NS + tk.E)
         self._box["yscrollcommand"] = self._yscroll.set
         self._yscroll["command"] = self._box.yview
@@ -399,3 +400,52 @@ class ListBox(tk.Frame):
     def destroy(self):
         self._closed = True
         super().destroy()
+
+
+# https://stackoverflow.com/questions/16188420/python-tkinter-scrollbar-for-frame
+class ScrolledFrame(tk.Frame):
+    """A subclass of :class:`tk.Frame` which acts just like a normal frame (for
+    gridding purposes etc.) but which actually contains a frame in a canvas
+    object, with (optional) scroll bars.
+    
+    Access the :attr:`frame` for the widget object to make a parent of any
+    widget you want to place in the scrollable-frame.
+    
+    :param parent: The parent object of the returned frame.
+    :param mode: String which if contains "h", then add horizontal scroll-bar,
+      and if contains "v" add vertical scroll-bar.  Default is both.
+    """
+    def __init__(self, parent, mode="hv"):
+        super().__init__(parent)
+        stretchy_columns(self, [0])
+        stretchy_rows(self, [0])
+        subframe = tk.Frame(self)
+        subframe.grid(row=0, column=0, sticky=tk.NSEW)
+        stretchy_columns(subframe, [0])
+        stretchy_rows(subframe, [0])
+
+        self._canvas = tk.Canvas(subframe, borderwidth=0, highlightthickness=0)
+        self._canvas.grid(row=0, column=0, sticky=tk.NSEW)
+        if "h" in mode:
+            self._xscroll = ttk.Scrollbar(self, orient = "horizontal", command = self._canvas.xview)
+            self._xscroll.grid(column = 0, row = 1, sticky = tk.EW)
+            self._canvas["xscrollcommand"] = self._xscroll.set
+        if "v" in mode:
+            self._yscroll = ttk.Scrollbar(self, orient = "vertical", command = self._canvas.yview)
+            self._yscroll.grid(column = 1, row = 0, sticky = tk.NS)
+            self._canvas["yscrollcommand"] = self._yscroll.set
+
+        self._frame = tk.Frame(subframe)
+        self._canvas.create_window(0, 0, window=self._frame, anchor=tk.NW)
+        self._frame.bind('<Configure>', self._conf)  
+        
+    @property
+    def frame(self):
+        return self._frame
+
+    def _conf(self, e):
+        if self._canvas["width"] != self.frame.winfo_reqwidth():
+            self._canvas["width"] = self.frame.winfo_reqwidth()
+        if self._canvas["height"] != self.frame.winfo_reqheight():
+            self._canvas["height"] = self.frame.winfo_reqheight()
+        self._canvas["scrollregion"] = (0, 0, self._canvas["width"], self._canvas["height"])

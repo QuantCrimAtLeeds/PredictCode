@@ -174,18 +174,21 @@ class AnalysisView(tk.Frame):
 
     def _analysis_tools(self, frame):
         util.stretchy_columns(frame, [0])
+        util.stretchy_rows(frame, [1,2])
         button_frame = ttk.Frame(frame)
         button_frame.grid(row=0, column=0, sticky=tk.EW)
         util.stretchy_columns(button_frame, [0])
         ttk.Button(button_frame, text=_text["save"], command=self._save).grid(row=0, column=0, sticky=tk.NSEW, padx=5, pady=3)
         ttk.Button(button_frame, text=_text["back"], command=self.cancel).grid(row=1, column=0, sticky=tk.NSEW, padx=5, pady=3)
+
         pred_frame = ttk.LabelFrame(master=frame, text=_text["preds"])
         pred_frame.grid(row=1, column=0, sticky=tk.NSEW, padx=5, pady=3)
-        ttk.Label(pred_frame, text="TODO: List of prediction methods / parameters here").grid(row=0,column=0)
-        # Just a place-holder...
-        c = tk.Canvas(pred_frame)
-        c.grid(row=1, column=0)
-        c["height"] = 150
+        util.stretchy_columns(pred_frame, [0])
+        f = util.ScrolledFrame(pred_frame, mode="v")
+        f.grid(sticky=tk.NSEW)
+        self._prediction_frame = f.frame
+        ttk.Button(self._prediction_frame, text="TODO afdgk asfk agk afsgk").grid(sticky=tk.NSEW)
+
         compare_frame = ttk.LabelFrame(frame, text=_text["asses"])
         compare_frame.grid(row=2, column=0, sticky=tk.NSEW, padx=5, pady=3)
         ttk.Label(compare_frame, text="TODO: List of methods to compare preditions here").grid()
@@ -370,6 +373,7 @@ def _add_to_kwargs(kwargs, key, value):
 class DateEntry(ttk.Entry):
     """Subclass of :class:`ttk.Entry` which opens a date picker which clicked,
     and allows keyboard entry, but validates entry to be a valid date.
+
 
     You may set a keyword argument "command" to register a callback on a change.
     """
