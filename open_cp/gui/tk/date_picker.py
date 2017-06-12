@@ -272,8 +272,7 @@ class _DatePickerView(tk.Frame):
 class PopUpDatePickerView(util.ModalWindow):
     """View for PopUpDatePicker"""
     def __init__(self, parent):
-        super().__init__(parent, "")
-        self.wm_overrideredirect(True)
+        super().__init__(parent, "", True)
         x, y = parent.winfo_pointerx() + 15, parent.winfo_pointery() + 5
         self.wm_geometry("+{}+{}".format(x, y))
         self.close_on_click_away()

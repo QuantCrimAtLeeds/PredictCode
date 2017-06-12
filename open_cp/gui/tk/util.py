@@ -234,11 +234,14 @@ class ModalWindow(tk.Toplevel):
     :param parent: The parent window from which to construct the dialog.
     :param title: Title for the modal window.
     """
-    def __init__(self, parent, title):
+    def __init__(self, parent, title, no_border = False):
         super().__init__(parent)
+        if no_border:
+            self.wm_overrideredirect(True)
         self.transient(parent)
         self._parent = parent
         self.title(title)
+        self.update_idletasks()
         self.grab_set()
         self.resizable(width=False, height=False)
         self.add_widgets()
@@ -248,7 +251,10 @@ class ModalWindow(tk.Toplevel):
 
     def _minim(self, event):
         # If we're being minimised then also minimise the parent!
-        self._parent.master.iconify()
+        if self._parent.master is None:
+            self._parent.iconify()
+        else:
+            self._parent.master.iconify()
 
     def _over_self(self, event):
         over_win = self.winfo_containing(event.x_root, event.y_root)
