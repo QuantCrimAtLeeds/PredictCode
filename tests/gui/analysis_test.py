@@ -40,7 +40,7 @@ def test_crime_types_3_levels(model):
     assert model.unique_crime_types({("One", "A")}) == [ "a", "b" ]
     
 def test_crime_type_selection(model):
-    assert model.selected_crime_types is None
+    assert model.selected_crime_types == []
 
     model.selected_crime_types = [["a"], ["b"], ["c"], ["a"]]
     assert model.selected_crime_types == { ("a",), ("b",), ("c",) }
@@ -52,9 +52,6 @@ def test_crime_type_selection(model):
         model.selected_crime_types = [["a"], ["b", "c"]]
         
 def test_counts_by_crime_type(model):
-    assert model.counts_by_crime_type() == 10
-
-    model.selected_crime_types = []
     assert model.counts_by_crime_type() == 0
 
     model.selected_crime_types = [("One",)]

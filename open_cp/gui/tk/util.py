@@ -226,7 +226,6 @@ class TextMeasurer():
         return max(self._measure_one(t) for t in text)
 
 
-# TODO: See if https://stackoverflow.com/questions/28541381 works on linux at all...??
 class ModalWindow(tk.Toplevel):
     """A simple modal window abstract base class.
     
