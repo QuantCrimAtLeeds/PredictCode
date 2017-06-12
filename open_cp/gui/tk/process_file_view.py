@@ -69,12 +69,13 @@ class LoadFullFile(util.ModalWindow):
     def cancel(self):
         self.cancelled = True
         self._task.cancel()
-        self.destroy()
+        self.destroy(),
 
 
 class DisplayResult(util.ModalWindow):
-    def __init__(self, parent, model):
+    def __init__(self, parent, model, mode="initial"):
         self.model = model
+        self._mode = mode
         super().__init__(parent, _text["processing"])
         self.result = "back"
         
@@ -120,10 +121,16 @@ class DisplayResult(util.ModalWindow):
 
         frame = ttk.Frame(self)
         frame.grid(row=4, column=0, sticky=util.NSEW, padx=5, pady=5)
-        ttk.Button(frame, text=_text["continue"], command=self._go).grid(column=0, row=0, padx=5)
-        ttk.Button(frame, text=_text["back"], command=self.cancel).grid(column=1, row=0, padx=5)
-        ttk.Button(frame, text=_text["quit"], command=self._quit).grid(column=2, row=0, padx=5)
-        
+        if self._mode == "initial":
+            ttk.Button(frame, text=_text["continue"], command=self._go).grid(column=0, row=0, padx=5, sticky=tk.NSEW)
+            ttk.Button(frame, text=_text["back"], command=self.cancel).grid(column=1, row=0, padx=5, sticky=tk.NSEW)
+            ttk.Button(frame, text=_text["quit"], command=self._quit).grid(column=2, row=0, padx=5, sticky=tk.NSEW)
+            util.stretchy_columns(frame, [0,1,2])
+        else:
+            ttk.Button(frame, text=_text["continue"], command=self._go).grid(column=0, row=0, padx=5, sticky=tk.NSEW)
+            ttk.Button(frame, text=_text["quit"], command=self._quit).grid(column=1, row=0, padx=5, sticky=tk.NSEW)
+            util.stretchy_columns(frame, [0,1])
+
         self.set_to_actual_size()
 
     def cancel(self):

@@ -20,8 +20,21 @@ def screen_size(root):
     # https://stackoverflow.com/questions/3949844
     return (root.winfo_screenwidth(), root.winfo_screenheight())
 
-def centre_window(window, width, height):
-    """Set the window to be of the given size, centred on the screen."""
+def centre_window(window, width=None, height=None):
+    """Set the window to be of the given size, centred on the screen.
+    
+    :param width: Width to set the window to.  If `None` then use current
+      window width.
+    :param height: Height to set the window to.  If `None` then use current
+      window height.
+    """
+    if width is None or height is None:
+        window.update_idletasks()
+        aw, ah = window.winfo_reqwidth(), window.winfo_reqheight()
+        if width is None:
+            width = aw
+        if height is None:
+            height = ah
     w, h = screen_size(window)
     x = (w - width) // 2
     y = (h - height) // 2

@@ -29,11 +29,12 @@ class ProcessFile():
       which will yield data back
     :param parent_view: The window from which to construct our modal dialog.
     """
-    def __init__(self, filename, total_rows, parse_settings, parent_view):
+    def __init__(self, filename, total_rows, parse_settings, parent_view, mode="initial"):
         self._filename = filename
         self._total_rows = total_rows
         self._parse_settings = parse_settings
         self._parent = parent_view
+        self._mode = mode
     
     def run(self):
         """Loads, displays results.
@@ -49,7 +50,7 @@ class ProcessFile():
         if self._view.cancelled:
             return None
         
-        self._view = process_file_view.DisplayResult(self._parent, self.model)
+        self._view = process_file_view.DisplayResult(self._parent, self.model, self._mode)
         self._view.wait_window(self._view)
         if self._view.result == "back":
             return None

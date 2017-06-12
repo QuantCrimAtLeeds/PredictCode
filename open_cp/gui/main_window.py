@@ -44,14 +44,20 @@ class MainWindow():
         import_file.ImportFile(filename).run()
         self.init()
 
-    def load_session(self):
-        filename = util.ask_open_filename(
-            filetypes = [("JSON session", "*.json")],
-            title="Please select a session file to open")
+    class CancelException(Exception):
+        pass
+
+    def load_session(self, filename=None):
+        if filename is None:
+            filename = util.ask_open_filename(
+                    filetypes = [("JSON session", "*.json")],
+                    title="Please select a session file to open")
         if filename is None:
             return
         try:
             model = self._load_session(filename)
+        except self.CancelException:
+            return
         except Exception as e:
             self._logger.exception("Error loading saved sessions")
             self.view.alert("Failed to read session.\nCause: {}/{}".format(type(e), e))
@@ -65,10 +71,10 @@ class MainWindow():
             data = json.load(f)
         filename = data["filename"]
         parse_settings = import_file_model.ParseSettings.from_dict(data["parse_settings"])
-        pf = process_file.ProcessFile(filename, None, parse_settings, self._root)
+        pf = process_file.ProcessFile(filename, None, parse_settings, self._root, "reload")
         loaded = pf.run()
         if not loaded:
-            raise Exception("Loading was cancelled or aborted.")
+            raise self.CancelException()
         model = analysis.Model.init_from_process_file_model(filename, pf.model)
         model.settings_from_dict(data)
         return model

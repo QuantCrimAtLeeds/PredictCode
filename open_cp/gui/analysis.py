@@ -5,9 +5,9 @@ analysis
 The main window, once we have loaded data.
 """
 
-import datetime, itertools, json, logging
+import datetime, json, logging, array
+import numpy as np
 import open_cp.gui.tk.analysis_view as analysis_view
-from open_cp.gui.import_file_model import CoordType
 import open_cp.gui.funcs as funcs
 
 class Analysis():
@@ -19,8 +19,11 @@ class Analysis():
         self._init()
 
     def _init(self):
+        errors = self.model.consume_errors()
+        if len(errors) > 0:
+            self.view.show_errors(errors)
         self._crime_types_model_to_view()
-        self.notify_crime_type_selection(None, 0)
+        self.notify_crime_type_selection(None)
         self._repaint_times()
         self.view.refresh_plot()
         self.recalc_total_count()
@@ -28,18 +31,7 @@ class Analysis():
     def _crime_types_model_to_view(self):
         if self.model.num_crime_type_levels == 0:
             return
-        elif self.model.num_crime_type_levels == 1:
-            self._ct_mtv_level(0)
-        elif self.model.num_crime_type_levels == 2:
-            self._ct_mtv_level(0)
-            self.notify_crime_type_selection(None, 0)
-            self._ct_mtv_level(1)
-            
-    def _ct_mtv_level(self, level):
-        options = self.view.crime_type_selections_text(level=level)
-        selected = [ options.index(ctypes[level])
-            for ctypes in self.model.selected_crime_types ]
-        self.view.set_crime_type_selections(selected, level=level)
+        self.view.crime_type_selections = self.model.selected_crime_types
 
     def _update_times(self, force=False):
         """Update the model to the view, and if necessary or `force`d redraw."""
@@ -67,7 +59,7 @@ class Analysis():
     def new_input_file(self, filename):
         from . import process_file
         total_rows = process_file.rows_in_csv(filename)
-        pf = process_file.ProcessFile(filename, total_rows, self.model._parse_settings, self._root)
+        pf = process_file.ProcessFile(filename, total_rows, self.model._parse_settings, self._root, "new_data")
         code = pf.run()
         if code is None or not code:
             self.view.destroy()
@@ -93,7 +85,7 @@ class Analysis():
         self.model.reset_times()
         self._repaint_times()
 
-    def notify_crime_type_selection(self, selection, level):
+    def notify_crime_type_selection(self, selection):
         """Called by view when the crime type selection changes.
         Updates the model with the selections and recalcultes totals (and
         displays them).
@@ -103,34 +95,15 @@ class Analysis():
         if self.model.num_crime_type_levels == 0:
             return
         if selection is None:
-            selection = self.view.crime_type_selections(level)
-        if self.model.num_crime_type_levels == 1:
-            if level != 0:
-                raise ValueError()
-            self.model.selected_crime_types = [
-                (self.view.crime_type_selection_text(0, x),)
-                for x in selection ]
-        elif self.model.num_crime_type_levels == 2:
-            if level == 0:
-                level0 = [ (self.view.crime_type_selection_text(0, x),)
-                    for x in self.view.crime_type_selections(0) ]
-                level1 = list(self.model.unique_crime_types(level0))
-                self.view.set_crime_type_options(1, level1)
-        
-            sel1, sel2 = self.view.crime_type_selections(0), self.view.crime_type_selections(1)
-            self.model.selected_crime_types = [
-                (self.view.crime_type_selection_text(0, x1), self.view.crime_type_selection_text(1, x2))
-                for x1, x2 in itertools.product(sel1, sel2)]
-        else:
-            raise ValueError()
-        # TODO: These can get slow-- push to thread?
+            selection = self.view.crime_type_selections
+        self.model.selected_crime_types = selection
         count = self.model.counts_by_crime_type()
         self.view.update_crime_type_count(count)
         self.recalc_total_count()
         
     def recalc_total_count(self):
-        train_count = len(self.model.training_data())
-        assess_count = len(self.model.assess_data())
+        train_count = len(self.model.training_data()[0])
+        assess_count = len(self.model.assess_data()[0])
         self.view.update_total_count(train_count, assess_count)
 
     def save(self, filename):
@@ -139,7 +112,7 @@ class Analysis():
                 json.dump(self.model.to_dict(), f, indent=2)
         except Exception as e:
             self._logger.exception("Failed to save")
-            self.view.alert("Failed to save session.\nCause: {}/{}".format(type(e), e))
+            self.view.alert(analysis_view._text["fail_save"].format(type(e), e))
 
 
 class Model():
@@ -150,17 +123,18 @@ class Model():
     :param parse_settings: An instance of :class:`import_file_model.ParseSettings`
     """
     def __init__(self, filename, data, parse_settings):
+        self._errors = []
         self.filename = filename
-        self.times = data[0]
-        self.xcoords = data[1]
-        self.ycoords = data[2]
+        self.times = np.asarray([np.datetime64(x) for x in data[0]])
+        self.xcoords = np.asarray(data[1]).astype(np.float)
+        self.ycoords = np.asarray(data[2]).astype(np.float)
         self.crime_types = data[3]
         if len(self.crime_types) > 0 and len(self.crime_types[0]) > 2:
             raise ValueError("Cannot handle more than 2 crime types.")
+        self._make_unique_crime_types()
         self._parse_settings = parse_settings
         self._time_range = None
-        self._crime_types = []
-        self._errors = []
+        self._selected_crime_types = set()
         self._logger = logging.getLogger(__name__)
         self.reset_times()
 
@@ -196,52 +170,58 @@ class Model():
         
         sel_ctypes = []
         for ctype in data["selected_crime_types"]:
+            ctype = tuple(ctype)
             le = len(ctype)
-            if le > self.num_crime_type_levels:
-                self._errors.append("Crime type selection {} doesn't make sense for input file as we don't have that many selected crime type fields!".format(ctype))
+            if le != self.num_crime_type_levels:
+                self._errors.append(analysis_view._text["ctfail1"].format(ctype))
                 continue
-            if not any(x[:le] == ctype for x in self.crime_types):
-                self._errors.append("Crime type selection {} doesn't make sense for input file".format(ctype))
-                continue
-            sel_ctypes.append(ctype)
-        self._logger.warn("Errors in loading saved settings: %s", self._errors)
+            try:
+                index = self.unique_crime_types.index(ctype)
+                sel_ctypes.append(index)
+            except:
+                self._errors.append(analysis_view._text["ctfail2"].format(ctype))
+        if len(self._errors) > 0:
+            self._logger.warn("Errors in loading saved settings: %s", self._errors)
         self.selected_crime_types = sel_ctypes
 
-    def __iter__(self):
-        yield from zip(self.times, self.xcoords, self.ycoords, self.crime_types)
+    def consume_errors(self):
+        """Returns a list of error messages and resets the list to be empty."""
+        errors = self._errors
+        self._errors = []
+        return errors
 
     @property
     def num_crime_type_levels(self):
         """Zero if no crime type field was selected, 1 if one field selected,
         etc."""
-        return len(self.crime_types[0])
+        if len(self.unique_crime_types) == 0:
+            return 0
+        return len(self.unique_crime_types[0])
 
-    def unique_crime_types(self, previous_level_selections):
-        """Return a list of crime types.  This ordering should be used by the
-        view to maintain coherence with the model.
-
-        :param previous_level_selections: If `None` then return all crime types
-          in level 0.  If iterable of lists/tuples of length 1, then return all
-          crime types in level 1 which are paired with some crime in the set;
-          and so forth for longer tuples (not currently used.)
-        """
-        if previous_level_selections is None:
-            out = list(set(x[0] for x in self.crime_types))
-            out.sort()
-            return out
-        previous_level_selections = list(previous_level_selections)
-        if len(previous_level_selections) == 0:
-            return []
-        sel = previous_level_selections[0]
-        if isinstance(sel, list) or isinstance(sel, tuple):
-            allowed = set(tuple(x) for x in previous_level_selections)
+    def _make_unique_crime_types(self):
+        data = [tuple(x) for x in self.crime_types]
+        self._unique_crime_types = list(set(data))
+        if len(self._unique_crime_types) > 1000:
+            self._errors.append(analysis_view._text["ctfail3"].format(len(self._unique_crime_types)))
+            self.crime_types = [[] for _ in self.crime_types]
+            self._make_unique_crime_types()
         else:
-            allowed = set((x,) for x in previous_level_selections)
-        index = len(next(iter(allowed)))
-        out = list(set(x[index] for x in self.crime_types
-                if tuple(x[:index]) in allowed))
-        out.sort()
-        return out
+            self._unique_crime_types.sort()
+            lookup = dict()
+            self.crime_types = array.array("l")
+            for x in data:
+                if x not in lookup:
+                    lookup[x] = self._unique_crime_types.index(x)
+                self.crime_types.append(lookup[x])
+        self.crime_types = np.asarray(self.crime_types).astype(np.int)
+
+    @property
+    def unique_crime_types(self):
+        """Return a list of crime types.  This ordering should be used by the
+        view to maintain coherence with the model.  Each crime type will be a
+        tuple, the length of which agrees with :attr:`num_crime_type_levels`.
+        """
+        return self._unique_crime_types
 
     @property
     def num_rows(self):
@@ -278,7 +258,13 @@ class Model():
             raise ValueError()
         self._time_range = tuple(value)
 
+    def _datetime64_to_datetime(self, dt):
+        dt = np.datetime64(dt)
+        ts = (dt - np.datetime64('1970-01-01T00:00:00Z')) / np.timedelta64(1, 's')
+        return datetime.datetime.utcfromtimestamp(ts)
+
     def _round_dt(self, dt, how="past"):
+        dt = self._datetime64_to_datetime(dt)
         if how == "past":
             return datetime.datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute)
         if how == "future":
@@ -287,81 +273,80 @@ class Model():
 
     def reset_times(self):
         """Set the default time ranges."""
-        start = self._round_dt(min(self.times), "past")
-        end = self._round_dt(max(self.times), "future")        
+        start = self._round_dt(np.min(self.times), "past")
+        end = self._round_dt(np.max(self.times), "future")        
         mid = self._round_dt(start + (end - start) / 2, "past")
         if mid - start > datetime.timedelta(days=365):
             mid = start + datetime.timedelta(days=365)
         self.time_range = (start, mid, mid, end)
 
     @property
+    def time_range_of_data(self):
+        """`(start, end)` times for the whole dataset."""
+        return (self._datetime64_to_datetime(np.min(self.times)),
+                self._datetime64_to_datetime(np.max(self.times)))
+
+    @property
     def selected_crime_types(self):
-        """The selected crime types.  Otherwise a list/set
-        of tuples of selected crime types (as text)."""
-        return self._crime_types
+        """The selected crime types.  A set of indexes into
+        :attr:`unique_crime_types`."""
+        return self._selected_crime_types
 
     @selected_crime_types.setter
     def selected_crime_types(self, value):
-        if value is None:
-            self._crime_types = None
+        if value is None or len(value) == 0:
+            self._selected_crime_types = []
             return
-        new_sel = set()
-        length = None
+        value = set(value)
+        limit = len(self.unique_crime_types)
         for x in value:
-            if not isinstance(x, tuple) and not isinstance(x, list):
-                raise ValueError("Each type should be a list or tuple")
-            if length is None:
-                length = len(x)
-            elif length != len(x):
-                raise ValueError("Each type should be the same length")
-            new_sel.add(tuple(x))
-        self._crime_types = new_sel
+            if x < 0 or x >= limit:
+                raise ValueError()
+        self._selected_crime_types = value
+
+    def _crime_selected_mask(self):
+        if self.num_crime_type_levels == 0:
+            return (np.zeros_like(self.crime_types) + 1).astype(np.bool)
+        allowed = list(self.selected_crime_types)
+        if len(allowed) == 0:
+            return np.zeros_like(self.crime_types).astype(np.bool)
+        # Oddly, faster than doing massive single numpy operation
+        mask = (self.crime_types == allowed[0])
+        for x in allowed[1:]:
+            mask |= (self.crime_types == x)
+        return mask
 
     def counts_by_crime_type(self):
         """:return: The number of events with the selected crime type(s)."""
-        filter = self.crime_type_filter()
-        return sum(filter(ct) for ct in self)
+        return np.sum(self._crime_selected_mask())
 
-    def crime_type_filter(self):
-        """Returns a callable object which when called on an `entry` (as from
-        iterating this class) returns True or False.  Is _not_ dynamically
-        updated, so if `selected_crime_types` changes then this needs to be
-        called again.
-        """
-        if self.selected_crime_types is None:
-            return lambda e : True
-        allowed = self.selected_crime_types
-        if len(allowed) == 0:
-            return lambda e : False
-        length = len(next(iter(allowed)))
-        def allow(ct):
-            return tuple(ct[3][:length]) in allowed
-        return allow
-        
     def training_data(self):
         """`(times, xcoords, ycoords)` for the selected time range and crime
         types.
         """
-        filter = self.crime_type_filter()
         start, end = self.time_range[0], self.time_range[1]
-        def in_time_range(e):
-            return e[0] >= start and e[0] <= end
-        return [e[:3] for e in self if filter(e) and in_time_range(e)]
+        start, end = np.datetime64(start), np.datetime64(end)
+        mask = (self.times >= start) & (self.times <= end)
+        mask &= self._crime_selected_mask()
+        return self.times[mask], self.xcoords[mask], self.ycoords[mask]
 
     def assess_data(self):
         """`(times, xcoords, ycoords)` for the selected time range and crime
         types.
         """
-        filter = self.crime_type_filter()
         start, end = self.time_range[2], self.time_range[3]
-        def in_time_range(e):
-            return e[0] > start and e[0] <= end
-        return [e[:3] for e in self if filter(e) and in_time_range(e)]
+        start, end = np.datetime64(start), np.datetime64(end)
+        mask = (self.times > start) & (self.times <= end)
+        mask &= self._crime_selected_mask()
+        return self.times[mask], self.xcoords[mask], self.ycoords[mask]
 
     def counts_by_time(self):
         """:return: `(train_count, assess_count)`"""
+        # TODO
         start, end = self.time_range[0], self.time_range[1]
-        train_count = sum(t >= start and t <= end for t in self.times)
+        start, end = np.datetime64(start), np.datetime64(end)
+        train_count = np.sum((self.times >= start) & (self.times <= end))
         start, end = self.time_range[2], self.time_range[3]
-        assess_count = sum(t > start and t <= end for t in self.times)
+        start, end = np.datetime64(start), np.datetime64(end)
+        assess_count = np.sum((self.times > start) & (self.times <= end))
         return train_count, assess_count

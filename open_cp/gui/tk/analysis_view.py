@@ -16,6 +16,7 @@ from . import mtp
 from . import tooltips
 from . import date_picker
 from open_cp.gui.common import CoordType
+import open_cp.gui.tk.error_list as error_list
 
 _text = {
     "data" : "Input data",
@@ -59,7 +60,14 @@ _text = {
     "loadnew" : "Load new input file?",
     "ln_msg" : ("Loading a new input file will replace the data with new data.  " +
                 "The new file must be in the same format as the current file!"),
-    "ln_pick_msg" : "Select a new CSV file"
+    "ln_pick_msg" : "Select a new CSV file",
+    "emsg" :  "Error messages",
+    "emsg1" : "From loading saved session",
+    "okay" : "Okay",
+    "fail_save" : "Failed to save session.\nCause: {}/{}",
+    "ctfail1" : "Crime type selection {} doesn't make sense for input file as we don't have that many selected crime type fields!",
+    "ctfail2" : "Crime type selection {} doesn't make sense for input file",
+    "ctfail3" : "Number of crimes types is {} which is too many!  No crime types will be considered..."
 }
 
 class AnalysisView(tk.Frame):
@@ -93,9 +101,10 @@ class AnalysisView(tk.Frame):
 
     def _data_buttons(self, parent):
         frame = ttk.Frame(parent)
+        util.stretchy_columns(frame, [0,1])
         ttk.Button(frame, text=_text["new_input"], command=self._new_input_file
                 ).grid(row=0, column=0, sticky=tk.NSEW, padx=5, pady=2)
-        ttk.Button(frame, text=_text["with_basemap"]).grid(row=1, column=0, sticky=tk.NSEW, padx=5, pady=2)
+        ttk.Button(frame, text=_text["with_basemap"]).grid(row=0, column=1, sticky=tk.NSEW, padx=5, pady=2)
         return frame
 
     def _new_input_file(self):
@@ -105,14 +114,15 @@ class AnalysisView(tk.Frame):
             if filename is not None:
                 self._controller.new_input_file(filename)
 
+    def _format_time_range(self):
+        start, end = self._model.time_range_of_data
+        fmt = "%Y-%m-%d %H:%M:%S"
+        return _text["timerange"] + start.strftime(fmt) + "\n\t" + _text["timerange1"] + end.strftime(fmt)
+
     def _time_range_select(self, parent):
         frame = ttk.LabelFrame(parent, text=_text["time_select"])
         frame.grid(sticky=tk.NSEW)
-        text = _text["timerange"]
-        text += str(min(self._model.times)) + "\n\t"
-        text += _text["timerange1"]
-        text += str(max(self._model.times))
-        ttk.Label(frame, text=text).grid(row=0, column=0, padx=3, pady=1, sticky=tk.W)
+        ttk.Label(frame, text=self._format_time_range()).grid(row=0, column=0, padx=3, pady=1, sticky=tk.W)
 
         training_frame = ttk.LabelFrame(frame, text=_text["train_time"])
         training_frame.grid(row=1, column=0, sticky=tk.EW)
@@ -183,52 +193,32 @@ class AnalysisView(tk.Frame):
         c.grid(row=1, column=0)
         c["height"] = 150
 
-    def _crime_types_all(self, index):
-        box = self._crime_type_boxes[index]
+    def _crime_types_all(self):
+        box = self._crime_type_box
         box.current_selection = range(box.size)
 
-    def _crime_types_none(self, index):
-        box = self._crime_type_boxes[index]
+    def _crime_types_none(self):
+        box = self._crime_type_box
         box.current_selection = []
 
-    def _add_crime_types_box(self, frame, row):
-        index = len(self._crime_type_boxes)
-        box = util.ListBox(frame, width=25, height=4,
-                command=lambda s : self._controller.notify_crime_type_selection(s, level=index))
-        self._crime_type_boxes.append( box )
-        box.grid(row=row, column=0, rowspan=2, padx=2, pady=2, sticky=tk.NSEW)
-        b = ttk.Button(frame, text=_text["all"], command=lambda : self._crime_types_all(index))
-        b.grid(row=row, column=1, padx=3, pady=3, sticky=tk.EW)
-        b = ttk.Button(frame, text=_text["clear"], command=lambda : self._crime_types_none(index))
-        b.grid(row=row+1, column=1, padx=3, pady=3, sticky=tk.EW)
-
-    def _crime_types_level_1(self, frame):
-        self._crime_type_boxes = []
-        self._add_crime_types_box(frame, 0)
-        box = self._crime_type_boxes[0]
-        box.grid(row=0, column=0, rowspan=2, padx=2, pady=2, sticky=tk.NSEW)
-        cts = self._model.unique_crime_types(None)
-        cts.sort()
-        box.add_rows(cts)
-
-    def _crime_types_level_2(self, frame):
-        self._add_crime_types_box(frame, 2)
-
     def _crime_type_select(self, parent):
-        self._crime_type_boxes = None
         frame = ttk.LabelFrame(parent, text=_text["sel_ct"])
         if self._model.num_crime_type_levels == 0:
+            self._crime_type_box = None
             ttk.Label(frame, text=_text["no_types"]).grid()
-        if self._model.num_crime_type_levels >= 1:
-            self._crime_types_level_1(frame)
-        if self._model.num_crime_type_levels == 2:
-            self._crime_types_level_2(frame)
-        if self._model.num_crime_type_levels > 2:
-            raise NotImplementedError()
-
-        self._crime_type_count_label = ttk.Label(frame)
-        self._crime_type_count_label.grid(row=10, column=0, columnspan=2, padx=3, pady=3, sticky=tk.W)
-
+        else:
+            self._crime_type_box = util.ListBox(frame, width=50, height=6,
+                    command=self._controller.notify_crime_type_selection)
+            self._crime_type_box.add_rows( " / ".join(tup) for tup in self._model.unique_crime_types )
+            self._crime_type_box.grid(row=0, column=0, padx=2, pady=2, sticky=tk.NSEW)
+            sub_frame = ttk.Frame(frame)
+            sub_frame.grid(row=0, column=1, padx=2, pady=2, sticky=tk.NSEW)
+            b = ttk.Button(sub_frame, text=_text["all"], command=self._crime_types_all)
+            b.grid(row=0, column=0, padx=3, pady=3, sticky=tk.EW)
+            b = ttk.Button(sub_frame, text=_text["clear"], command=self._crime_types_none)
+            b.grid(row=1, column=0, padx=3, pady=3, sticky=tk.EW)
+            self._crime_type_count_label = ttk.Label(sub_frame, wraplength=150)
+            self._crime_type_count_label.grid(row=2, column=0, columnspan=2, padx=3, pady=3, sticky=tk.W)
         return frame
 
     def _total_counts(self, parent):
@@ -258,13 +248,13 @@ class AnalysisView(tk.Frame):
         sub_frame = ttk.Frame(frame)
         sub_frame.grid(row=0, column=0, sticky=tk.N + tk.EW)
         self._info_frame(sub_frame).grid(row=0, column=0)
-        self._data_buttons(sub_frame).grid(row=0, column=1)
+        self._data_buttons(sub_frame).grid(row=1, column=0)
         sub_frame = ttk.Frame(frame)
         sub_frame.grid(row=1, column=0, sticky=tk.N + tk.EW)
         self._plot_frame(sub_frame).grid(row=0, column=0, sticky=tk.NSEW, padx=1)
         self._time_range_select(sub_frame).grid(row=0, column=1, sticky=tk.NSEW, padx=1)
-        self._crime_type_select(sub_frame).grid(row=1, column=1, sticky=tk.NSEW, padx=1)
-        self._total_counts(sub_frame).grid(row=1, column=0, sticky=tk.NSEW, padx=1)
+        self._crime_type_select(frame).grid(row=2, column=0, sticky=tk.NSEW, padx=1)
+        self._total_counts(frame).grid(row=3, column=0, sticky=tk.NSEW, padx=1)
 
         frame = ttk.LabelFrame(self, text=_text["tasks"])
         frame.grid(row=0, column=1, sticky=util.NSEW, padx=3, pady=3)
@@ -334,46 +324,18 @@ class AnalysisView(tk.Frame):
     def assess_end(self, dt):
         self.assess_end_date_entry.date = dt
         self.assess_end_time_entry.time = dt
+    
+    @property
+    def crime_type_selections(self):
+        if self._crime_type_box is None:
+            return []
+        return self._crime_type_box.current_selection
 
-    def crime_type_selections(self, level):
-        """For the given level, which rows in the crime types box are currently
-        selected?"""
-        if level < 0 or level >= self._model.num_crime_type_levels:
+    @crime_type_selections.setter
+    def crime_type_selections(self, selections):
+        if self._crime_type_box is None:
             raise ValueError()
-        return self._crime_type_boxes[level].current_selection
-
-    def set_crime_type_selections(self, selections, level):
-        """Set which rows are selected in the given level of crime type box."""
-        if self._crime_type_boxes is None:
-            return
-        self._crime_type_boxes[level].current_selection = selections
-
-    def crime_type_selection_text(self, level, index):
-        """For the given level and index/row, what is the text displayed in
-        the crime type box?"""
-        if level < 0 or level >= self._model.num_crime_type_levels:
-            raise ValueError()
-        return self._crime_type_boxes[level].text(index)
-
-    def crime_type_selections_text(self, level):
-        """For the given level, return a list of the text for each row in the
-        crime type selection box."""
-        if level < 0 or level >= self._model.num_crime_type_levels:
-            raise ValueError()
-        box = self._crime_type_boxes[level]
-        return [box.text(i) for i in range(box.size)]
-
-    def set_crime_type_options(self, level, options):
-        """For the given level (currently must be 1) set the _text_ which
-        should appear in all the rows.
-
-        :param options: Iterable of strings.
-        """
-        if level != 1:
-            raise ValueError()
-        self._crime_type_boxes[level].clear_rows()
-        self._crime_type_boxes[level].add_rows(options)
-        self._crime_type_boxes[level].current_selection = []
+        self._crime_type_box.current_selection = selections
 
     def update_time_counts(self, train_count, assess_count):
         self.train_count_label["text"] = _text["train_count"].format(train_count)
@@ -384,6 +346,10 @@ class AnalysisView(tk.Frame):
 
     def update_total_count(self, train_count, assess_count):
         self._total_count_label["text"] = _text["tcc"].format(train_count, assess_count)
+
+    def show_errors(self, errors):
+        el = error_list.ErrorList(self, _text["emsg"], _text["emsg1"], errors, [_text["okay"]])
+        el.run()
 
 
 def _find_command(kwargs):
