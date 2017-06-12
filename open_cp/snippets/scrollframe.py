@@ -17,7 +17,7 @@ ttk.Button(root, text="Some other button").grid(row=1,column=1)
 def clicked(i):
     print("Clicked", i)
 
-for i in range(10):
+for i in range(5):
     b = ttk.Button(sf.frame, text="Click me {}".format(i), command=lambda n=i: clicked(n))
     b.grid(row=i, column=i)
 

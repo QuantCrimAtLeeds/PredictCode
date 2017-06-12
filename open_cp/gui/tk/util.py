@@ -69,6 +69,10 @@ def stretchy_rows(window, rows):
     for i in rows:
         window.rowconfigure(i, weight=1)
 
+def stretchy_rows_cols(window, rows, columns):
+    self.stretchy_columns(window, columns)
+    self.stretchy_rows(window, rows)
+
 def ask_open_filename(*args, **kwargs):
     """As :func:`tkinter.filedialog.askopenfilename` but filters the returned
     file to be valid or `None`."""
@@ -419,30 +423,47 @@ class ScrolledFrame(tk.Frame):
         super().__init__(parent)
         stretchy_columns(self, [0])
         stretchy_rows(self, [0])
-        subframe = tk.Frame(self)
-        subframe.grid(row=0, column=0, sticky=tk.NSEW)
-        stretchy_columns(subframe, [0])
-        stretchy_rows(subframe, [0])
+        self._subframe = tk.Frame(self)
+        self._subframe.grid(row=0, column=0, sticky=tk.NSEW)
+        stretchy_columns(self._subframe, [0])
+        stretchy_rows(self._subframe, [0])
 
-        self._canvas = tk.Canvas(subframe, borderwidth=0, highlightthickness=0)
+        self._canvas = tk.Canvas(self._subframe, borderwidth=0, highlightthickness=0)
         self._canvas.grid(row=0, column=0, sticky=tk.NSEW)
         if "h" in mode:
             self._xscroll = ttk.Scrollbar(self, orient = "horizontal", command = self._canvas.xview)
             self._xscroll.grid(column = 0, row = 1, sticky = tk.EW)
             self._canvas["xscrollcommand"] = self._xscroll.set
+        else:
+            self._xscroll = None
         if "v" in mode:
             self._yscroll = ttk.Scrollbar(self, orient = "vertical", command = self._canvas.yview)
             self._yscroll.grid(column = 1, row = 0, sticky = tk.NS)
             self._canvas["yscrollcommand"] = self._yscroll.set
+        else:
+            self._yscroll = None
 
-        self._frame = tk.Frame(subframe)
+        self._frame = tk.Frame(self._subframe)
         self._canvas.create_window(0, 0, window=self._frame, anchor=tk.NW)
         self._frame.bind('<Configure>', self._conf)  
-        
+        self._subframe.bind('<Configure>', self._conf1)
+
     @property
     def frame(self):
         return self._frame
 
+    def _conf1(self, e):
+        if self._xscroll is not None:
+            if int(self._canvas["width"]) <= e.width:
+                self._xscroll.grid_remove()
+            else:
+                self._xscroll.grid()
+        if self._yscroll is not None:
+            if int(self._canvas["height"]) <= e.height:
+                self._yscroll.grid_remove()
+            else:
+                self._yscroll.grid()
+        
     def _conf(self, e):
         if self._canvas["width"] != self.frame.winfo_reqwidth():
             self._canvas["width"] = self.frame.winfo_reqwidth()

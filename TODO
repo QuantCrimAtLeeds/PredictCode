@@ -8,5 +8,14 @@
 
 # GUI
 
+- Predictors:
+  - Flesh out AnalysisModel and have the view consume it
+  - When click "add" launch PickPrediction
+  - Get the visuals right on this.
+  - When user selects a new predictor, launch the controller for it
+  - Add newly built predictor into the list
+  - Do the 2 naive predictors
+  - Grid generator
+
 - Session saving/loading
-   - New dialog to select a recent session
+  - New dialog to select a recent session

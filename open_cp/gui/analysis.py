@@ -5,10 +5,17 @@ analysis
 The main window, once we have loaded data.
 """
 
-import datetime, json, logging, array
+import array
+import datetime
+import json
+import logging
+
 import numpy as np
-import open_cp.gui.tk.analysis_view as analysis_view
+
 import open_cp.gui.funcs as funcs
+import open_cp.gui.predictors as predictors
+import open_cp.gui.tk.analysis_view as analysis_view
+
 
 class Analysis():
     def __init__(self, model, root):
@@ -133,6 +140,7 @@ class Model():
             raise ValueError("Cannot handle more than 2 crime types.")
         self._make_unique_crime_types()
         self._parse_settings = parse_settings
+        self.analysis_model = AnalysisModel()
         self._time_range = None
         self._selected_crime_types = set()
         self._logger = logging.getLogger(__name__)
@@ -350,3 +358,29 @@ class Model():
         start, end = np.datetime64(start), np.datetime64(end)
         assess_count = np.sum((self.times > start) & (self.times <= end))
         return train_count, assess_count
+
+
+class AnalysisModel():
+    """Model for the prediction and analysis settings.
+    Separated out just to make the classes easier to read."""
+    def __init__(self):
+        # TODO: Add list of selected predictors here.
+        pass
+
+
+class PickPredictionModel():
+    def __init__(self):
+        self._find_preds = predictors.all_predictors
+
+    def predictor_names(self):
+        for clazz in self._find_preds:
+            yield clazz.describe()
+
+
+class PickPrediction():
+    def __init__(self, parent, model):
+        self._model = model
+        self.view = analysis_view.PickPredictionView(parent, model)
+
+    def run():
+        self.view.wait_window(self.view)

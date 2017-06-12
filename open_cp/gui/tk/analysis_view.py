@@ -67,7 +67,8 @@ _text = {
     "fail_save" : "Failed to save session.\nCause: {}/{}",
     "ctfail1" : "Crime type selection {} doesn't make sense for input file as we don't have that many selected crime type fields!",
     "ctfail2" : "Crime type selection {} doesn't make sense for input file",
-    "ctfail3" : "Number of crimes types is {} which is too many!  No crime types will be considered..."
+    "ctfail3" : "Number of crimes types is {} which is too many!  No crime types will be considered...",
+    "pickpred" : "Choose a predicion algorithm"
 }
 
 class AnalysisView(tk.Frame):
@@ -183,11 +184,12 @@ class AnalysisView(tk.Frame):
 
         pred_frame = ttk.LabelFrame(master=frame, text=_text["preds"])
         pred_frame.grid(row=1, column=0, sticky=tk.NSEW, padx=5, pady=3)
-        util.stretchy_columns(pred_frame, [0])
-        f = util.ScrolledFrame(pred_frame, mode="v")
+        util.stretchy_rows_cols(pred_frame, [0], [0])
+        f = util.ScrolledFrame(pred_frame)
         f.grid(sticky=tk.NSEW)
         self._prediction_frame = f.frame
-        ttk.Button(self._prediction_frame, text="TODO afdgk asfk agk afsgk").grid(sticky=tk.NSEW)
+        for i in range(3):
+            ttk.Button(self._prediction_frame, text="TODO afdgk asfk agk afsgk").grid(sticky=tk.NSEW)
 
         compare_frame = ttk.LabelFrame(frame, text=_text["asses"])
         compare_frame.grid(row=2, column=0, sticky=tk.NSEW, padx=5, pady=3)
@@ -354,6 +356,20 @@ class AnalysisView(tk.Frame):
         el = error_list.ErrorList(self, _text["emsg"], _text["emsg1"], errors, [_text["okay"]])
         el.run()
 
+
+class PickPredictionView(util.ModalWindow):
+    def __init__(self, parent, model):
+        self._model = model
+        super().__init__(parent, _text["pickpred"])
+
+    def add_widgets(self):
+        frame = util.ScrolledFrame(self, mode="v")
+        frame.grid(sticky=tk.NSEW)
+
+        frame = frame.frame
+        for name in self._model.predictor_names():
+            ttk.Button(frame, text=name)
+            
 
 def _find_command(kwargs):
     if "command" in kwargs:
