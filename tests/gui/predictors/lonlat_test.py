@@ -24,7 +24,7 @@ def compare_projs(lon, lat):
         x1, y1 = p(lon + 0.501, lat + 0.501)
         dists.append(np.sqrt((x-x1)**2 + (y-y1)**2))
 
-    assert max(dists) - min(dists) < 0.5
+    assert max(dists) - min(dists) < 1
         
 
 def test_projs():

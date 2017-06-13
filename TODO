@@ -8,6 +8,8 @@
 
 # GUI
 
+- Bug: Adding a tooltip to an HREF doesn't work, as the mouse event is `bind`ed twice.  Fix.
+
 - Predictors:
   - Do the 2 naive predictors
   - Grid generator
