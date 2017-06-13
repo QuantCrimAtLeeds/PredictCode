@@ -17,6 +17,8 @@ from . import tooltips
 from . import date_picker
 from open_cp.gui.common import CoordType
 import open_cp.gui.tk.error_list as error_list
+import open_cp.gui.resources as resources
+import PIL.ImageTk as ImageTk
 
 _text = {
     "data" : "Input data",
@@ -69,7 +71,9 @@ _text = {
     "ctfail2" : "Crime type selection {} doesn't make sense for input file",
     "ctfail3" : "Number of crimes types is {} which is too many!  No crime types will be considered...",
     "pickpred" : "Choose a new prediction algorithm",
-    "cancel" : "Cancel"
+    "cancel" : "Cancel",
+    "del_pred" : "Delete this predictor",
+    "edit_pred" : "Edit this predictor"
 }
 
 class AnalysisView(tk.Frame):
@@ -179,17 +183,28 @@ class AnalysisView(tk.Frame):
             w.destroy()
         
         row = 0
-        for pred in self._model.analysis_model.predictors:
+        for index, pred in enumerate(self._model.analysis_tools_model.predictors):
             frame = tk.Frame(self._prediction_frame)
             frame.grid(sticky=tk.NSEW, padx=2, pady=2, row=row, column=0)
             row += 1
             ttk.Label(frame, text=pred.name).grid(row=0, column=0, padx=2, pady=1)
             if pred.settings_string is not None:
                 ttk.Label(frame, text=pred.settings_string).grid(row=1, column=0, padx=2, pady=1)
-            
-        ttk.Button(self._prediction_frame, text="Add new predictor",
-            command=self._controller.tools_controller.add_new_predictor).grid(sticky=tk.NSEW, row=row)
 
+            cmd = lambda i=index : self._controller.tools_controller.remove_predictor(i)
+            b = ttk.Button(frame, image=self._close_icon, command=cmd)
+            b.grid(row=0, column=1)
+            tooltips.ToolTipYellow(b, _text["del_pred"])
+            cmd = lambda i=index : self._controller.tools_controller.edit_predictor(i)
+            b = ttk.Button(frame, image=self._edit_icon, command=cmd)
+            b.grid(row=0, column=2)
+            tooltips.ToolTipYellow(b, _text["edit_pred"])
+
+            ttk.Separator(self._prediction_frame).grid(sticky=tk.NSEW, padx=2, pady=1, row=row, column=0)
+            row += 1
+
+        ttk.Button(self._prediction_frame, text="Add new predictor",
+            command=self._controller.tools_controller.add_new_predictor).grid(sticky=tk.NSEW, row=row,padx=5,pady=2)
 
     def _analysis_tools(self, frame):
         util.stretchy_columns(frame, [0])
@@ -259,7 +274,12 @@ class AnalysisView(tk.Frame):
     def alert(self, message):
         tkinter.messagebox.showerror("Error", message)
 
+    def _load_resources(self):
+        self._close_icon = ImageTk.PhotoImage(resources.close_icon)
+        self._edit_icon = ImageTk.PhotoImage(resources.edit_icon)
+
     def add_widgets(self):
+        self._load_resources()
         # TODO: Maybe make column 1 fixed size??
         #self.columnconfigure(0, weight=2)
         #self.columnconfigure(1, weight=10)
@@ -381,9 +401,7 @@ class PickPredictionView(util.ModalWindow):
         super().__init__(parent, _text["pickpred"])
 
     def add_widgets(self):
-        self.set_size_percentage(20, 20)
         frame = util.ScrolledFrame(self, mode="v")
-        #frame = ttk.Frame(self)
         frame.grid(sticky=tk.NSEW)
         frame = frame.frame
 
@@ -399,6 +417,31 @@ class PickPredictionView(util.ModalWindow):
         ttk.Button(frame, text=_text["cancel"], command=self.cancel).grid(sticky=tk.NSEW, padx=10, pady=3)
 
         self.set_to_actual_width()
+
+
+class PredictionEditView(util.ModalWindow):
+    def __init__(self, parent, title):
+        super().__init__(parent, title)
+        self.result = False
+        
+    def run(self, view):
+        view.grid(sticky=tk.NSEW, row=0, column=0)
+        self.set_to_actual_size()
+        self.wait_window(self)
+
+    def add_widgets(self):
+        ttk.Separator(self).grid(row=1, column=0, sticky=tk.EW, padx=2, pady=2)
+        frame = tk.Frame(self)
+        frame.grid(row=2, column=0, sticky=tk.NSEW)
+        util.stretchy_columns(frame, [0,1])
+        b = ttk.Button(frame, text=_text["okay"], command=self.okay)
+        b.grid(row=0, column=0, sticky=tk.EW, padx=5)
+        b = ttk.Button(frame, text=_text["cancel"], command=self.cancel)
+        b.grid(row=0, column=1, sticky=tk.EW, padx=5)
+
+    def okay(self):
+        self.result = True
+        self.cancel()
 
 
 def _find_command(kwargs):

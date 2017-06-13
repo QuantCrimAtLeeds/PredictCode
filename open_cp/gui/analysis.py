@@ -146,7 +146,7 @@ class Model():
             raise ValueError("Cannot handle more than 2 crime types.")
         self._make_unique_crime_types()
         self._parse_settings = parse_settings
-        self.analysis_model = AnalysisToolsModel()
+        self.analysis_tools_model = AnalysisToolsModel(self)
         self._time_range = None
         self._selected_crime_types = set()
         self._logger = logging.getLogger(__name__)
@@ -365,11 +365,44 @@ class Model():
         return train_count, assess_count
 
 
+class AnalysisToolsController():
+    """Partner of :class:`AnalysisToolsModel`.
+    
+    :param model: Instance of :class:`Model`
+    """
+    def __init__(self, model):
+        self.model = model.analysis_tools_model
+        self.view = None
+        self._pick_pred_model = PickPredictionModel()
+
+    def add_new_predictor(self):
+        pred = PickPrediction(self.view, self._pick_pred_model).run()
+        if pred is None:
+            return
+        self.model.add_predictor(pred)
+        self.view.update_predictors_list()
+
+    def remove_predictor(self, index):
+        self.model.remove_predictor(index)
+        self.view.update_predictors_list()
+
+    def edit_predictor(self, index):
+        pred = self.model.predictors[index]
+        view = analysis_view.PredictionEditView(self.view, pred.describe())
+        edit_view = pred.make_view(view)
+        data = pred.to_dict()
+        view.run(edit_view)
+        if not view.result:
+            pred.from_dict(data)
+        self.view.update_predictors_list()
+
+
 class AnalysisToolsModel():
     """Model for the prediction and analysis settings.
     Separated out just to make the classes easier to read."""
-    def __init__(self):
+    def __init__(self, model):
         self._predictors = []
+        self._model = model
 
     @property
     def predictors(self):
@@ -384,26 +417,13 @@ class AnalysisToolsModel():
 
     def add_predictor(self, clazz):
         v = list(self.predictors)
-        v.append( clazz() )
+        v.append( clazz(self._model) )
         self.predictors = v
 
-
-class AnalysisToolsController():
-    """Partner of :class:`AnalysisToolsModel`.
-    
-    :param model: Instance of :class:`Model`
-    """
-    def __init__(self, model):
-        self.model = model.analysis_model
-        self.view = None
-        self._pick_pred_model = PickPredictionModel()
-
-    def add_new_predictor(self):
-        pred = PickPrediction(self.view, self._pick_pred_model).run()
-        if pred is None:
-            return
-        self.model.add_predictor(pred)
-        self.view.update_predictors_list()
+    def remove_predictor(self, index):
+        v = list(self.predictors)
+        del v[index]
+        self.predictors = v
 
 
 class PickPredictionModel():

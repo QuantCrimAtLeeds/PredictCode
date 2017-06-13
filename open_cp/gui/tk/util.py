@@ -10,6 +10,7 @@ import tkinter.ttk as ttk
 import tkinter.font as tkfont
 import tkinter.filedialog
 import datetime as _datetime
+import webbrowser as _web
 
 NSEW = tk.N + tk.S + tk.E + tk.W
 
@@ -153,6 +154,26 @@ class FloatValidator(Validator):
         return True
 
 
+class IntValidator(Validator):
+    """A :class:`Validator` which only accepts values which are empty, or can
+    parse to a python `int`.
+
+    :param allow_empty: If True, allow "" as a value; otherwise not.
+    """
+    def __init__(self, widget, variable, callback=None, allow_empty=False):
+        super().__init__(widget, variable, callback)
+        self._allow_empty = allow_empty
+
+    def validate(self, value):
+        if value == "" and self._allow_empty:
+            return True
+        try:
+            int(value)
+        except:
+            return False
+        return True
+
+
 class DateTimeValidator(Validator):
     """A :class:`Validator` which only accepts values which parse using the
     given `strptime` string.
@@ -268,8 +289,9 @@ class ModalWindow(tk.Toplevel):
         self.add_widgets()
         self.protocol("WM_DELETE_WINDOW", self.cancel)
         self.bind("<Button-1>", self._flash)
-        self.bind("<Unmap>", self._minim)
-        # Seems to make it work on Windows 10
+        # This seems to cause chaos: TODO: Check if it's needed on X/linux?
+        #self.bind("<Unmap>", self._minim)
+        # Seems to make it work on Windows
         self.after_idle(lambda : self.transient(self._parent))
 
     def _minim(self, event):
@@ -452,7 +474,6 @@ class ScrolledFrame(tk.Frame):
         self._canvas.create_window(0, 0, window=self._frame, anchor=tk.NW)
         self._frame.bind('<Configure>', self._conf)  
         self._subframe.bind('<Configure>', self._conf1)
-        print("Done setup...")
 
     @property
     def frame(self):
@@ -461,8 +482,6 @@ class ScrolledFrame(tk.Frame):
         return self._frame
 
     def _conf1(self, e):
-        print("_conf1", e)
-        return
         if self._xscroll is not None:
             if int(self._canvas["width"]) <= e.width:
                 self._xscroll.grid_remove()
@@ -473,14 +492,46 @@ class ScrolledFrame(tk.Frame):
                 self._yscroll.grid_remove()
             else:
                 self._yscroll.grid()
-        print("_conf1", "end")
         
     def _conf(self, e):
-        print("_conf", e)
-        return
         if self._canvas["width"] != self.frame.winfo_reqwidth():
             self._canvas["width"] = self.frame.winfo_reqwidth()
         if self._canvas["height"] != self.frame.winfo_reqheight():
             self._canvas["height"] = self.frame.winfo_reqheight()
         self._canvas["scrollregion"] = (0, 0, self._canvas["width"], self._canvas["height"])
-        print("_conf", "end")
+
+
+class HREF(ttk.Label):
+    """A subclass of :class:`ttk.Label` which acts like a hyperlink."""
+    def __init__(self, parent, **kwargs):
+        if "url" not in kwargs:
+            raise ValueError("Must specify a URL target")
+        self._url = kwargs["url"]
+        del kwargs["url"]
+        super().__init__(parent, **kwargs)
+        self._init()
+        self["style"] = "Href.TLabel"
+        self._link()
+        self.bind("<Button>", self.open)
+
+    def open(self, event):
+        self._busy()
+        _web.open(self._url)
+
+    def _busy(self):
+        self["cursor"] = "watch"
+        self.after(500, self._link)
+
+    def _link(self):
+        self["cursor"] = "hand2"
+
+    def _init(self):
+        if HREF._font is None:
+            HREF._font = tkfont.nametofont("TkTextFont").copy()
+            HREF._font["underline"] = True
+        if HREF._style is None:
+            HREF._style = ttk.Style()
+            HREF._style.configure("Href.TLabel", foreground="blue", font=HREF._font)
+
+    _font = None
+    _style = None

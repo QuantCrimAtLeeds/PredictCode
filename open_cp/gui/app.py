@@ -27,6 +27,10 @@ def run():
     root = main_window_view.TopWindow()
     locator._make_pool(root)
 
+    #import open_cp.gui.predictors.lonlat as lonlat
+    #lonlat.test(root)
+    #return
+
     mw = main_window.MainWindow(root)
     # Quick start jump to analysis...    
     #mw.view.after(50, mw.load_session(os.path.join("..", "Open data sets", "session.json")))

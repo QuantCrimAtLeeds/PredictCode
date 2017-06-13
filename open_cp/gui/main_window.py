@@ -13,6 +13,7 @@ import open_cp.gui.tk.util as util
 import open_cp.gui.import_file_model as import_file_model
 import open_cp.gui.process_file as process_file
 import open_cp.gui.analysis as analysis
+import open_cp.gui.about as about
 
 class MainWindow():
     def __init__(self, root):
@@ -78,3 +79,9 @@ class MainWindow():
         model = analysis.Model.init_from_process_file_model(filename, pf.model)
         model.settings_from_dict(data)
         return model
+
+    def recent(self):
+        pass
+
+    def about(self):
+        about.About(self.view).run()
