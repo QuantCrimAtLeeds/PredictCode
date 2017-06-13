@@ -4,6 +4,7 @@ pyproj
 shapely
 python-dateutil
 matplotlib
+Pillow
 
 pytest
 codecov

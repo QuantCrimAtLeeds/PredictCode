@@ -25,7 +25,8 @@ _text = {
             ("matplotlib", "https://matplotlib.org/"),
             ("pytest", "https://docs.pytest.org/en/latest/"),
             ("codecov", "https://github.com/codecov/codecov-python"),
-            ("pytest-cov", "https://pytest-cov.readthedocs.io/en/latest/")
+            ("pytest-cov", "https://pytest-cov.readthedocs.io/en/latest/"),
+            ("Pillow", "https://pypi.python.org/pypi/Pillow/2.1.0")
             ],
     "other" : "Other resources",
     "others" : [("Icons by Madebyoliver, CC 3.0 BY", "http://www.flaticon.com/authors/madebyoliver")]
