@@ -68,7 +68,8 @@ _text = {
     "ctfail1" : "Crime type selection {} doesn't make sense for input file as we don't have that many selected crime type fields!",
     "ctfail2" : "Crime type selection {} doesn't make sense for input file",
     "ctfail3" : "Number of crimes types is {} which is too many!  No crime types will be considered...",
-    "pickpred" : "Choose a predicion algorithm"
+    "pickpred" : "Choose a new prediction algorithm",
+    "cancel" : "Cancel"
 }
 
 class AnalysisView(tk.Frame):
@@ -173,6 +174,23 @@ class AnalysisView(tk.Frame):
 
         return frame
 
+    def update_predictors_list(self):
+        for w in self._prediction_frame.winfo_children():
+            w.destroy()
+        
+        row = 0
+        for pred in self._model.analysis_model.predictors:
+            frame = tk.Frame(self._prediction_frame)
+            frame.grid(sticky=tk.NSEW, padx=2, pady=2, row=row, column=0)
+            row += 1
+            ttk.Label(frame, text=pred.name).grid(row=0, column=0, padx=2, pady=1)
+            if pred.settings_string is not None:
+                ttk.Label(frame, text=pred.settings_string).grid(row=1, column=0, padx=2, pady=1)
+            
+        ttk.Button(self._prediction_frame, text="Add new predictor",
+            command=self._controller.tools_controller.add_new_predictor).grid(sticky=tk.NSEW, row=row)
+
+
     def _analysis_tools(self, frame):
         util.stretchy_columns(frame, [0])
         util.stretchy_rows(frame, [1,2])
@@ -182,14 +200,13 @@ class AnalysisView(tk.Frame):
         ttk.Button(button_frame, text=_text["save"], command=self._save).grid(row=0, column=0, sticky=tk.NSEW, padx=5, pady=3)
         ttk.Button(button_frame, text=_text["back"], command=self.cancel).grid(row=1, column=0, sticky=tk.NSEW, padx=5, pady=3)
 
-        pred_frame = ttk.LabelFrame(master=frame, text=_text["preds"])
+        pred_frame = ttk.LabelFrame(frame, text=_text["preds"])
         pred_frame.grid(row=1, column=0, sticky=tk.NSEW, padx=5, pady=3)
         util.stretchy_rows_cols(pred_frame, [0], [0])
         f = util.ScrolledFrame(pred_frame)
         f.grid(sticky=tk.NSEW)
         self._prediction_frame = f.frame
-        for i in range(3):
-            ttk.Button(self._prediction_frame, text="TODO afdgk asfk agk afsgk").grid(sticky=tk.NSEW)
+        self.update_predictors_list()
 
         compare_frame = ttk.LabelFrame(frame, text=_text["asses"])
         compare_frame.grid(row=2, column=0, sticky=tk.NSEW, padx=5, pady=3)
@@ -358,18 +375,31 @@ class AnalysisView(tk.Frame):
 
 
 class PickPredictionView(util.ModalWindow):
-    def __init__(self, parent, model):
+    def __init__(self, parent, model, controller):
         self._model = model
+        self._controller = controller
         super().__init__(parent, _text["pickpred"])
 
     def add_widgets(self):
+        self.set_size_percentage(20, 20)
         frame = util.ScrolledFrame(self, mode="v")
+        #frame = ttk.Frame(self)
         frame.grid(sticky=tk.NSEW)
-
         frame = frame.frame
-        for name in self._model.predictor_names():
-            ttk.Button(frame, text=name)
-            
+
+        last_order = None
+        for index, (name, order) in enumerate(zip(self._model.predictor_names(), self._model.predictor_orders())):
+            if last_order is not None and order != last_order:
+                ttk.Separator(frame).grid(sticky=tk.NSEW, pady=3, padx=3)
+            last_order = order
+            b = ttk.Button(frame, text=name, command=lambda i=index: self._controller.selected(i))
+            b.grid(sticky=tk.NSEW, padx=3, pady=3)
+
+        ttk.Separator(frame).grid(sticky=tk.NSEW,pady=5)
+        ttk.Button(frame, text=_text["cancel"], command=self.cancel).grid(sticky=tk.NSEW, padx=10, pady=3)
+
+        self.set_to_actual_width()
+
 
 def _find_command(kwargs):
     if "command" in kwargs:

@@ -1,8 +1,10 @@
+from . import predictor
 
 # Add new prediction modules here ###########################################
 
-from . import predictor
 from . import naive
+from . import grid
+from . import lonlat
 
 # End #######################################################################
 

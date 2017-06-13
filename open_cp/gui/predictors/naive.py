@@ -18,7 +18,11 @@ class CountingGrid(predictor.Predictor):
         return "Counting Grid naive predictor"
 
     @staticmethod
-    def make_view(self, parent):
+    def order():
+        return predictor._TYPE_PREDICTOR
+
+    @staticmethod
+    def make_view(parent):
         """Construct and return a view object.  This object is the model, and
         the controller may either be another object constructed here, or the
         model."""
@@ -47,6 +51,10 @@ class ScipyKDE(predictor.Predictor):
     @staticmethod
     def describe():
         return "Scipy Kernel Density Estimator naive predictor"
+
+    @staticmethod
+    def order():
+        return predictor._TYPE_PREDICTOR
 
     @staticmethod
     def make_view(self, parent):

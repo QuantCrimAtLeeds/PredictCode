@@ -37,6 +37,8 @@ class Task():
         raise NotImplementedError()
 
 
+_TYPE_PREDICTOR = 100
+
 class Predictor():
     """Abstract base class which all prediction methods derive from.
     The actual mechanics of making a prediction should be in the main `open_cp`
@@ -47,6 +49,7 @@ class Predictor():
     predictors can use it.  The :attr:`name` is used to find suitable partners.
     """
     def __init__(self):
+        # Should always be a no-arg constructor
         pass
 
     @staticmethod
@@ -54,10 +57,16 @@ class Predictor():
         """Return human readable short description of this predictor."""
 
     @staticmethod
-    def make_view(self, parent):
+    def make_view(parent):
         """Construct and return a view object.  This object is the model, and
         the controller may either be another object constructed here, or the
         model."""
+        raise NotImplementedError()
+
+    @staticmethod
+    def order():
+        """An ordinal specifying the order, lowest is "first".  E.g. the generator
+        of a grid would be before an actual predictor."""
         raise NotImplementedError()
 
     @property
@@ -71,6 +80,7 @@ class Predictor():
         """Human readable giving further settings.  May be `None`."""
         raise NotImplementedError()
     
+
     def make_tasks(self):
         raise NotImplementedError()
 

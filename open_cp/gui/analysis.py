@@ -22,7 +22,9 @@ class Analysis():
         self.model = model
         self._root = root
         self._logger = logging.getLogger(__name__)
+        self._tools = AnalysisToolsController(self.model)
         self.view = analysis_view.AnalysisView(self.model, self, self._root)
+        self._tools.view = self.view
         self._init()
 
     def _init(self):
@@ -121,6 +123,10 @@ class Analysis():
             self._logger.exception("Failed to save")
             self.view.alert(analysis_view._text["fail_save"].format(type(e), e))
 
+    @property
+    def tools_controller(self):
+        return self._tools
+
 
 class Model():
     """The model
@@ -140,7 +146,7 @@ class Model():
             raise ValueError("Cannot handle more than 2 crime types.")
         self._make_unique_crime_types()
         self._parse_settings = parse_settings
-        self.analysis_model = AnalysisModel()
+        self.analysis_model = AnalysisToolsModel()
         self._time_range = None
         self._selected_crime_types = set()
         self._logger = logging.getLogger(__name__)
@@ -350,7 +356,6 @@ class Model():
 
     def counts_by_time(self):
         """:return: `(train_count, assess_count)`"""
-        # TODO
         start, end = self.time_range[0], self.time_range[1]
         start, end = np.datetime64(start), np.datetime64(end)
         train_count = np.sum((self.times >= start) & (self.times <= end))
@@ -360,27 +365,79 @@ class Model():
         return train_count, assess_count
 
 
-class AnalysisModel():
+class AnalysisToolsModel():
     """Model for the prediction and analysis settings.
     Separated out just to make the classes easier to read."""
     def __init__(self):
-        # TODO: Add list of selected predictors here.
-        pass
+        self._predictors = []
+
+    @property
+    def predictors(self):
+        """An ordered list of predictors."""
+        return self._predictors
+
+    @predictors.setter
+    def predictors(self, value):
+        v = list(value)
+        v.sort(key = lambda p : p.order())
+        self._predictors = v
+
+    def add_predictor(self, clazz):
+        v = list(self.predictors)
+        v.append( clazz() )
+        self.predictors = v
+
+
+class AnalysisToolsController():
+    """Partner of :class:`AnalysisToolsModel`.
+    
+    :param model: Instance of :class:`Model`
+    """
+    def __init__(self, model):
+        self.model = model.analysis_model
+        self.view = None
+        self._pick_pred_model = PickPredictionModel()
+
+    def add_new_predictor(self):
+        pred = PickPrediction(self.view, self._pick_pred_model).run()
+        if pred is None:
+            return
+        self.model.add_predictor(pred)
+        self.view.update_predictors_list()
 
 
 class PickPredictionModel():
     def __init__(self):
-        self._find_preds = predictors.all_predictors
+        self._predictors = [
+                (clazz.order(), clazz.describe(), clazz)
+                for clazz in predictors.all_predictors
+            ]
+        self._predictors.sort()
 
     def predictor_names(self):
-        for clazz in self._find_preds:
-            yield clazz.describe()
+        return [pair[1] for pair in self._predictors]
+
+    def predictor_orders(self):
+        return [pair[0] for pair in self._predictors]
+
+    def predictor_classes(self):
+        return [pair[2] for pair in self._predictors]
 
 
 class PickPrediction():
     def __init__(self, parent, model):
         self._model = model
-        self.view = analysis_view.PickPredictionView(parent, model)
+        self._root = parent
 
-    def run():
-        self.view.wait_window(self.view)
+    def run(self):
+        self._selected = None
+        self._view = analysis_view.PickPredictionView(self._root, self._model, self)
+        self._view.wait_window(self._view)
+        
+        if self._selected is None:
+            return None
+        return self._model.predictor_classes()[self._selected]
+
+    def selected(self, index):
+        self._selected = index
+        self._view.cancel()

@@ -69,7 +69,7 @@ class LoadFullFile(util.ModalWindow):
     def cancel(self):
         self.cancelled = True
         self._task.cancel()
-        self.destroy(),
+        super().cancel()
 
 
 class DisplayResult(util.ModalWindow):

@@ -70,8 +70,8 @@ def stretchy_rows(window, rows):
         window.rowconfigure(i, weight=1)
 
 def stretchy_rows_cols(window, rows, columns):
-    self.stretchy_columns(window, columns)
-    self.stretchy_rows(window, rows)
+    stretchy_columns(window, columns)
+    stretchy_rows(window, rows)
 
 def ask_open_filename(*args, **kwargs):
     """As :func:`tkinter.filedialog.askopenfilename` but filters the returned
@@ -256,16 +256,21 @@ class ModalWindow(tk.Toplevel):
         super().__init__(parent)
         if no_border:
             self.wm_overrideredirect(True)
-        self.transient(parent)
+        if parent.master is None:
+            self._parent = parent
+        else:
+            self._parent = parent.master
         self._parent = parent
         self.title(title)
-        self.update_idletasks()
         self.grab_set()
+        self.focus_force()
         self.resizable(width=False, height=False)
         self.add_widgets()
         self.protocol("WM_DELETE_WINDOW", self.cancel)
         self.bind("<Button-1>", self._flash)
         self.bind("<Unmap>", self._minim)
+        # Seems to make it work on Windows 10
+        self.after_idle(lambda : self.transient(self._parent))
 
     def _minim(self, event):
         # If we're being minimised then also minimise the parent!
@@ -447,12 +452,17 @@ class ScrolledFrame(tk.Frame):
         self._canvas.create_window(0, 0, window=self._frame, anchor=tk.NW)
         self._frame.bind('<Configure>', self._conf)  
         self._subframe.bind('<Configure>', self._conf1)
+        print("Done setup...")
 
     @property
     def frame(self):
+        """The frame widget which should be the parent of any widgets you wish
+        to display."""
         return self._frame
 
     def _conf1(self, e):
+        print("_conf1", e)
+        return
         if self._xscroll is not None:
             if int(self._canvas["width"]) <= e.width:
                 self._xscroll.grid_remove()
@@ -463,10 +473,14 @@ class ScrolledFrame(tk.Frame):
                 self._yscroll.grid_remove()
             else:
                 self._yscroll.grid()
+        print("_conf1", "end")
         
     def _conf(self, e):
+        print("_conf", e)
+        return
         if self._canvas["width"] != self.frame.winfo_reqwidth():
             self._canvas["width"] = self.frame.winfo_reqwidth()
         if self._canvas["height"] != self.frame.winfo_reqheight():
             self._canvas["height"] = self.frame.winfo_reqheight()
         self._canvas["scrollregion"] = (0, 0, self._canvas["width"], self._canvas["height"])
+        print("_conf", "end")
