@@ -15,7 +15,7 @@ import numpy as np
 import open_cp.gui.funcs as funcs
 import open_cp.gui.predictors as predictors
 import open_cp.gui.tk.analysis_view as analysis_view
-
+from open_cp.gui.import_file_model import CoordType
 
 class Analysis():
     def __init__(self, model, root):
@@ -398,7 +398,11 @@ class AnalysisToolsController():
 
     def edit_predictor(self, index):
         pred = self.model.predictors[index]
-        view = analysis_view.PredictionEditView(self.view, pred.describe())
+        resize = None
+        if "resize" in pred.config():
+            if pred.config()["resize"]:
+                resize = "wh"
+        view = analysis_view.PredictionEditView(self.view, pred.describe(), resize)
         edit_view = pred.make_view(view)
         data = pred.to_dict()
         view.run(edit_view)
@@ -462,6 +466,21 @@ class AnalysisToolsModel():
         v = list(self.predictors)
         del v[index]
         self.predictors = v
+
+    def predictors_of_type(self, order):
+        """Get all predictors of the given order/type."""
+        return [p for p in self.predictors if p.order() == order]
+
+    def projected_coords(self):
+        """Obtain, if possible using the current settings, the entire data-set
+        of projected coordinates.  Returns `None` otherwise."""
+        if self._model.coord_type == CoordType.XY:
+            return self._model.xcoords, self._model.ycoords
+        preds = self.predictors_of_type(predictors.predictor._TYPE_COORD_PROJ)
+        if len(preds) == 0:
+            return None
+        task = preds[0].make_tasks()[0]
+        return task(self._model.xcoords, self._model.ycoords)
 
 
 class PickPredictionModel():

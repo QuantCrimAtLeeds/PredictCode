@@ -18,6 +18,7 @@ class Task():
     
     :param ordering: Higher means run later.  Once all tasks have been
       produced, those with the lowest ordering will run first.
+      TODO: I am gravitation for the `ordering` to really be a `type id`
     :param allow_off_process: If true, then run in a separate process in
       parallel.  Default is False, with is optimal for quick tasks.
     """
@@ -62,6 +63,7 @@ class Predictor():
         self._times = model.times
         self._xcoords = model.xcoords
         self._ycoords = model.ycoords
+        self._model = model
 
     @staticmethod
     def describe():
@@ -82,6 +84,13 @@ class Predictor():
         :param inline: If True, then if applicable, produce a more minimal view.
         """
         raise NotImplementedError()
+
+    def config(self):
+        """Optionally return a non-empty dictionary to specify extra options.
+
+        - {"resize": True}  allow the edit view window to be resized.
+        """
+        return dict()
 
     @property
     def name(self):
@@ -106,10 +115,17 @@ class Predictor():
         raise NotImplementedError()
 
     _Coords = _collections.namedtuple("Coords", "xcoords ycoords")
-    def _as_coords(self):
+    def _as_coords(self, xcoords=None, ycoords=None):
         """Return the coordinates of the data points in an object which has
         attributes `xcoords` and `ycoords`."""
-        return self._Coords(self._xcoords, self._ycoords)
+        if xcoords is None:
+            xcoords, ycoords = self._projected_coords()
+        return self._Coords(xcoords, ycoords)
+
+    def _projected_coords(self):
+        """Returns a pair `(xcs, ycs)` of the coordinates of the whole data
+        set, projected appropriately."""
+        return self._model.analysis_tools_model.projected_coords()
 
 
 class FindPredictors():

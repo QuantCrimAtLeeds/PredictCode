@@ -54,7 +54,8 @@ class GridProvider(predictor.Predictor):
         """Make a grid for the current settings."""
         grid = open_cp.data.Grid(xsize=self._grid_size, ysize=self._grid_size,
             xoffset=self._xoffset, yoffset=self._yoffset)
-        return open_cp.geometry.mask_grid_by_points_intersection(self._as_coords(), grid, bbox=True)
+        return open_cp.geometry.mask_grid_by_points_intersection(
+                self._as_coords(), grid, bbox=True)
 
     def make_tasks(self):
         raise NotImplementedError()
@@ -93,6 +94,9 @@ class GridProvider(predictor.Predictor):
             value = int(value)
         self._yoffset = value
 
+    def config(self):
+        return {"resize":True}
+
 
 ## GUI Stuff #############################################################
 
@@ -109,6 +113,9 @@ _text = {
     "xo" : "X Offset",
     "yo" : "X Offset",
     "xyott" : "A value between 0 and the size of the grid, giving the relative offset of the grid.  Changing shifts the grid around with respect to the data points.",
+    "no_proj" : "Data in Longitude/Latitude format and no projection is selected, so cannot visualise.",
+    "no_proj_tt" : "You must select a projection method before analysis.",
+    "vp" : "Visual preview",
 }
 
 class GridView(tk.Frame):
@@ -116,6 +123,7 @@ class GridView(tk.Frame):
         super().__init__(parent)
         self._controller = controller
         self._inline = inline
+        util.stretchy_rows_cols(self, [3], [2])
         self._add_widgets()
 
     def _add_widgets(self):
@@ -152,28 +160,43 @@ class GridView(tk.Frame):
         self._xo.set(self._controller.xoffset)
         self._yo.set(self._controller.yoffset)
 
+    def _no_proj(self):
+        if self._plot is None:
+            self._plot = ttk.Label(self, text=_text["no_proj"], wraplength=200)
+            self._plot.grid(sticky=tk.W, padx=2, pady=2, row=3, column=0, columnspan=2)
+            tooltips.ToolTipYellow(self._plot, _text["no_proj_tt"])
+
     def _plot_grid(self):
-        if not self._inline:
-            # This works, but is (a) incredibly slow,
-            # and (b) steals the focus...
-            fig, ax = mtp.plt.subplots()
-            ax.scatter(self._controller._xcoords, self._controller._ycoords, marker="x", color="black", alpha=0.5)
+        coords = self._controller._projected_coords()
+        if coords is None:
+            return self._no_proj()
+        if self._inline:
+            return
+
+        def make_fig():
+            fig, ax = mtp.plt.subplots(figsize=(15,9))
+            ax.scatter(coords[0], coords[1], marker="x", color="black", alpha=0.5)
             pc = open_cp.plot.patches_from_grid(self._controller.get_grid())
             ax.add_collection(mtp.matplotlib.collections.PatchCollection(pc, facecolor="None", edgecolor="black"))
-            coords = self._controller._as_coords()
-            xmin, xmax = _np.min(coords.xcoords), _np.max(coords.xcoords)
+            xmin, xmax = _np.min(coords[0]), _np.max(coords[0])
             xd = (xmax - xmin) / 100 * 3
             ax.set(xlim=[xmin-xd, xmax+xd])
-            ymin, ymax = _np.min(coords.ycoords), _np.max(coords.ycoords)
+            ymin, ymax = _np.min(coords[1]), _np.max(coords[1])
             yd = (ymax - ymin) / 100 * 3
             ax.set(ylim=[ymin-yd, ymax+yd])
-            
-            if self._plot is not None:
-                self._plot.destroy()
-            self._plot = mtp.figure_to_canvas(fig, self)
-            self._plot.grid(row=0, column=2, rowspan=4, padx=2, pady=2)
+            fig.tight_layout()
+            return fig
+        
+        if self._plot is None:
+            frame = ttk.LabelFrame(self, text=_text["vp"])
+            frame.grid(row=0, column=2, rowspan=4, padx=2, pady=2, sticky=tk.NSEW)
+            util.stretchy_rows_cols(frame, [0], [0])
+            self._plot = mtp.CanvasFigure(frame)
+            self._plot.grid(padx=2, pady=2, sticky=tk.NSEW)
+        self._plot.set_figure_task(make_fig, dpi=150)
 
     def _change(self, event=None):
+        old = (self._controller.size, self._controller.xoffset, self._controller.yoffset)
         try:
             self._controller.size = self._size.get()
         except:
@@ -187,7 +210,8 @@ class GridView(tk.Frame):
         except:
             pass
         self._init()
-        self._plot_grid()
+        if old != (self._controller.size, self._controller.xoffset, self._controller.yoffset):
+            self._plot_grid()
 
 def test(root):
     ll = GridProvider(predictor.test_model())

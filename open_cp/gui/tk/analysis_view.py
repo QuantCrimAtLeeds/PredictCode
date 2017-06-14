@@ -310,14 +310,16 @@ class AnalysisView(tk.Frame):
             self.destroy()
 
     def refresh_plot(self):
-        fig, ax = mtp.plt.subplots()
-        ax.scatter(self._model.xcoords, self._model.ycoords, marker="+", color="black", alpha=0.2)
-        fig.set_size_inches(3, 3)
-        fig.tight_layout()
-        if self._plot_widget is not None:
-            self._plot_widget.destroy()
-        self._plot_widget = mtp.figure_to_canvas(fig, self._plot_frame)
-        self._plot_widget.grid()
+        if self._plot_widget is None:
+            self._plot_widget = mtp.CanvasFigure(self._plot_frame, width=250)
+            self._plot_widget.grid(sticky=tk.NSEW, padx=2, pady=2)
+        def draw():
+            fig, ax = mtp.plt.subplots()
+            ax.scatter(self._model.xcoords, self._model.ycoords, marker="+", color="black", alpha=0.2)
+            fig.set_size_inches(3, 3)
+            fig.tight_layout()
+            return fig
+        self._plot_widget.set_figure_task(draw)
 
     def _datetime_from(self, date, time):
         return datetime.datetime(date.year, date.month, date.day, time.hour, time.minute)
@@ -422,11 +424,12 @@ class PickPredictionView(util.ModalWindow):
 
 
 class PredictionEditView(util.ModalWindow):
-    def __init__(self, parent, title):
-        super().__init__(parent, title)
+    def __init__(self, parent, title, resize=None):
+        super().__init__(parent, title, resize=resize)
         self.result = False
         
     def run(self, view):
+        util.stretchy_rows_cols(self, [0], [0])
         view.grid(sticky=tk.NSEW, row=0, column=0)
         self.set_to_actual_size()
         self.wait_window(self)
@@ -464,7 +467,6 @@ def _add_to_kwargs(kwargs, key, value):
 class DateEntry(ttk.Entry):
     """Subclass of :class:`ttk.Entry` which opens a date picker which clicked,
     and allows keyboard entry, but validates entry to be a valid date.
-
 
     You may set a keyword argument "command" to register a callback on a change.
     """

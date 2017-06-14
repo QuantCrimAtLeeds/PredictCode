@@ -6,8 +6,9 @@ Transform lon/lat coords into meters
 """
 
 from . import predictor
+import open_cp.gui.import_file_model as import_file_model
 import logging
-import numpy as np
+import numpy as _np
 
 ## Actual work classes ###################################################
 
@@ -16,13 +17,13 @@ class Builtin():
     https://en.wikipedia.org/wiki/Geographic_coordinate_system#Expressing_latitude_and_longitude_as_linear_units
     """
     def __init__(self, ycoords):
-        average_lat = np.average(np.asarray(ycoords))
-        phi = np.pi * average_lat / 180
-        self._y = 111132.92 - 559.82 * np.cos(2 * phi) + 1.175 * np.cos(4 * phi)
-        self._x = 111412.84 * np.cos(phi) - 93.5 * np.cos(3 * phi)
+        average_lat = _np.average(_np.asarray(ycoords))
+        phi = _np.pi * average_lat / 180
+        self._y = 111132.92 - 559.82 * _np.cos(2 * phi) + 1.175 * _np.cos(4 * phi)
+        self._x = 111412.84 * _np.cos(phi) - 93.5 * _np.cos(3 * phi)
 
     def __call__(self, lon, lat):
-        return self._x * lon, self._y * lat
+        return self._x * _np.asarray(lon), self._y * _np.asarray(lat)
 
 
 try:
@@ -40,8 +41,8 @@ class ViaUTM():
     Uses `pyproj` to do the actual projecting.
     """
     def __init__(self, xcoords):
-        average_longitude = np.average(np.asarray(xcoords))
-        utm_zone = int(np.floor((average_longitude + 180) / 6) + 1)
+        average_longitude = _np.average(_np.asarray(xcoords))
+        utm_zone = int(_np.floor((average_longitude + 180) / 6) + 1)
         self._proj = pyproj.Proj(datum="NAD83", ellps="GRS80", proj="utm", units="m", zone=utm_zone)
 
     def __call__(self, lon, lat):
@@ -64,6 +65,23 @@ class BritishNationalGrid(EPSG):
 
 
 ## The Predictor class ###################################################
+
+class PassThrough():
+    """For use when the data is already projected.  Selected automatically by the model."""
+    def __init__(self, model):
+        if model.coord_type != import_file_model.CoordType.XY:
+            raise ValueError("Can only be used on data already projected.")
+
+    class Task(predictor.Task):
+        def __init__(self):
+            super().__init__(predictor._TYPE_COORD_PROJ)
+
+        def __call__(self, xcoords, ycoords):
+            return xcoords, ycoords
+
+    def make_tasks(self):
+        return [self.Task()]
+
 
 class LonLatConverter(predictor.Predictor):
     def __init__(self, model):
@@ -100,9 +118,6 @@ class LonLatConverter(predictor.Predictor):
         self.selected = data["selected"]
         self._epsg = data["epsg"]
 
-    def make_tasks(self):
-        raise NotImplementedError()
-
     @property
     def selected(self):
         return self._selected
@@ -133,6 +148,17 @@ class LonLatConverter(predictor.Predictor):
 
     def get_epsg(self):
         return self._epsg
+
+    class Task(predictor.Task):
+        def __init__(self, delegate):
+            super().__init__(predictor._TYPE_COORD_PROJ)
+            self._delegate = delegate
+
+        def __call__(self, xcoords, ycoords):
+            return self._delegate(_np.asarray(xcoords), _np.asarray(ycoords))
+
+    def make_tasks(self):
+        return [self.Task(self._projector)]
 
 
 ## GUI related ###########################################################

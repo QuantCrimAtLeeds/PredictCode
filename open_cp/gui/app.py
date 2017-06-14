@@ -37,4 +37,4 @@ def run():
     mw.run()
 
     # Don't wait for threads...
-    #os._exit(0)
+    os._exit(0)

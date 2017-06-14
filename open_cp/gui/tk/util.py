@@ -272,8 +272,12 @@ class ModalWindow(tk.Toplevel):
     
     :param parent: The parent window from which to construct the dialog.
     :param title: Title for the modal window.
+    :param no_border: If `True` then don't draw the window border, title bar
+      etc.
+    :param resize: If `None` then don't allow resizing.  Otherwise a string
+      containing `w` and/or `h` to allow resizing of width and/or height.
     """
-    def __init__(self, parent, title, no_border = False):
+    def __init__(self, parent, title, no_border = False, resize=None):
         super().__init__(parent)
         if no_border:
             self.wm_overrideredirect(True)
@@ -285,7 +289,10 @@ class ModalWindow(tk.Toplevel):
         self.title(title)
         self.grab_set()
         self.focus_force()
-        self.resizable(width=False, height=False)
+        if resize is None:
+            self.resizable(width=False, height=False)
+        else:
+            self.resizable(width=("w" in resize), height=("h" in resize))
         self.add_widgets()
         self.protocol("WM_DELETE_WINDOW", self.cancel)
         self.bind("<Button-1>", self._flash)

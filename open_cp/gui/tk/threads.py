@@ -73,6 +73,7 @@ class OffThreadTask():
         if hasattr(self, "_cancelling_lock"):
             with self._cancelling_lock:
                 return self._cancelled
+        return False
 
     def __call__(self):
         """Task to be run off thread"""
