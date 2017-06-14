@@ -33,10 +33,10 @@ class ToolTip():
 
         self._future_id = None
         self._tool_tip_window = None
-        self._widget.bind("<Enter>", self._enter)
-        self._widget.bind("<Leave>", self._leave)
-        self._widget.bind("<ButtonPress>", self._leave)
-
+        self._widget.bind("<Enter>", self._enter, add=True)
+        self._widget.bind("<Leave>", self._leave, add=True)
+        self._widget.bind("<ButtonPress>", self._leave, add=True)
+    
     def _enter(self, event=None):
         try:
             if str(self._widget["state"]) == tk.DISABLED:

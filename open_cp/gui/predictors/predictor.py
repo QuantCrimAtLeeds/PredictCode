@@ -7,6 +7,7 @@ which produce predictions.
 """
 
 import inspect as _inspect
+import collections as _collections
 
 class Task():
     """Abstract base class for a computational task which needs to be carried
@@ -37,6 +38,8 @@ class Task():
         raise NotImplementedError()
 
 
+_TYPE_COORD_PROJ = 0
+_TYPE_GRID = 10
 _TYPE_PREDICTOR = 100
 
 class Predictor():
@@ -70,10 +73,14 @@ class Predictor():
         of a grid would be before an actual predictor."""
         raise NotImplementedError()
 
-    def make_view(self, parent):
+    def make_view(self, parent, inline=False):
         """Construct and return a view object.  This object is the model, and
         the controller may either be another object constructed here, or the
-        model."""
+        model.
+        
+        :param parent: The parent `tk` object (typically another view)
+        :param inline: If True, then if applicable, produce a more minimal view.
+        """
         raise NotImplementedError()
 
     @property
@@ -98,11 +105,18 @@ class Predictor():
         """Restore state from a dictionary."""
         raise NotImplementedError()
 
+    _Coords = _collections.namedtuple("Coords", "xcoords ycoords")
+    def _as_coords(self):
+        """Return the coordinates of the data points in an object which has
+        attributes `xcoords` and `ycoords`."""
+        return self._Coords(self._xcoords, self._ycoords)
+
 
 class FindPredictors():
     def __init__(self, start):
         self._predictors = set()
         self._checked = set()
+        self._max_depth = 2
         self._scan_module(start)
         if Predictor in self._predictors:
             self._predictors.remove(Predictor)
@@ -113,7 +127,9 @@ class FindPredictors():
         """Set of classes which (properly) extend predictor.Predictor"""
         return self._predictors
         
-    def _scan_module(self, mod):
+    def _scan_module(self, mod, depth=0):
+        if depth >= self._max_depth:
+            return
         if mod in self._checked:
             return
         self._checked.add(mod)
@@ -122,7 +138,7 @@ class FindPredictors():
                 if _inspect.isclass(value):
                     self._scan_class(value)
                 elif _inspect.ismodule(value):
-                    self._scan_module(value)
+                    self._scan_module(value, depth+1)
                     
     def _scan_class(self, cla):
         if Predictor in _inspect.getmro(cla):

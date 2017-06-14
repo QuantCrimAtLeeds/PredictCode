@@ -9,6 +9,8 @@ from . import predictor
 import logging
 import numpy as np
 
+## Actual work classes ###################################################
+
 class Builtin():
     """An approximation; see
     https://en.wikipedia.org/wiki/Geographic_coordinate_system#Expressing_latitude_and_longitude_as_linear_units
@@ -21,7 +23,6 @@ class Builtin():
 
     def __call__(self, lon, lat):
         return self._x * lon, self._y * lat
-
 
 
 try:
@@ -62,6 +63,8 @@ class BritishNationalGrid(EPSG):
         super().__init__(27700)
 
 
+## The Predictor class ###################################################
+
 class LonLatConverter(predictor.Predictor):
     def __init__(self, model):
         super().__init__(model)
@@ -75,9 +78,9 @@ class LonLatConverter(predictor.Predictor):
 
     @staticmethod
     def order():
-        return 0
+        return predictor._TYPE_COORD_PROJ
 
-    def make_view(self, parent):
+    def make_view(self, parent, inline=False):
         self._view = LonLatConverterView(parent, self)
         return self._view
 
@@ -131,6 +134,8 @@ class LonLatConverter(predictor.Predictor):
     def get_epsg(self):
         return self._epsg
 
+
+## GUI related ###########################################################
 
 import tkinter as tk
 import tkinter.ttk as ttk

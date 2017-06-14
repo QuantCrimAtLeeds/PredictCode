@@ -117,8 +117,9 @@ class Analysis():
 
     def save(self, filename):
         try:
+            d = self.model.to_dict()
             with open(filename, "wt") as f:
-                json.dump(self.model.to_dict(), f, indent=2)
+                json.dump(d, f, indent=2)
         except Exception as e:
             self._logger.exception("Failed to save")
             self.view.alert(analysis_view._text["fail_save"].format(type(e), e))
@@ -161,14 +162,16 @@ class Model():
 
     def to_dict(self):
         """Convert all settings to a dictionary."""
-        return {"filename" : self.filename,
+        data = {"filename" : self.filename,
                 "parse_settings" : self._parse_settings.to_dict(),
                 "training_time_range" : [funcs.datetime_to_string(self.time_range[0]),
                         funcs.datetime_to_string(self.time_range[1])],
                 "assessment_time_range" : [funcs.datetime_to_string(self.time_range[2]),
                         funcs.datetime_to_string(self.time_range[3])],
-                "selected_crime_types" : list(self._crime_types)
+                "analysis_tools" : self.analysis_tools_model.to_dict(),
             }
+        data["selected_crime_types"] = [ self.unique_crime_types[index] for index in self.selected_crime_types]
+        return data
 
     def settings_from_dict(self, data):
         """Over-write the current settings with the passed dictionary,
@@ -177,6 +180,13 @@ class Model():
         Checks that the selected crime types are consistent with the current
         data and adds problems to the errors list.
         """
+        if "analysis_tools" in data:
+            try:
+                self.analysis_tools_model.settings_from_dict(data["analysis_tools"])
+            except ValueError as ex:
+                self._errors.append(str(ex))
+        else:
+            self._logger.warn("Didn't find key 'analysis_tools': Is this an old input file?")
         t = data["training_time_range"]
         a = data["assessment_time_range"]
         self.time_range = [funcs.string_to_datetime(t[0]), funcs.string_to_datetime(t[1]),
@@ -399,10 +409,38 @@ class AnalysisToolsController():
 
 class AnalysisToolsModel():
     """Model for the prediction and analysis settings.
-    Separated out just to make the classes easier to read."""
+    Separated out just to make the classes easier to read.
+    
+    :param model: The main mode, so we can access coord/times data.
+    """
     def __init__(self, model):
         self._predictors = []
         self._model = model
+
+    def to_dict(self):
+        """Write settings to dictionary."""
+        preds = [ {"name" : p.describe(), "settings" : p.to_dict()}
+            for p in self.predictors ]
+        return { "predictors" : preds }
+
+    def settings_from_dict(self, data):
+        """Import settings from a dictionary."""
+        v, errors = [], []
+        for pred_data in data["predictors"]:
+            name = pred_data["name"]
+            pred = [p for p in predictors.all_predictors if p.describe() == name]
+            if len(pred) == 0:
+                errors.append(analysis_view._text["pi_fail1"].format(name))
+                continue
+            if len(pred) > 1:
+                errors.append(analysis_view._text["pi_fail2"].format(name))
+                continue
+            pred = pred[0](self._model)
+            pred.from_dict(pred_data["settings"])
+            v.append(pred)
+        self.predictors = v
+        if len(errors) > 0:
+            raise ValueError("\n".join(errors))
 
     @property
     def predictors(self):

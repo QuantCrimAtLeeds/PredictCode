@@ -27,8 +27,8 @@ def run():
     root = main_window_view.TopWindow()
     locator._make_pool(root)
 
-    #import open_cp.gui.predictors.lonlat as lonlat
-    #lonlat.test(root)
+    #import open_cp.gui.predictors.grid as pred
+    #pred.test(root)
     #return
 
     mw = main_window.MainWindow(root)
@@ -37,4 +37,4 @@ def run():
     mw.run()
 
     # Don't wait for threads...
-    os._exit(0)
+    #os._exit(0)

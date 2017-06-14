@@ -8,12 +8,14 @@
 
 # GUI
 
-- Bug: Adding a tooltip to an HREF doesn't work, as the mouse event is `bind`ed twice.  Fix.
+BUG: If focus is off the application when it tries to display a top-level window,
+  the window goes missing.  On Windows.
 
 - Predictors:
   - Do the 2 naive predictors
   - Grid generator
-  - AnalysisToolsModel to/from dictionary for serialisation
 
 - Session saving/loading
   - New dialog to select a recent session
+
+- Would be nice to bind the scroll wheel to a vertical scroll bar...

@@ -11,8 +11,8 @@ from . import data as _data
 try:
     import shapely.geometry as _geometry
 except Exception:
-    import sys
-    print("Failed to import shapely.", file=sys.stderr)
+    import logging
+    logging.getLogger(__name__).error("Failed to import `shapely`.")
     _geometry = None
 
 def grid_intersection(geometry, grid):
@@ -46,7 +46,9 @@ def grid_intersection(geometry, grid):
 def mask_grid_by_intersection(geometry, grid):
     """Generate a :class:`MaskedGrid` by intersecting the grid with the
     geometry.  The returned grid may have a different x/y offset, so that it
-    can contain all grid cells which intersect with the geometry.
+    can contain all grid cells which intersect with the geometry.  However,
+    the "relative offset" will be unchanged (so that the difference between the
+    x offsets will be a multiple of the grid width, and the same for y).
 
     :param geometry: Geometry object to intersect with.
     :param grid: The :class:`Grid` instance describing the grid.
@@ -71,6 +73,45 @@ def mask_grid_by_intersection(geometry, grid):
             poly = poly.intersection(geometry)
             if poly.is_empty or poly.area == 0:
                 mask[y][x] = True
+    
+    return _data.MaskedGrid(grid.xsize, grid.ysize, xo, yo, mask)
+
+def mask_grid_by_points_intersection(timed_points, grid, bbox=False):
+    """Generate a :class:`MaskedGrid` by intersecting the grid with collection
+    of points.
+
+    :param timed_points: Instance of :class:`TimedPoints` (or other object with
+      `xcoords` and `ycoords` attributes).
+    :param grid: The :class:`Grid` instance describing the grid.
+    :param bbox: If `True` then return the smallest rectangle containing the
+      points.  If `False` then just return the grid cells which contain at
+      least once point.
+    """
+    xcs = _np.asarray(timed_points.xcoords)
+    ycs = _np.asarray(timed_points.ycoords)
+    minx, maxx = _np.min(xcs), _np.max(xcs)
+    miny, maxy = _np.min(ycs), _np.max(ycs)
+    xstart = int(_np.floor((minx - grid.xoffset) / grid.xsize))
+    xend = int(_np.floor((maxx - grid.xoffset) / grid.xsize))
+    ystart = int(_np.floor((miny - grid.yoffset) / grid.ysize))
+    yend = int(_np.floor((maxy - grid.yoffset) / grid.ysize))
+    width = xend - xstart + 1
+    height = yend - ystart + 1
+
+    mask = _np.zeros((height, width), dtype=_np.bool)
+    xo = grid.xoffset + xstart * grid.xsize
+    yo = grid.yoffset + ystart * grid.ysize
+    if not bbox:
+        def intersect(xx, yy):
+            mask = ( (xcs >= xx) & (ycs >= yy)
+                & (xcs <= (xx+grid.xsize)) & (ycs <= (yy+grid.ysize)) )
+            return _np.any(mask)
+        for y in range(height):
+            yy = yo + y * grid.ysize
+            for x in range(width):
+                xx = xo + x * grid.xsize
+                if not intersect(xx, yy):
+                    mask[y][x] = True
     
     return _data.MaskedGrid(grid.xsize, grid.ysize, xo, yo, mask)
 

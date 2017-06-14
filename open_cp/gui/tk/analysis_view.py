@@ -70,6 +70,8 @@ _text = {
     "ctfail1" : "Crime type selection {} doesn't make sense for input file as we don't have that many selected crime type fields!",
     "ctfail2" : "Crime type selection {} doesn't make sense for input file",
     "ctfail3" : "Number of crimes types is {} which is too many!  No crime types will be considered...",
+    "pi_fail1" : "Cannot find a match for a predictor named {}",
+    "pi_fail2" : "Multiple matches for a predictor named {}",
     "pickpred" : "Choose a new prediction algorithm",
     "cancel" : "Cancel",
     "del_pred" : "Delete this predictor",
@@ -435,9 +437,9 @@ class PredictionEditView(util.ModalWindow):
         frame.grid(row=2, column=0, sticky=tk.NSEW)
         util.stretchy_columns(frame, [0,1])
         b = ttk.Button(frame, text=_text["okay"], command=self.okay)
-        b.grid(row=0, column=0, sticky=tk.EW, padx=5)
+        b.grid(row=0, column=0, sticky=tk.EW, padx=5, pady=3)
         b = ttk.Button(frame, text=_text["cancel"], command=self.cancel)
-        b.grid(row=0, column=1, sticky=tk.EW, padx=5)
+        b.grid(row=0, column=1, sticky=tk.EW, padx=5, pady=3)
 
     def okay(self):
         self.result = True
