@@ -16,7 +16,7 @@ def compare_projs(lon, lat):
         x, y = p(xs, ys)
         dists.append( distance.pdist(np.asarray([x,y]).T) )
     a = np.abs(dists[1] - dists[2])
-    assert np.average(a) < 200
+    assert np.average(a) < 250
 
     dists = []
     for p in projs:
