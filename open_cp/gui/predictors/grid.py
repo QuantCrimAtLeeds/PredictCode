@@ -58,9 +58,9 @@ class GridProvider(predictor.Predictor):
         return open_cp.geometry.mask_grid_by_points_intersection(
                 self._as_coords(), grid, bbox=True)
 
-    class Task(predictor.Task):
+    class Task(predictor.GridTask):
         def __init__(self, size, xo, yo):
-            super().__init__(predictor._TYPE_GRID)
+            super().__init__()
             self._grid_size = size
             self._xoffset = xo
             self._yoffset = yo

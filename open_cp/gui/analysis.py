@@ -130,7 +130,7 @@ class Analysis():
 
 
 class Model():
-    """The model
+    """The model 
 
     :param filename: Name of the file we loaded
     :param data: `(timestamps, xcoords, ycoords, crime_types)`
@@ -362,6 +362,13 @@ class Model():
         start, end = np.datetime64(start), np.datetime64(end)
         mask = (self.times > start) & (self.times <= end)
         mask &= self._crime_selected_mask()
+        return self.times[mask], self.xcoords[mask], self.ycoords[mask]
+
+    def selected_by_crime_type_data(self):
+        """`(times, xcoords, ycoords)` for the crime types (but with any
+        timestamp).
+        """
+        mask = self._crime_selected_mask()
         return self.times[mask], self.xcoords[mask], self.ycoords[mask]
 
     def counts_by_time(self):

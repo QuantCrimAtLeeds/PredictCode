@@ -11,11 +11,28 @@
 - Predictors:
   - Do the 2 naive predictors
 
+Pipeline of running:
+- Find the projectors to use.  For each projector:
+- Find the grids to use.  For each grid:
+- Generate the prediction tasks.
+- Then generate tasks from these, and run them.
+- Each one should produce a "raw" projection: a timestamp of the projection, and an instance of GridPrediction
+- Everything else should go under "analysis"
+
+Would be good to have a way to capture non-fatal warnings.
+- For example, most predictors will generate one prediction per day, so any time (as opposed to date) data in
+the "assessement time range" will be ignored.  (Aside: make this a base-class method).
+- Maybe write a custom logger which redirects to a window??
+
+
+
+
 - Session saving/loading
   - New dialog to select a recent session
 
 - Would be nice to bind the scroll wheel to a vertical scroll bar...
 
 - Would be nice if in `mtp.py` we can get away without needing PIL.
+  - This is very low priority...
   - Can load a photo image, but cannot rescale. 
   - So need to change code to recompute the figure with a suitable dpi

@@ -291,6 +291,7 @@ class ModalWindow(tk.Toplevel):
         self.title(title)
         self.grab_set()
         self.focus_force()
+        self.minsize(50, 50)
         if resize is None:
             self.resizable(width=False, height=False)
         else:
@@ -301,21 +302,21 @@ class ModalWindow(tk.Toplevel):
         # Have had trouble with this, but the current placement seems to work
         # on Windows and X-Windows okay.
         self.transient(self._parent)
-        self.after(100, lambda : self.bind("<Unmap>", self._minim))
+        #self.after(100, lambda : self.bind("<Unmap>", self._minim))
+        self.bind("<Unmap>", self._minim)
 
     def _minim(self, event):
         # If we're being minimised then also minimise the parent!
-        now = _time.perf_counter()
-        if hasattr(self, "_lastmin"):
-            delta = now - self._lastmin
-            if delta < 0.5:
-                return
-        self._lastmin = now
-        _logging.getLogger(__name__).debug("%s being asked to minimise...", self)
+        if event.widget != self:
+            # Because we binded to a _top level window_ all child widgets will
+            # also raise this event; but we only care about the actual top
+            # level window being unmapped.
+            return
+        _logging.getLogger(__name__).debug("%s being asked to minimise", self)
         win = self._parent.master
         if win is None:
             win = self._parent
-        self.after(50, win.iconify)
+        self.after_idle(win.iconify)
 
     def _over_self(self, event):
         over_win = self.winfo_containing(event.x_root, event.y_root)

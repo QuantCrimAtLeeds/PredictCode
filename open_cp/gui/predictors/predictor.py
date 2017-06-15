@@ -8,6 +8,7 @@ which produce predictions.
 
 import inspect as _inspect
 import collections as _collections
+import open_cp.data
 
 class Task():
     """Abstract base class for a computational task which needs to be carried
@@ -16,14 +17,12 @@ class Task():
     May either be run in this process (e.g. generating a grid) or run off
     process to enable parallelisation.
     
-    :param ordering: Higher means run later.  Once all tasks have been
-      produced, those with the lowest ordering will run first.
-      TODO: I am gravitation for the `ordering` to really be a `type id`
+    We should sub-class for specific types of task.
+    
     :param allow_off_process: If true, then run in a separate process in
       parallel.  Default is False, with is optimal for quick tasks.
     """
-    def __init__(self, ordering, allow_off_process=False):
-        self._ordering = ordering
+    def __init__(self, allow_off_process=False):
         self._off_process = allow_off_process
 
     @property
@@ -31,17 +30,56 @@ class Task():
         """Should we run as a separate process?"""
         return self._off_process
 
-    @property
-    def order(self):
-        return self._ordering
 
-    def __call__(self):
+_TYPE_COORD_PROJ = 0
+
+class ProjectTask(Task):
+    def __call__(self, xcoords, ycoords):
+        """Project the coordinates, which may be one dimensional arrays, or
+        scalars."""
         raise NotImplementedError()
 
 
-_TYPE_COORD_PROJ = 0
 _TYPE_GRID = 10
-_TYPE_PREDICTOR = 100
+
+class GridTask(Task):
+    def __call__(self, timed_points):
+        """Return a :class:`open_cp.data.BoundedGrid` instance giving the grid
+        for the passed dataset.  Predictors are free to estimate risk outside
+        of this grid, but the grid should give an indication of the extent of
+        the data."""
+        raise NotImplementedError()
+        
+
+_TYPE_GRID_PREDICTOR = 100
+
+class GridPredictorTask(Task):
+    def __call__(self, analysis_model, grid, project_task):
+        """For the given instance of :class:`analysis.Model` generate one or
+        more instances of :class:`SingleGridPredictor` making actual
+        predictions."""
+        raise NotImplementedError()
+        
+    def projected_data(self, analysis_model, project_task):
+        """Use the projector to return all data from the model which matches
+        the selected crime types, projected in a suitable way.
+        
+        :return: Instance of :class:`open_cp.data.TimedPoints`.
+        """
+        times, xcoords, ycoords = analysis_model.selected_by_crime_type_data()
+        xcoords, ycoords = project_task(xcoords, ycoords)
+        return open_cp.data.TimedPoints.from_coords(times, xcoords, ycoords)
+        
+        
+class SingleGridPredictor(Task):
+    # TODO
+    pass
+
+
+#_TYPE_CTS_PREDICTOR = 200
+
+
+
 
 class Predictor():
     """Abstract base class which all prediction methods derive from.

@@ -33,7 +33,8 @@ class DataTrainer():
 class GridPrediction(data.BoundedGrid):
     """A prediction based on a grid.  The risk is always computed by finding
     the grid cell the coordinates contained, and then deferring to the abstract
-    `grid_risk` method.
+    `grid_risk` method.  Notice also that the "extent" of the prediction is not
+    (meaningfully) defined.
     
     :param xsize: The width of each grid cell.
     :param ysize: The height of each grid cell.
@@ -76,11 +77,11 @@ class GridPrediction(data.BoundedGrid):
         mask = _np.empty((self.yextent, self.xextent), dtype=_np.bool)
         for y in range(self.yextent):
             for x in range(self.xextent):
-                intensity[y][x] = grid_pred.grid_risk(x, y)
-                mask[y][x] = not grid_pred.is_valid(x, y)
+                intensity[y][x] = self.grid_risk(x, y)
+                mask[y][x] = not self.is_valid(x, y)
         if not _np.any(mask):
             return intensity
-        risk = _np.ma.masked_array(intensity, mask)
+        return _np.ma.masked_array(intensity, mask)
 
     def __repr__(self):
         return "GridPrediction(offset=({},{}), size={}x{})".format(self.xoffset,

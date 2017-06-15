@@ -89,7 +89,7 @@ class PassThrough():
         if model.coord_type != import_file_model.CoordType.XY:
             raise ValueError("Can only be used on data already projected.")
 
-    class Task(predictor.Task):
+    class Task(predictor.ProjectTask):
         def __init__(self):
             super().__init__(predictor._TYPE_COORD_PROJ)
 
@@ -168,9 +168,9 @@ class LonLatConverter(predictor.Predictor):
     def get_epsg(self):
         return self._epsg
 
-    class Task(predictor.Task):
+    class Task(predictor.ProjectTask):
         def __init__(self, delegate):
-            super().__init__(predictor._TYPE_COORD_PROJ)
+            super().__init__()
             self._delegate = delegate
 
         def __call__(self, xcoords, ycoords):

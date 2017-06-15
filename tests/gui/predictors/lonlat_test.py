@@ -49,7 +49,6 @@ def test_passthrough(model):
     pt = lonlat.PassThrough(model)
     tasks = pt.make_tasks()
     assert len(tasks) == 1
-    assert tasks[0].order == 0
     assert tasks[0].off_process == False
     x, y = tasks[0](model.xcoords, model.ycoords)
     np.testing.assert_allclose(x, [0,-1,0,1])
@@ -68,7 +67,6 @@ def test_lonlat_tasks(model1):
     con = lonlat.LonLatConverter(model)
     tasks = con.make_tasks()
     assert len(tasks) == 1
-    assert tasks[0].order == 0
     assert tasks[0].off_process == False
     
     x, y = tasks[0](model.xcoords, model.ycoords)

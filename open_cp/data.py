@@ -432,11 +432,17 @@ class TimedPoints:
     @staticmethod
     def from_coords(timestamps, xcoords, ycoords):
         """Static constructor allowing you to pass separate arrays of x and y
-        coordinates.
+        coordinates.  Also allows `timestamps` to be unorderd: all data will
+        be sorted first.
         """
         lengths = { len(timestamps), len(xcoords), len(ycoords) }
         if len(lengths) != 1:
             raise Exception("Input data should all be of the same length")
+        timestamps = _np.asarray(timestamps)
+        indices = _np.argsort(timestamps)
+        timestamps = timestamps[indices]
+        xcoords = _np.asarray(xcoords)[indices]
+        ycoords = _np.asarray(ycoords)[indices]
         return TimedPoints(timestamps, _np.stack([xcoords, ycoords]))
 
 

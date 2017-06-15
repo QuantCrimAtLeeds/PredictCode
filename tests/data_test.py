@@ -161,12 +161,14 @@ def test_TimedPoints_must_be_time_ordered():
         TimedPoints(timestamps, coords)
 
 def test_TimedPoints_from_coords():
-    tp2 = a_valid_TimedPoints()
-    tp = TimedPoints.from_coords(tp2.timestamps, [3, 1, 4], [1, 5, 9])
-    assert tp.timestamps[0] == np.datetime64("2017-03-20T12:30")
-    assert tp.timestamps[1] == np.datetime64("2017-03-20T14:30")
-    npt.assert_array_almost_equal(tp.coords[0], [3, 1, 4])
-    npt.assert_array_almost_equal(tp.coords[1], [1, 5, 9])
+    times = [np.datetime64("2016-10-11T12:30"), np.datetime64("2016-05-07T00:00"),
+             np.datetime64("2017-01-02T14:00")]
+    tp = TimedPoints.from_coords(times, [3, 1, 4], [1, 5, 9])
+    assert tp.timestamps[0] == np.datetime64("2016-05-07T00:00")
+    assert tp.timestamps[1] == np.datetime64("2016-10-11T12:30")
+    assert tp.timestamps[2] == np.datetime64("2017-01-02T14:00")
+    npt.assert_array_almost_equal(tp.coords[0], [1, 3, 4])
+    npt.assert_array_almost_equal(tp.coords[1], [5, 1, 9])
     assert len(tp.timestamps) == 3
     assert tp.coords.shape == (2, 3)
 
