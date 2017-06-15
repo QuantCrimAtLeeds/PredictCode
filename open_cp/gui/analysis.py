@@ -389,7 +389,10 @@ class AnalysisToolsController():
         pred = PickPrediction(self.view, self._pick_pred_model).run()
         if pred is None:
             return
-        self.model.add_predictor(pred)
+        try:
+            self.model.add_predictor(pred)
+        except ValueError as ex:
+            self.view.alert(str(ex))
         self.view.update_predictors_list()
 
     def remove_predictor(self, index):

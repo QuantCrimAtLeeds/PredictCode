@@ -107,11 +107,14 @@ def test_serialisation(saved_dict):
 @pytest.fixture
 def model_with_preds(saved_dict, model):
     model.settings_from_dict(saved_dict)
+    model._parse_settings.coord_type = import_file_model.CoordType.LonLat
     model.analysis_tools_model.add_predictor(predictors.lonlat.LonLatConverter)
     return model.to_dict()
 
-def test_pred_serialisation(model_with_preds):
+def test_pred_serialisation(model_with_preds, parse_settings):
     mdl = model()
+    mdl._parse_settings = parse_settings
+    mdl._parse_settings.coord_type = import_file_model.CoordType.LonLat
     mdl.settings_from_dict(model_with_preds)
 
     assert len(mdl.analysis_tools_model.predictors) == 1

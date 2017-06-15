@@ -33,15 +33,16 @@ def test_projs():
     for x, y in zip(lon, lat):
         compare_projs(x, y)
 
+import collections
+Model = collections.namedtuple("Model", "times xcoords ycoords coord_type")
+import open_cp.gui.import_file_model as import_file_model
+
 @pytest.fixture
 def model():
     import datetime
     times = [datetime.datetime.now() for _ in range(4)]
     xcs = [0, -1, 0, 1]
     ycs = [54, 50, 55, 52]
-    import collections
-    Model = collections.namedtuple("Model", "times xcoords ycoords coord_type")
-    import open_cp.gui.import_file_model as import_file_model
     return Model(times, xcs, ycs, import_file_model.CoordType.XY)
 
 def test_passthrough(model):
@@ -54,7 +55,16 @@ def test_passthrough(model):
     np.testing.assert_allclose(x, [0,-1,0,1])
     np.testing.assert_allclose(y, [54, 50, 55, 52])
 
-def test_lonlat_tasks(model):
+@pytest.fixture
+def model1(model):
+    return Model(model.times, model.xcoords, model.ycoords, import_file_model.CoordType.LonLat)
+
+def test_lonlat_raises(model):
+    with pytest.raises(ValueError):
+        lonlat.LonLatConverter(model)
+
+def test_lonlat_tasks(model1):
+    model = model1
     con = lonlat.LonLatConverter(model)
     tasks = con.make_tasks()
     assert len(tasks) == 1

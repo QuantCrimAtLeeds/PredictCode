@@ -51,14 +51,28 @@ class GridProvider(predictor.Predictor):
         self._yoffset = data["yoffset"]
 
     def get_grid(self):
-        """Make a grid for the current settings."""
+        """Make a grid for the current settings.  Clipped to contain all data
+        points."""
         grid = open_cp.data.Grid(xsize=self._grid_size, ysize=self._grid_size,
             xoffset=self._xoffset, yoffset=self._yoffset)
         return open_cp.geometry.mask_grid_by_points_intersection(
                 self._as_coords(), grid, bbox=True)
 
+    class Task(predictor.Task):
+        def __init__(self, size, xo, yo):
+            super().__init__(predictor._TYPE_GRID)
+            self._grid_size = size
+            self._xoffset = xo
+            self._yoffset = yo
+            
+        def __call__(self, timed_points):
+            grid = open_cp.data.Grid(xsize=self._grid_size, ysize=self._grid_size,
+                                     xoffset=self._xoffset, yoffset=self._yoffset)
+            return open_cp.geometry.mask_grid_by_points_intersection(
+                timed_points, grid, bbox=True)
+
     def make_tasks(self):
-        raise NotImplementedError()
+        return [self.Task(self.size, self.xoffset, self.yoffset)]
 
     @property
     def size(self):
@@ -174,17 +188,20 @@ class GridView(tk.Frame):
             return
 
         def make_fig():
-            fig, ax = mtp.plt.subplots(figsize=(15,9))
+            fig = mtp.new_figure()
+            ax = fig.add_subplot(1,1,1)
             ax.scatter(coords[0], coords[1], marker="x", color="black", alpha=0.5)
-            pc = open_cp.plot.patches_from_grid(self._controller.get_grid())
-            ax.add_collection(mtp.matplotlib.collections.PatchCollection(pc, facecolor="None", edgecolor="black"))
+            #pc = open_cp.plot.patches_from_grid(self._controller.get_grid())
+            #ax.add_collection(mtp.matplotlib.collections.PatchCollection(pc, edgecolor="black", facecolor="None"))
+            lc = open_cp.plot.lines_from_regular_grid(self._controller.get_grid())
+            ax.add_collection(mtp.matplotlib.collections.LineCollection(lc, color="black", linewidth=0.5))
             xmin, xmax = _np.min(coords[0]), _np.max(coords[0])
             xd = (xmax - xmin) / 100 * 3
             ax.set(xlim=[xmin-xd, xmax+xd])
             ymin, ymax = _np.min(coords[1]), _np.max(coords[1])
             yd = (ymax - ymin) / 100 * 3
             ax.set(ylim=[ymin-yd, ymax+yd])
-            fig.tight_layout()
+            fig.set_tight_layout(True)
             return fig
         
         if self._plot is None:

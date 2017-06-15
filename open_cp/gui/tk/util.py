@@ -11,6 +11,8 @@ import tkinter.font as tkfont
 import tkinter.filedialog
 import datetime as _datetime
 import webbrowser as _web
+import logging as _logging
+import time as _time
 
 NSEW = tk.N + tk.S + tk.E + tk.W
 
@@ -296,18 +298,24 @@ class ModalWindow(tk.Toplevel):
         self.add_widgets()
         self.protocol("WM_DELETE_WINDOW", self.cancel)
         self.bind("<Button-1>", self._flash)
-        # This seems to cause chaos: TODO: Check if it's needed on X/linux?
-        #self.bind("<Unmap>", self._minim)
-        # Seems to make it work on Windows
+        # Have had trouble with this, but the current placement seems to work
+        # on Windows and X-Windows okay.
         self.transient(self._parent)
-        #self.after_idle(lambda : )
+        self.after(100, lambda : self.bind("<Unmap>", self._minim))
 
     def _minim(self, event):
         # If we're being minimised then also minimise the parent!
-        if self._parent.master is None:
-            self._parent.iconify()
-        else:
-            self._parent.master.iconify()
+        now = _time.perf_counter()
+        if hasattr(self, "_lastmin"):
+            delta = now - self._lastmin
+            if delta < 0.5:
+                return
+        self._lastmin = now
+        _logging.getLogger(__name__).debug("%s being asked to minimise...", self)
+        win = self._parent.master
+        if win is None:
+            win = self._parent
+        self.after(50, win.iconify)
 
     def _over_self(self, event):
         over_win = self.winfo_containing(event.x_root, event.y_root)

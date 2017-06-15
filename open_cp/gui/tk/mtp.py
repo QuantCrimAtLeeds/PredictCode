@@ -6,10 +6,12 @@ Some utilities to work with `matplotlib`
 """
 
 import matplotlib
+# If we use TkAgg then on linux, you can only interact with matplotlib on the
+# GUI thread.  Which is obviously not so good.
 matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+import matplotlib.figure as figure
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import tkinter as tk
-import tkinter.ttk as ttk
 import open_cp.gui.tk.util as util
 import threading as _threading
 import open_cp.gui.locator as _locator
@@ -17,20 +19,11 @@ import open_cp.gui.tk.threads as _threads
 import io as _io
 import PIL.ImageTk, PIL.Image
 
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
-def figure_to_canvas(figure, root):
-    """Create a `tk` widget from a `matplotlib` figure.
-
-    :param figure: The `matplotlib` figure to use
-    :param root: The `tk` widget to be a child of
-
-    :return: A new `tk` widget.
-    """
-    canvas = FigureCanvasTkAgg(figure, master=root)
-    canvas.show()
-    return canvas.get_tk_widget()
-
+def new_figure():
+    """Make a new figure with an `Agg` backend canvas attached."""
+    fig = figure.Figure(figsize=(15,9))
+    FigureCanvas(fig)
+    return fig
 
 class _MakeFigTask(_threads.OffThreadTask):
     def __init__(self, canvas_figure, fig_dpi):
@@ -45,12 +38,14 @@ class _MakeFigTask(_threads.OffThreadTask):
             return
         file = _io.BytesIO()
         fig.savefig(file, dpi=dpi)
-        # Do this to stop memory leak...
-        plt.close(fig)
-        fig.clf() # This line is the important one...
+        # If you want, closing the figure will free memory more quickly than
+        # the Garbage Collection does.  But as far as I can see, as long as
+        # we're using the "object oriented" interface to matplotlib, there
+        # is no actual memory leak by not doing this.
+        #fig.clf()
         if self.cancelled:
             return
-        # This works...
+        # This also works...
         #import base64
         #file = base64.b64encode(file.getvalue())
         #image = tk.PhotoImage(data=file)
@@ -84,15 +79,14 @@ class _RescaleTask(_threads.OffThreadTask):
             return
         width, height = self._correct_aspect_ratio(*self._image.size)
         image = self._image.resize((width, height), resample=PIL.Image.LANCZOS)
-        if self.cancelled:
-            return
-        photo = PIL.ImageTk.PhotoImage(image)
-        return photo
+        return image
 
     def on_gui_thread(self, value):
         if value is None:
             return
-        self._canvas_figure.set_photo(value)
+        # On linux, this must be called on the GUI thread
+        photo = PIL.ImageTk.PhotoImage(value)
+        self._canvas_figure.set_photo(photo)
 
 
 class CanvasFigure(tk.Frame):
@@ -113,6 +107,7 @@ class CanvasFigure(tk.Frame):
         if height is not None:
             self._canvas["height"] = height
         self._canvas.grid(sticky=tk.NSEW, row=0, column=0)
+        self._pool = _locator.get("pool")
         self._canvas_image = None
         self._image = None
         self._size = (1,1)
@@ -129,14 +124,19 @@ class CanvasFigure(tk.Frame):
         with self._rlock:
             self._size = (width, height)
         self._draw()
+        
+    def _set_watch(self):
+        def set():
+            self._canvas["cursor"] = "watch"
+        self._pool.submit_gui_task(set)
 
     def _draw(self):
         with self._rlock:
             if self._image is None:
                 return
             rescale_task = _RescaleTask(self, self._image)
-            _locator.get("pool").submit(rescale_task)
-            self._canvas["cursor"] = "watch"
+            self._pool.submit(rescale_task)
+            self._set_watch()
 
     @property
     def size(self):
@@ -151,7 +151,7 @@ class CanvasFigure(tk.Frame):
             self._draw()
 
     def set_photo(self, photo):
-        """Set the canvas photo; library use only."""
+        """Set the canvas photo; library use only.  Only call on GUI thread"""
         with self._rlock:
             if self._canvas_image is None:
                 self._canvas_image = self._canvas.create_image(0, 0, image=photo, anchor=tk.NW)
@@ -165,16 +165,16 @@ class CanvasFigure(tk.Frame):
         """Set the figure to use."""
         with self._rlock:
             fig_task = _MakeFigTask(self, (figure, dpi))
-            _locator.get("pool").submit(fig_task)
-            self._canvas["cursor"] = "watch"
+            self._pool.submit(fig_task)
+            self._set_watch()
 
     def set_figure_task(self, task, dpi=150):
         """Pass a task which generates a figure.  This will be run off-thread
         and then displayed."""
         def on_gui_thread(fig):
             self.set_figure(fig, dpi)
-        _locator.get("pool").submit(task, on_gui_thread)
-        self._canvas["cursor"] = "watch"
+        self._pool.submit(task, on_gui_thread)
+        self._set_watch()
 
     def destroy(self):
         self._photo = None

@@ -9,6 +9,23 @@ from . import predictor
 import open_cp.gui.import_file_model as import_file_model
 import logging
 import numpy as _np
+from open_cp.gui.common import CoordType
+
+_text = {
+    "bi" : "Builtin",
+    "bi_tt" : "Approximation; works, but UTM or an EPSG should be better.",
+    "utm" : "Use best match UTM",
+    "utm_tt" : "Uses the best match Universal Transverse Mercator coordinate system.  This is likely the best choice unless you know an EPSG projection for your data.",
+    "uk" : "British national grid",
+    "uk_tt" : "The standard British National Grid projection",
+    "epsg" : "EPSG code",
+    "epsg_tt" : "Manually enter an EPSG code",
+    "epsg_entry_tt" : "Enter a valid EPSG code",
+    "epsg_url" : "http://spatialreference.org/ref/epsg/",
+    "epsg_url_text" : "(Click for a list)",
+    "no_pyproj" : "Python package `pyproj` could not be loaded, so no more options.",
+    "alpr" : "Coordinates are already projected, so no need to project from Lon/Lat!",
+}
 
 ## Actual work classes ###################################################
 
@@ -86,6 +103,8 @@ class PassThrough():
 class LonLatConverter(predictor.Predictor):
     def __init__(self, model):
         super().__init__(model)
+        if model.coord_type != CoordType.LonLat:
+            raise ValueError(_text["alpr"])
         self.selected = 0
         self._espg = 27700
         self._view = None
@@ -167,21 +186,6 @@ import tkinter as tk
 import tkinter.ttk as ttk
 import open_cp.gui.tk.util as util
 import open_cp.gui.tk.tooltips as tooltips
-
-_text = {
-    "bi" : "Builtin",
-    "bi_tt" : "Approximation; works, but UTM or an EPSG should be better.",
-    "utm" : "Use best match UTM",
-    "utm_tt" : "Uses the best match Universal Transverse Mercator coordinate system.  This is likely the best choice unless you know an EPSG projection for your data.",
-    "uk" : "British national grid",
-    "uk_tt" : "The standard British National Grid projection",
-    "epsg" : "EPSG code",
-    "epsg_tt" : "Manually enter an EPSG code",
-    "epsg_entry_tt" : "Enter a valid EPSG code",
-    "epsg_url" : "http://spatialreference.org/ref/epsg/",
-    "epsg_url_text" : "(Click for a list)",
-    "no_pyproj" : "Python package `pyproj` could not be loaded, so no more options.",
-}
 
 class LonLatConverterView(tk.Frame):
     def __init__(self, parent, controller):

@@ -314,10 +314,11 @@ class AnalysisView(tk.Frame):
             self._plot_widget = mtp.CanvasFigure(self._plot_frame, width=250)
             self._plot_widget.grid(sticky=tk.NSEW, padx=2, pady=2)
         def draw():
-            fig, ax = mtp.plt.subplots()
+            fig = mtp.new_figure()
+            ax = fig.add_subplot(1,1,1)
             ax.scatter(self._model.xcoords, self._model.ycoords, marker="+", color="black", alpha=0.2)
             fig.set_size_inches(3, 3)
-            fig.tight_layout()
+            fig.set_tight_layout(True)
             return fig
         self._plot_widget.set_figure_task(draw)
 

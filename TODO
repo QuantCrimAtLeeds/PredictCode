@@ -8,15 +8,7 @@
 
 # GUI
 
-BUG: If focus is off the application when it tries to display a top-level window,
-  the window goes missing.  Fixed on windows.  Test on Linux/X windows.
-
 - Predictors:
-  - Raise error if a lonlat projector is selected on projected data.
-    - Then catch this and display a message in the analysis view class
-  - Grid generator
-    - Fix the memory leak.  But it's still slow.  Is there a better way to
-      draw?
   - Do the 2 naive predictors
 
 - Session saving/loading
@@ -27,5 +19,3 @@ BUG: If focus is off the application when it tries to display a top-level window
 - Would be nice if in `mtp.py` we can get away without needing PIL.
   - Can load a photo image, but cannot rescale. 
   - So need to change code to recompute the figure with a suitable dpi
-
-- Don't use pyplot, as it leads to memory leaks.  See https://stackoverflow.com/a/12300012/3403507
