@@ -24,6 +24,15 @@ def start_logging():
 
 def run():
     start_logging()
+
+    if "win" in sys.platform:
+        import ctypes
+        myappid = "PredictCode.OpenCP"
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+    else:
+        self._logger.warn("Unexpected flatform: %s.  So visuals might be wrong", sys.platform)
+
+
     root = main_window_view.TopWindow()
     locator._make_pool(root)
 

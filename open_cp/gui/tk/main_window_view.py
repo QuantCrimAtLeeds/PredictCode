@@ -9,6 +9,7 @@ import tkinter.messagebox
 from . import util
 import traceback
 import logging
+import sys
 
 _text = {
     "name" : "OpenCP",
@@ -26,10 +27,12 @@ class TopWindow(tk.Tk):
     """
     def __init__(self):
         super().__init__()
+        self._logger = logging.getLogger(__name__)
         self.grid()
         self.columnconfigure(0, weight=1)
         self.rowconfigure(0, weight=1)
         self.title(_text["name"])
+        self._window_icon()
         
     def resize(self, width_per, height_per):
         util.centre_window_percentage(self, width_per, height_per)
@@ -38,11 +41,19 @@ class TopWindow(tk.Tk):
         self.destroy()
         self.quit()
 
+    def _window_icon(self):
+        try:
+            import open_cp.gui.resources
+            import PIL.ImageTk
+            bitmap = PIL.ImageTk.PhotoImage(open_cp.gui.resources.app_icon)
+            self.tk.call("wm", "iconphoto", self._w, bitmap)
+        except:
+            self._logger.exception()
+
     def report_callback_exception(self, *args):
         """Make the application exit with a log and dump of stack trace."""
-        logger = logging.getLogger(__name__)
         err = traceback.format_exception(*args)
-        logger.error("Exception: %s", err)
+        self._logger.error("Exception: %s", err)
         print("".join(err))
         import os
         os._exit(1)
