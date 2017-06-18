@@ -24,6 +24,14 @@ def run():
     from open_cp.gui.tk import main_window_view
     from open_cp.gui import locator
 
+    if "win" in sys.platform:
+        import ctypes
+        myappid = "PredictCode.OpenCP"
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+    else:
+        self._logger.warn("Unexpected flatform: %s.  So visuals might be wrong", sys.platform)
+
+
     root = main_window_view.TopWindow()
     locator._make_pool(root)
 
