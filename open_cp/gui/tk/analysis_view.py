@@ -75,7 +75,11 @@ _text = {
     "pickpred" : "Choose a new prediction algorithm",
     "cancel" : "Cancel",
     "del_pred" : "Delete this predictor",
-    "edit_pred" : "Edit this predictor"
+    "edit_pred" : "Edit this predictor",
+    "add_pred" : "Add new predictor stage",
+    "del_comp" : "Delete this comparitor",
+    "edit_comp" : "Edit this comparitor",
+    "add_comp" : "Add new comparitor stage",
 }
 
 class AnalysisView(tk.Frame):
@@ -180,33 +184,45 @@ class AnalysisView(tk.Frame):
 
         return frame
 
+    def update_comparitors_list(self):
+        row = self._update_list(self._comparison_frame,
+            self._model.comparison_model.objects,
+            [_text["del_comp"], _text["edit_comp"], _text["add_comp"]],
+            self._controller.comparison_controller )
+
     def update_predictors_list(self):
-        for w in self._prediction_frame.winfo_children():
+        row = self._update_list(self._prediction_frame,
+            self._model.analysis_tools_model.objects,
+            [_text["del_pred"], _text["edit_pred"], _text["add_pred"]],
+            self._controller.tools_controller )
+
+    def _update_list(self, outer_frame, source, texts, controller):
+        for w in outer_frame.winfo_children():
             w.destroy()
         
         row = 0
-        for index, pred in enumerate(self._model.analysis_tools_model.predictors):
-            frame = tk.Frame(self._prediction_frame)
+        for index, pred in enumerate(source):
+            frame = tk.Frame(outer_frame)
             frame.grid(sticky=tk.NSEW, padx=2, pady=2, row=row, column=0)
             row += 1
             ttk.Label(frame, text=pred.name).grid(row=0, column=0, padx=2, pady=1)
             if pred.settings_string is not None:
                 ttk.Label(frame, text=pred.settings_string).grid(row=1, column=0, padx=2, pady=1)
 
-            cmd = lambda i=index : self._controller.tools_controller.remove_predictor(i)
+            cmd = lambda i=index : controller.remove(i)
             b = ttk.Button(frame, image=self._close_icon, command=cmd)
             b.grid(row=0, column=1)
-            tooltips.ToolTipYellow(b, _text["del_pred"])
-            cmd = lambda i=index : self._controller.tools_controller.edit_predictor(i)
+            tooltips.ToolTipYellow(b, texts[0])
+            cmd = lambda i=index : controller.edit(i)
             b = ttk.Button(frame, image=self._edit_icon, command=cmd)
             b.grid(row=0, column=2)
-            tooltips.ToolTipYellow(b, _text["edit_pred"])
+            tooltips.ToolTipYellow(b, texts[1])
 
-            ttk.Separator(self._prediction_frame).grid(sticky=tk.NSEW, padx=2, pady=1, row=row, column=0)
+            ttk.Separator(outer_frame).grid(sticky=tk.NSEW, padx=2, pady=1, row=row, column=0)
             row += 1
 
-        ttk.Button(self._prediction_frame, text="Add new predictor",
-            command=self._controller.tools_controller.add_new_predictor).grid(sticky=tk.NSEW, row=row,padx=5,pady=2)
+        ttk.Button(outer_frame, text=texts[2],command=controller.add).grid(
+                sticky=tk.NSEW, row=row, padx=5, pady=2)
 
     def _analysis_tools(self, frame):
         util.stretchy_columns(frame, [0])
@@ -227,10 +243,11 @@ class AnalysisView(tk.Frame):
 
         compare_frame = ttk.LabelFrame(frame, text=_text["asses"])
         compare_frame.grid(row=2, column=0, sticky=tk.NSEW, padx=5, pady=3)
-        ttk.Label(compare_frame, text="TODO: List of methods to compare preditions here").grid()
-        c = tk.Canvas(compare_frame)
-        c.grid(row=1, column=0)
-        c["height"] = 150
+        util.stretchy_rows_cols(compare_frame, [0], [0])
+        f = util.ScrolledFrame(compare_frame)
+        f.grid(sticky=tk.NSEW)
+        self._comparison_frame = f.frame
+        self.update_comparitors_list()
 
     def _crime_types_all(self):
         box = self._crime_type_box

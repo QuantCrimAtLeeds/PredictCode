@@ -23,8 +23,10 @@ class Analysis():
         self._root = root
         self._logger = logging.getLogger(__name__)
         self._tools = AnalysisToolsController(self.model)
+        self._comparisons = ComparisonController(self.model)
         self.view = analysis_view.AnalysisView(self.model, self, self._root)
         self._tools.view = self.view
+        self._comparisons.view = self.view
         self._init()
 
     def _init(self):
@@ -128,6 +130,12 @@ class Analysis():
     def tools_controller(self):
         return self._tools
 
+    @property
+    def comparison_controller(self):
+        return self._comparisons
+
+
+## The model #############################################################
 
 class Model():
     """The model 
@@ -148,6 +156,7 @@ class Model():
         self._make_unique_crime_types()
         self._parse_settings = parse_settings
         self.analysis_tools_model = AnalysisToolsModel(self)
+        self.comparison_model = ComparisonModel(self)
         self._time_range = None
         self._selected_crime_types = set()
         self._logger = logging.getLogger(__name__)
@@ -382,32 +391,37 @@ class Model():
         return train_count, assess_count
 
 
-class AnalysisToolsController():
-    """Partner of :class:`AnalysisToolsModel`.
-    
-    :param model: Instance of :class:`Model`
-    """
-    def __init__(self, model):
-        self.model = model.analysis_tools_model
-        self.view = None
-        self._pick_pred_model = PickPredictionModel()
+## Bases classes for the predictors / comparitors ########################
 
-    def add_new_predictor(self):
-        pred = PickPrediction(self.view, self._pick_pred_model).run()
+
+class _ListController():
+    """    :param model: Instance of :class:`Model`
+    """
+    def __init__(self, model, pick_model, pick_view):
+        self.model = model
+        self.view = None
+        self._pick_model = pick_model
+        self._pick_view = pick_view
+
+    def update(self):
+        raise NotImplementedError()
+
+    def add(self):
+        pred = self._pick_view(self.view, self._pick_model).run()
         if pred is None:
             return
         try:
-            self.model.add_predictor(pred)
+            self.model.add(pred)
         except ValueError as ex:
             self.view.alert(str(ex))
-        self.view.update_predictors_list()
+        self.update()
 
-    def remove_predictor(self, index):
-        self.model.remove_predictor(index)
-        self.view.update_predictors_list()
+    def remove(self, index):
+        self.model.remove(index)
+        self.update()
 
-    def edit_predictor(self, index):
-        pred = self.model.predictors[index]
+    def edit(self, index):
+        pred = self.model.objects[index]
         resize = None
         if "resize" in pred.config():
             if pred.config()["resize"]:
@@ -418,6 +432,22 @@ class AnalysisToolsController():
         view.run(edit_view)
         if not view.result:
             pred.from_dict(data)
+        self.update()
+
+
+## Analysis Tools (i.e. "predictors") ####################################
+
+
+class AnalysisToolsController(_ListController):
+    """Partner of :class:`AnalysisToolsModel`.
+    
+    :param model: Instance of :class:`Model`
+    """
+    def __init__(self, model):
+        super().__init__(model.analysis_tools_model, PickPredictionModel(),
+            PickPrediction)
+
+    def update(self):
         self.view.update_predictors_list()
 
 
@@ -425,7 +455,7 @@ class AnalysisToolsModel():
     """Model for the prediction and analysis settings.
     Separated out just to make the classes easier to read.
     
-    :param model: The main mode, so we can access coord/times data.
+    :param model: The main model, so we can access coord/times data.
     """
     def __init__(self, model):
         self._predictors = []
@@ -434,7 +464,7 @@ class AnalysisToolsModel():
     def to_dict(self):
         """Write settings to dictionary."""
         preds = [ {"name" : p.describe(), "settings" : p.to_dict()}
-            for p in self.predictors ]
+            for p in self.objects ]
         return { "predictors" : preds }
 
     def settings_from_dict(self, data):
@@ -452,34 +482,34 @@ class AnalysisToolsModel():
             pred = pred[0](self._model)
             pred.from_dict(pred_data["settings"])
             v.append(pred)
-        self.predictors = v
+        self.objects = v
         if len(errors) > 0:
             raise ValueError("\n".join(errors))
 
     @property
-    def predictors(self):
+    def objects(self):
         """An ordered list of predictors."""
         return self._predictors
 
-    @predictors.setter
-    def predictors(self, value):
+    @objects.setter
+    def objects(self, value):
         v = list(value)
         v.sort(key = lambda p : p.order())
         self._predictors = v
 
-    def add_predictor(self, clazz):
-        v = list(self.predictors)
+    def add(self, clazz):
+        v = list(self.objects)
         v.append( clazz(self._model) )
-        self.predictors = v
+        self.objects = v
 
-    def remove_predictor(self, index):
-        v = list(self.predictors)
+    def remove(self, index):
+        v = list(self.objects)
         del v[index]
-        self.predictors = v
+        self.objects = v
 
     def predictors_of_type(self, order):
         """Get all predictors of the given order/type."""
-        return [p for p in self.predictors if p.order() == order]
+        return [p for p in self.objects if p.order() == order]
 
     def projected_coords(self):
         """Obtain, if possible using the current settings, the entire data-set
@@ -528,3 +558,43 @@ class PickPrediction():
     def selected(self, index):
         self._selected = index
         self._view.cancel()
+
+
+## Comparison tools ######################################################
+
+
+class ComparisonController(_ListController):
+    """Partner of :class:`ComparisonModel`.
+    
+    :param model: Instance of :class:`Model`
+    """
+    def __init__(self, model):
+        super().__init__(model.comparison_model, ComparisonModel(model),
+            None)
+
+    def update(self):
+        self.view.update_comparitors_list()
+
+
+class ComparisonModel():
+    """Model for the prediction and analysis settings.
+    Separated out just to make the classes easier to read.
+    
+    :param model: The main model, so we can access coord/times data.
+    """
+    def __init__(self, model):
+        self._comparisons = []
+        self._model = model
+
+    def to_dict(self):
+        # TODO
+        pass
+
+    def settings_from_dict(self, data):
+        # TODO
+        pass
+
+    @property
+    def objects(self):
+        """An ordered list of predictors."""
+        return self._comparisons        

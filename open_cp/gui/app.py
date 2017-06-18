@@ -5,14 +5,7 @@ app
 The main application for when running in GUI mode.
 """
 
-import logging
-import sys
-import os
-
-from open_cp.gui import main_window
-
-from open_cp.gui.tk import main_window_view
-from open_cp.gui import locator
+import logging, sys
 
 def start_logging():
     logger = logging.getLogger("open_cp")
@@ -24,6 +17,13 @@ def start_logging():
 
 def run():
     start_logging()
+    logging.getLogger(__name__).info("Started...")
+
+    import os
+    from open_cp.gui import main_window
+    from open_cp.gui.tk import main_window_view
+    from open_cp.gui import locator
+
     root = main_window_view.TopWindow()
     locator._make_pool(root)
 
