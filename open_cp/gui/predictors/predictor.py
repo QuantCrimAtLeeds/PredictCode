@@ -106,6 +106,7 @@ class Predictor():
     @staticmethod
     def describe():
         """Return human readable short description of this predictor."""
+        raise NotImplementedError()
 
     @staticmethod
     def order():
@@ -164,39 +165,6 @@ class Predictor():
         """Returns a pair `(xcs, ycs)` of the coordinates of the whole data
         set, projected appropriately."""
         return self._model.analysis_tools_model.projected_coords()
-
-
-class FindPredictors():
-    def __init__(self, start):
-        self._predictors = set()
-        self._checked = set()
-        self._max_depth = 2
-        self._scan_module(start)
-        if Predictor in self._predictors:
-            self._predictors.remove(Predictor)
-        delattr(self, "_checked")
-        
-    @property
-    def predictors(self):
-        """Set of classes which (properly) extend predictor.Predictor"""
-        return self._predictors
-        
-    def _scan_module(self, mod, depth=0):
-        if depth >= self._max_depth:
-            return
-        if mod in self._checked:
-            return
-        self._checked.add(mod)
-        for name, value in _inspect.getmembers(mod):
-            if not name.startswith("_"):
-                if _inspect.isclass(value):
-                    self._scan_class(value)
-                elif _inspect.ismodule(value):
-                    self._scan_module(value, depth+1)
-                    
-    def _scan_class(self, cla):
-        if Predictor in _inspect.getmro(cla):
-            self._predictors.add(cla)
 
 
 def test_model():

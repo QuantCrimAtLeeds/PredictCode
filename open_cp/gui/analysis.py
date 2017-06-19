@@ -178,6 +178,7 @@ class Model():
                 "assessment_time_range" : [funcs.datetime_to_string(self.time_range[2]),
                         funcs.datetime_to_string(self.time_range[3])],
                 "analysis_tools" : self.analysis_tools_model.to_dict(),
+                "comparison_tools" : self.comparison_model.to_dict(),
             }
         data["selected_crime_types"] = [ self.unique_crime_types[index] for index in self.selected_crime_types]
         return data
@@ -196,6 +197,13 @@ class Model():
                 self._errors.append(str(ex))
         else:
             self._logger.warn("Didn't find key 'analysis_tools': Is this an old input file?")
+        if "comparison_tools" in data:
+            try:
+                self.comparison_model.settings_from_dict(data["comparison_tools"])
+            except ValueError as ex:
+                self._errors.append(str(ex))
+        else:
+            self._logger.warn("Didn't find key 'comparison_tools': Is this an old input file?")
         t = data["training_time_range"]
         a = data["assessment_time_range"]
         self.time_range = [funcs.string_to_datetime(t[0]), funcs.string_to_datetime(t[1]),
@@ -395,19 +403,20 @@ class Model():
 
 
 class _ListController():
-    """    :param model: Instance of :class:`Model`
+    """Base class for a "list" of objects.
+    
+    :param model: Instance of :class:`Model`
     """
-    def __init__(self, model, pick_model, pick_view):
+    def __init__(self, model, pick_model):
         self.model = model
         self.view = None
         self._pick_model = pick_model
-        self._pick_view = pick_view
 
     def update(self):
         raise NotImplementedError()
 
     def add(self):
-        pred = self._pick_view(self.view, self._pick_model).run()
+        pred = Pick(self.view, self._pick_model).run()
         if pred is None:
             return
         try:
@@ -435,6 +444,45 @@ class _ListController():
         self.update()
 
 
+class _ListModel():
+    """Model for :class:`_ListController`.  Assumed that each object has an
+    interface similar to :class:`Predictor`.
+
+    :param model: The main model, so we can access coord/times data.
+    """
+    def __init__(self, model):
+        self._objects = []
+        self._model = model
+    
+    def to_dict(self):
+        """This base class version just serialises the :attr:`objects` as
+        a list of dictionaries."""
+        objs = [ {"name" : p.describe(), "settings" : p.to_dict()}
+            for p in self.objects ]
+        return objs
+
+    @property
+    def objects(self):
+        """An ordered list of predictors."""
+        return self._objects
+
+    @objects.setter
+    def objects(self, value):
+        v = list(value)
+        v.sort(key = lambda p : p.order())
+        self._objects = v
+
+    def add(self, clazz):
+        v = list(self.objects)
+        v.append( clazz(self._model) )
+        self.objects = v
+
+    def remove(self, index):
+        v = list(self.objects)
+        del v[index]
+        self.objects = v
+
+
 ## Analysis Tools (i.e. "predictors") ####################################
 
 
@@ -444,28 +492,24 @@ class AnalysisToolsController(_ListController):
     :param model: Instance of :class:`Model`
     """
     def __init__(self, model):
-        super().__init__(model.analysis_tools_model, PickPredictionModel(),
-            PickPrediction)
+        super().__init__(model.analysis_tools_model, PickPredictionModel())
 
     def update(self):
         self.view.update_predictors_list()
 
 
-class AnalysisToolsModel():
+class AnalysisToolsModel(_ListModel):
     """Model for the prediction and analysis settings.
     Separated out just to make the classes easier to read.
     
     :param model: The main model, so we can access coord/times data.
     """
     def __init__(self, model):
-        self._predictors = []
-        self._model = model
+        super().__init__(model)
 
     def to_dict(self):
         """Write settings to dictionary."""
-        preds = [ {"name" : p.describe(), "settings" : p.to_dict()}
-            for p in self.objects ]
-        return { "predictors" : preds }
+        return { "predictors" : super().to_dict() }
 
     def settings_from_dict(self, data):
         """Import settings from a dictionary."""
@@ -485,27 +529,6 @@ class AnalysisToolsModel():
         self.objects = v
         if len(errors) > 0:
             raise ValueError("\n".join(errors))
-
-    @property
-    def objects(self):
-        """An ordered list of predictors."""
-        return self._predictors
-
-    @objects.setter
-    def objects(self, value):
-        v = list(value)
-        v.sort(key = lambda p : p.order())
-        self._predictors = v
-
-    def add(self, clazz):
-        v = list(self.objects)
-        v.append( clazz(self._model) )
-        self.objects = v
-
-    def remove(self, index):
-        v = list(self.objects)
-        del v[index]
-        self.objects = v
 
     def predictors_of_type(self, order):
         """Get all predictors of the given order/type."""
@@ -531,17 +554,17 @@ class PickPredictionModel():
             ]
         self._predictors.sort()
 
-    def predictor_names(self):
+    def names(self):
         return [pair[1] for pair in self._predictors]
 
-    def predictor_orders(self):
+    def orders(self):
         return [pair[0] for pair in self._predictors]
 
-    def predictor_classes(self):
+    def classes(self):
         return [pair[2] for pair in self._predictors]
 
 
-class PickPrediction():
+class Pick():
     def __init__(self, parent, model):
         self._model = model
         self._root = parent
@@ -553,7 +576,7 @@ class PickPrediction():
         
         if self._selected is None:
             return None
-        return self._model.predictor_classes()[self._selected]
+        return self._model.classes()[self._selected]
 
     def selected(self, index):
         self._selected = index
@@ -569,32 +592,57 @@ class ComparisonController(_ListController):
     :param model: Instance of :class:`Model`
     """
     def __init__(self, model):
-        super().__init__(model.comparison_model, ComparisonModel(model),
-            None)
+        super().__init__(model.comparison_model, PickComparitorModel())
 
     def update(self):
         self.view.update_comparitors_list()
 
 
-class ComparisonModel():
+class ComparisonModel(_ListModel):
     """Model for the prediction and analysis settings.
     Separated out just to make the classes easier to read.
     
     :param model: The main model, so we can access coord/times data.
     """
     def __init__(self, model):
-        self._comparisons = []
-        self._model = model
+        super().__init__(model)
 
     def to_dict(self):
-        # TODO
-        pass
-
+        return {"comparitors" : super().to_dict()}
+        
     def settings_from_dict(self, data):
-        # TODO
-        pass
+        """Import settings from a dictionary."""
+        v, errors = [], []
+        for pred_data in data["comparitors"]:
+            name = pred_data["name"]
+            pred = [p for p in predictors.all_comparitors if p.describe() == name]
+            if len(pred) == 0:
+                errors.append(analysis_view._text["ci_fail1"].format(name))
+                continue
+            if len(pred) > 1:
+                errors.append(analysis_view._text["ci_fail2"].format(name))
+                continue
+            pred = pred[0](self._model)
+            pred.from_dict(pred_data["settings"])
+            v.append(pred)
+        self.objects = v
+        if len(errors) > 0:
+            raise ValueError("\n".join(errors))
 
-    @property
-    def objects(self):
-        """An ordered list of predictors."""
-        return self._comparisons        
+
+class PickComparitorModel():
+    def __init__(self):
+        self._comparitors = [
+                (clazz.order(), clazz.describe(), clazz)
+                for clazz in predictors.all_comparitors
+            ]
+        self._comparitors.sort()
+
+    def names(self):
+        return [pair[1] for pair in self._comparitors]
+
+    def orders(self):
+        return [pair[0] for pair in self._comparitors]
+
+    def classes(self):
+        return [pair[2] for pair in self._comparitors]

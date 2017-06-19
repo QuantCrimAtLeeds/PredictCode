@@ -72,7 +72,10 @@ _text = {
     "ctfail3" : "Number of crimes types is {} which is too many!  No crime types will be considered...",
     "pi_fail1" : "Cannot find a match for a predictor named {}",
     "pi_fail2" : "Multiple matches for a predictor named {}",
+    "ci_fail1" : "Cannot find a match for a comparitor named {}",
+    "ci_fail2" : "Multiple matches for a comparitor named {}",
     "pickpred" : "Choose a new prediction algorithm",
+    "pickcom" : "Choose a new comparator algorithm",
     "cancel" : "Cancel",
     "del_pred" : "Delete this predictor",
     "edit_pred" : "Edit this predictor",
@@ -416,11 +419,14 @@ class AnalysisView(tk.Frame):
         el.run()
 
 
-class PickPredictionView(util.ModalWindow):
-    def __init__(self, parent, model, controller):
+## Pick Predictions / Comparitors ########################################
+
+class _PickView(util.ModalWindow):
+    """Display a modal dialog to choose from an ordered list."""
+    def __init__(self, parent, model, controller, title):
         self._model = model
         self._controller = controller
-        super().__init__(parent, _text["pickpred"])
+        super().__init__(parent, title)
 
     def add_widgets(self):
         frame = util.ScrolledFrame(self, mode="v")
@@ -428,7 +434,7 @@ class PickPredictionView(util.ModalWindow):
         frame = frame.frame
 
         last_order = None
-        for index, (name, order) in enumerate(zip(self._model.predictor_names(), self._model.predictor_orders())):
+        for index, (name, order) in enumerate(zip(self._model.names(), self._model.orders())):
             if last_order is not None and order != last_order:
                 ttk.Separator(frame).grid(sticky=tk.NSEW, pady=3, padx=3)
             last_order = order
@@ -439,13 +445,13 @@ class PickPredictionView(util.ModalWindow):
         ttk.Button(frame, text=_text["cancel"], command=self.cancel).grid(sticky=tk.NSEW, padx=10, pady=3)
 
         self.set_to_actual_width()
+    
 
-
-class PredictionEditView(util.ModalWindow):
-    def __init__(self, parent, title, resize=None):
+class _EditView(util.ModalWindow):
+    def __init__(self, parent, title, resize):
         super().__init__(parent, title, resize=resize)
         self.result = False
-        
+    
     def run(self, view):
         util.stretchy_rows_cols(self, [0], [0])
         view.grid(sticky=tk.NSEW, row=0, column=0)
@@ -466,6 +472,23 @@ class PredictionEditView(util.ModalWindow):
         self.result = True
         self.cancel()
 
+
+class PickPredictionView(_PickView):
+    def __init__(self, parent, model, controller, ):
+        super().__init__(parent, model, controller, _text["pickpred"])
+
+
+class PredictionEditView(_EditView):
+    def __init__(self, parent, title, resize=None):
+        super().__init__(parent, title, resize)
+
+
+class PickComparatorView(_PickView):
+    def __init__(self, parent, model, controller, ):
+        super().__init__(parent, model, controller, _text["pickcom"])
+    
+
+## Utility methods / classes #############################################
 
 def _find_command(kwargs):
     if "command" in kwargs:

@@ -17,7 +17,8 @@ def start_logging():
 
 def run():
     start_logging()
-    logging.getLogger(__name__).info("Started...")
+    logger = logging.getLogger(__name__)
+    logger.info("Started...")
 
     import os
     from open_cp.gui import main_window
@@ -25,11 +26,14 @@ def run():
     from open_cp.gui import locator
 
     if "win" in sys.platform:
+        logger.info("Platform is windows: '%s'", sys.platform)
         import ctypes
         myappid = "PredictCode.OpenCP"
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+    elif "linux" in sys.platform:
+        logger.info("Platform is linux: '%s'", sys.platform)
     else:
-        self._logger.warn("Unexpected flatform: %s.  So visuals might be wrong", sys.platform)
+        logger.warn("Unexpected flatform: %s.  So visuals might be wrong", sys.platform)
 
 
     root = main_window_view.TopWindow()

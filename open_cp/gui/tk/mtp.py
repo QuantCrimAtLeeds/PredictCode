@@ -19,9 +19,9 @@ import open_cp.gui.tk.threads as _threads
 import io as _io
 import PIL.ImageTk, PIL.Image
 
-def new_figure():
+def new_figure(size=(15,9)):
     """Make a new figure with an `Agg` backend canvas attached."""
-    fig = figure.Figure(figsize=(15,9))
+    fig = figure.Figure(figsize=size)
     FigureCanvas(fig)
     return fig
 

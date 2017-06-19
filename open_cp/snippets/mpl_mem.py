@@ -77,12 +77,30 @@ tr = tracker.SummaryTracker()
 # pyplot(total_close = True)   : 0.9%
 
 #objectoriented()
-#pyplot()
+pyplot()
 #pyplot(True)
-pyplot(total_close = True)
+#pyplot(total_close = True)
 
 # This doesn't seem terribly accurate, sadly
 tr.print_diff()
+
+# This shows the same
+from pympler import muppy
+all_objects = muppy.get_objects()
+from pympler import summary
+sum1 = summary.summarize(all_objects)
+summary.print_(sum1)
+
+# This makes no difference
+import gc
+gc.collect()
+all_objects = muppy.get_objects()
+sum1 = summary.summarize(all_objects)
+summary.print_(sum1)
+
+# From reading the "muppy" docs, my _guess_ is that some non-Python (i.e.
+# probably pure C code) in the matplotlib stack is allocating (a lot of)
+# memory, which is why we cannot see it.
 
 print("Done...")    
 # Spin to allow monitoring in "top"

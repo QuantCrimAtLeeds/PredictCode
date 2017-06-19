@@ -188,19 +188,34 @@ class GridView(tk.Frame):
             return
 
         def make_fig():
-            fig = mtp.new_figure()
+            xmin, xmax = _np.min(coords[0]), _np.max(coords[0])
+            xd = (xmax - xmin) / 100 * 3
+            xmin, xmax = xmin - xd, xmax + xd
+            ymin, ymax = _np.min(coords[1]), _np.max(coords[1])
+            yd = (ymax - ymin) / 100 * 3
+            ymin, ymax = ymin - yd, ymax + yd
+
+            width = xmax - xmin
+            height = ymax - ymin
+            if width == 0 or height == 0:
+                size=(10,10)
+            else:
+                height = height / width * 10.0
+                width = 10.0
+                if height > 10.0:
+                    width = 100.0 / height
+                    height = 10.0
+                size = (width, height)
+                
+            fig = mtp.new_figure(size)
             ax = fig.add_subplot(1,1,1)
             ax.scatter(coords[0], coords[1], marker="x", color="black", alpha=0.5)
             #pc = open_cp.plot.patches_from_grid(self._controller.get_grid())
             #ax.add_collection(mtp.matplotlib.collections.PatchCollection(pc, edgecolor="black", facecolor="None"))
             lc = open_cp.plot.lines_from_regular_grid(self._controller.get_grid())
             ax.add_collection(mtp.matplotlib.collections.LineCollection(lc, color="black", linewidth=0.5))
-            xmin, xmax = _np.min(coords[0]), _np.max(coords[0])
-            xd = (xmax - xmin) / 100 * 3
-            ax.set(xlim=[xmin-xd, xmax+xd])
-            ymin, ymax = _np.min(coords[1]), _np.max(coords[1])
-            yd = (ymax - ymin) / 100 * 3
-            ax.set(ylim=[ymin-yd, ymax+yd])
+            ax.set(xlim=[xmin, xmax], ylim=[ymin, ymax])
+            ax.set_aspect(1.0)
             fig.set_tight_layout(True)
             return fig
         
