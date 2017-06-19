@@ -5,11 +5,10 @@
 - Look at the grid-based SEPP method which seems to perform badly
 
 
-
 # GUI
 
-- Finish comparitors list etc.
-- Add comparitor "One day period, Three day period, week etc."
+- Run panel
+  - See `set_run_messages` in analysis_view
 
 - Predictors:
   - Do the 2 naive predictors
@@ -26,7 +25,8 @@ Would be good to have a way to capture non-fatal warnings.
 - For example, most predictors will generate one prediction per day, so any time (as opposed to date) data in
 the "assessment time range" will be ignored.  (Aside: make this a base-class method).
 - Maybe write a custom logger which redirects to a window??
-
+  - See the start in predictors/__init__.py
+  - Probably want to use the QueueHandler handler
 
 
 

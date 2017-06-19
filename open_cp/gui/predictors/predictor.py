@@ -6,9 +6,10 @@ Base classes and utility methods for the GUI side of describing algorithms
 which produce predictions.
 """
 
-import inspect as _inspect
 import collections as _collections
 import open_cp.data
+
+PREDICTOR_LOGGER_NAME = "__interactive_warning_logger__"
 
 class Task():
     """Abstract base class for a computational task which needs to be carried

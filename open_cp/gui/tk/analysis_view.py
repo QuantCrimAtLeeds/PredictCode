@@ -83,6 +83,10 @@ _text = {
     "del_comp" : "Delete this comparitor",
     "edit_comp" : "Edit this comparitor",
     "add_comp" : "Add new comparitor stage",
+    "run" : "Launch predictors",
+    "runbutton" : "Run current analysis",
+    "runmsg" : "Messages",
+    "oldrun" : "Previous analysis",
 }
 
 class AnalysisView(tk.Frame):
@@ -286,6 +290,38 @@ class AnalysisView(tk.Frame):
         self._total_count_label.grid()
         return frame
 
+    def _run_panel(self, parent):
+        frame = ttk.LabelFrame(parent, text=_text["run"])
+        self._run_frame = ttk.Frame(frame)
+        self._run_frame.grid(row=0, column=0, padx=1, pady=1, sticky=tk.NSEW)
+        return frame
+
+    def set_run_messages(self, messages):
+        """Set a list of messages giving prerequisits for launching a run, or
+        is none, then a run button
+        
+        :param messages: List of messages; none indicates that a run can start.
+        """
+        for w in self._run_frame.winfo_children():
+            w.destroy()
+        if len(messages) == 0:
+            button = ttk.Button(self._run_frame, text=_text["runbutton"], command=self._run)
+            button.grid(sticky=tk.NSEW, row=0, column=0)
+        else:
+            labelframe = ttk.LabelFrame(self._run_frame, text=_text["runmsg"])
+            labelframe.grid(sticky=tk.NSEW, row=0, column=0)
+            for r, text in enumerate(messages):
+                ttk.Label(labelframe, text=text).grid(row=r, column=0, padx=1, pady=1, sticky=tk.W)
+        
+    def set_previous_analysis(self):
+        labelframe = ttk.LabelFrame(self._run_frame, text=_text["oldrun"])
+        labelframe.grid(sticky=tk.NSEW, row=0, column=1)
+        # TODO
+        
+    def _run(self):
+        """Launch the analysis."""
+        pass
+
     def _save(self):
         filename = util.ask_save_filename(filetypes = [("JSON session", "*.json")],
             title="Please select a session file to save to",
@@ -319,6 +355,7 @@ class AnalysisView(tk.Frame):
         self._time_range_select(sub_frame).grid(row=0, column=1, sticky=tk.NSEW, padx=1)
         self._crime_type_select(frame).grid(row=2, column=0, sticky=tk.NSEW, padx=1)
         self._total_counts(frame).grid(row=3, column=0, sticky=tk.NSEW, padx=1)
+        self._run_panel(frame).grid(row=4, column=0, sticky=tk.NSEW, padx=1)
 
         frame = ttk.LabelFrame(self, text=_text["tasks"])
         frame.grid(row=0, column=1, sticky=util.NSEW, padx=3, pady=3)

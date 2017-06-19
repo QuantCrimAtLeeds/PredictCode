@@ -1,4 +1,7 @@
 import inspect as _inspect
+import sys as _sys
+import logging as _logging
+
 from . import predictor
 from . import comparitor
 
@@ -54,8 +57,6 @@ class _Find():
             self._predictors.add(cla)
 
 
-import sys as _sys
-
 _fp = _Find(_sys.modules[__name__], predictor.Predictor)
 _fp.optionally_remove(predictor.Predictor)
 all_predictors = list(_fp.predictors)
@@ -63,3 +64,26 @@ all_predictors = list(_fp.predictors)
 _fp = _Find(_sys.modules[__name__], comparitor.Comparitor)
 _fp.optionally_remove(comparitor.Comparitor)
 all_comparitors = list(_fp.predictors)
+
+
+_LOGGER_NAME = "__interactive_warning_logger__"
+_stdout_handler = None
+_current_handler = None
+
+def _get_stdout_handler():
+    global _stdout_handler
+    if _stdout_handler is None:
+        _stdout_handler = _logging.StreamHandler(_sys.__stdout__)
+        fmt = _logging.Formatter("{asctime} {levelname} {name} - {message}", style="{")
+        _stdout_handler.setFormatter(fmt)
+    return _stdout_handler
+
+def set_edit_logging():
+    """Only log errors, in the usual style."""
+    logger = _logging.getLogger(_LOGGER_NAME)
+    logger.setLevel(_logging.ERROR)
+    if _current_handler is not None:
+        logger.removeHandler(_current_handler)
+    logger.addHandler(_get_stdout_handler())
+
+set_edit_logging()
