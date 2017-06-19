@@ -66,6 +66,11 @@ def test_MaskedGrid_from_Grid():
     assert mg.xextent == 2
     assert mg.yextent == 2
 
+    assert mg.region().xmin == 5
+    assert mg.region().xmax == 25
+    assert mg.region().ymin == 7
+    assert mg.region().ymax == 37
+
 def test_RectangluarRegion_getters():
     r = RectangularRegion(5, 8, 10, 14)
     assert r.xmin == 5

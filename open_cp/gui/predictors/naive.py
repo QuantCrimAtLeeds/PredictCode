@@ -57,7 +57,25 @@ class CountingGrid(predictor.Predictor):
         pass
     
     def make_tasks(self):
-        raise NotImplementedError()
+        return [self.Task()]
+        
+    class Task(predictor.GridPredictorTask):
+        def __call__(self, analysis_model, grid, project_task):
+            timed_points = self.projected_data(analysis_model, project_task)
+            training_start, _, _, _ = analysis_model.time_range
+            timed_points = timed_points[timed_points.timestamps >= training_start]
+            CountingGrid.SubTask(timed_points, grid)
+
+    class SubTask(predictor.SingleGridPredictor):
+        def __init__(self, timed_points, grid):
+            self._timed_points = timed_points
+            self.predictor = open_cp.naive.CountingGridKernel(grid.xsize,
+                grid.ysize, grid.region())
+
+        def __call__(self, predict_time, length):
+            mask = self._timed_points.timestamps < predict_time
+            self.predictor.data = self._timed_points[mask]
+            return self.predictor.predict()
 
 
 class CountingGridView(tk.Frame):

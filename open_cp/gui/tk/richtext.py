@@ -71,13 +71,26 @@ class RichText(tk.Frame):
         """
         _SizeFinder(self._text, min_height, max_height)
         
-    def add_text(self, text):
+    def add_text(self, text, extra_tags = None):
         """Add the unformatted text at the end."""
         self._text["state"] = tk.NORMAL
-        self._text.insert(tk.END, text, ("t"))
+        tags = ["t"]
+        if extra_tags is not None:
+            tags.extend( list(extra_tags) )
+        self._text.insert(tk.END, text, tuple(tags))
         self._text["state"] = tk.DISABLED
     
-    
+    def add_coloured_text(self, text, colour):
+        if not hasattr(self, "_colours"):
+            self._colours = dict()
+        if colour not in self._colours:
+            tag = "c{}".format(len(self._colours) + 1)
+            self._colours[colour] = tag
+            self._text.tag_config(tag, foreground=colour)
+        tag = self._colours[colour]
+        self.add_text(text, (tag, ))
+
+
 class _SizeFinder():
     def __init__(self, text, min_height, max_height):
         self._text = text

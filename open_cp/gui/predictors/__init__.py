@@ -1,6 +1,7 @@
 import inspect as _inspect
 import sys as _sys
 import logging as _logging
+import logging.handlers as _handlers
 
 from . import predictor
 from . import comparitor
@@ -78,12 +79,27 @@ def _get_stdout_handler():
         _stdout_handler.setFormatter(fmt)
     return _stdout_handler
 
-def set_edit_logging():
-    """Only log errors, in the usual style."""
-    logger = _logging.getLogger(_LOGGER_NAME)
-    logger.setLevel(_logging.ERROR)
+def _set_handler(handler):
+    logger = get_logger()
+    global _current_handler
     if _current_handler is not None:
         logger.removeHandler(_current_handler)
-    logger.addHandler(_get_stdout_handler())
+    _current_handler = handler
+    logger.addHandler(handler)
+
+def set_edit_logging():
+    """Only log errors, in the usual style."""
+    get_logger().setLevel(_logging.ERROR)
+    _set_handler(_get_stdout_handler())
+
+def set_queue_logging(queue):
+    """Log all to the passed queue."""
+    get_logger().setLevel(_logging.DEBUG)
+    handler = _handlers.QueueHandler(queue)
+    _set_handler(handler)
+
+def get_logger():
+    """Get the message logger"""
+    return _logging.getLogger(_LOGGER_NAME)
 
 set_edit_logging()

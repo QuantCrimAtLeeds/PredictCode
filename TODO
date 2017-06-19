@@ -7,27 +7,8 @@
 
 # GUI
 
-- Run panel
-  - See `set_run_messages` in analysis_view
-
 - Predictors:
   - Do the 2 naive predictors
-
-Pipeline of running:
-- Find the projectors to use.  For each projector:
-- Find the grids to use.  For each grid:
-- Generate the prediction tasks.
-- Then generate tasks from these, and run them.
-- Each one should produce a "raw" projection: a timestamp of the projection, and an instance of GridPrediction
-- Everything else should go under "analysis"
-
-Would be good to have a way to capture non-fatal warnings.
-- For example, most predictors will generate one prediction per day, so any time (as opposed to date) data in
-the "assessment time range" will be ignored.  (Aside: make this a base-class method).
-- Maybe write a custom logger which redirects to a window??
-  - See the start in predictors/__init__.py
-  - Probably want to use the QueueHandler handler
-
 
 
 - Session saving/loading

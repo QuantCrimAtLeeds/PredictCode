@@ -16,14 +16,15 @@ import open_cp.gui.funcs as funcs
 import open_cp.gui.predictors as predictors
 import open_cp.gui.tk.analysis_view as analysis_view
 from open_cp.gui.import_file_model import CoordType
+import open_cp.gui.run_analysis as run_analysis
 
 class Analysis():
     def __init__(self, model, root):
         self.model = model
         self._root = root
         self._logger = logging.getLogger(__name__)
-        self._tools = AnalysisToolsController(self.model)
-        self._comparisons = ComparisonController(self.model)
+        self._tools = AnalysisToolsController(self.model, self)
+        self._comparisons = ComparisonController(self.model, self)
         self.view = analysis_view.AnalysisView(self.model, self, self._root)
         self._tools.view = self.view
         self._comparisons.view = self.view
@@ -38,6 +39,8 @@ class Analysis():
         self._repaint_times()
         self.view.refresh_plot()
         self.recalc_total_count()
+        self._tools.update()
+        self._comparisons.update()
 
     def _crime_types_model_to_view(self):
         if self.model.num_crime_type_levels == 0:
@@ -133,6 +136,21 @@ class Analysis():
     @property
     def comparison_controller(self):
         return self._comparisons
+
+    def run_analysis(self):
+        run_analysis.RunAnalysis(self.view, self.model).run()
+
+    def update_run_messages(self, pred_msgs=None, comp_msgs=None):
+        if pred_msgs is not None:
+            self._pred_msgs = pred_msgs
+        if comp_msgs is not None:
+            self._comp_msgs = comp_msgs
+        combine = []
+        if hasattr(self, "_pred_msgs"):
+            combine.extend(self._pred_msgs)
+        if hasattr(self, "_comp_msgs"):
+            combine.extend(self._comp_msgs)
+        self.view.set_run_messages(combine)
 
 
 ## The model #############################################################
@@ -407,7 +425,9 @@ class _ListController():
     
     :param model: Instance of :class:`Model`
     """
-    def __init__(self, model, pick_model):
+    def __init__(self, controller, basemodel, model, pick_model):
+        self.controller = controller
+        self.main_model = basemodel
         self.model = model
         self.view = None
         self._pick_model = pick_model
@@ -491,12 +511,28 @@ class AnalysisToolsController(_ListController):
     
     :param model: Instance of :class:`Model`
     """
-    def __init__(self, model):
-        super().__init__(model.analysis_tools_model, PickPredictionModel())
+    def __init__(self, model, controller):
+        super().__init__(controller, model, model.analysis_tools_model,
+            PickPredictionModel())
 
     def update(self):
         self.view.update_predictors_list()
+        self.make_msgs()
 
+    def make_msgs(self):
+        out = []
+        if self.main_model.coord_type == CoordType.LonLat:
+            projs = self.model.predictors_of_type(predictors.predictor._TYPE_COORD_PROJ)
+            if len(projs) == 0:
+                out.append(analysis_view._text["noproj"])
+        # TODO: Support continuous projections
+        grids = self.model.predictors_of_type(predictors.predictor._TYPE_GRID)
+        if len(grids) == 0:
+            out.append(analysis_view._text["nogrid"])
+        preds = self.model.predictors_of_type(predictors.predictor._TYPE_GRID_PREDICTOR)
+        if len(preds) == 0:
+            out.append(analysis_view._text["nopreds"])
+        self.controller.update_run_messages(pred_msgs=out)
 
 class AnalysisToolsModel(_ListModel):
     """Model for the prediction and analysis settings.
@@ -591,11 +627,20 @@ class ComparisonController(_ListController):
     
     :param model: Instance of :class:`Model`
     """
-    def __init__(self, model):
-        super().__init__(model.comparison_model, PickComparitorModel())
+    def __init__(self, model, controller):
+        super().__init__(controller, model, model.comparison_model,
+            PickComparitorModel())
 
     def update(self):
         self.view.update_comparitors_list()
+        self.make_msgs()
+
+    def make_msgs(self):
+        out = []
+        strategy = self.model.comparators_of_type(predictors.comparitor.TYPE_TOP_LEVEL)
+        if len(strategy) == 0:
+            out.append(analysis_view._text["nostrat"])
+        self.controller.update_run_messages(comp_msgs=out)
 
 
 class ComparisonModel(_ListModel):
@@ -628,6 +673,10 @@ class ComparisonModel(_ListModel):
         self.objects = v
         if len(errors) > 0:
             raise ValueError("\n".join(errors))
+
+    def comparators_of_type(self, order):
+        """Get all predictors of the given order/type."""
+        return [p for p in self.objects if p.order() == order]
 
 
 class PickComparitorModel():

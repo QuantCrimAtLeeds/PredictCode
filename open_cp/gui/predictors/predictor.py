@@ -60,7 +60,11 @@ class GridPredictorTask(Task):
         more instances of :class:`SingleGridPredictor` making actual
         predictions."""
         raise NotImplementedError()
-        
+
+    def off_thread(self):
+        """Is this a slow task which should be run off thread?"""
+        return False
+
     def projected_data(self, analysis_model, project_task):
         """Use the projector to return all data from the model which matches
         the selected crime types, projected in a suitable way.
@@ -73,9 +77,16 @@ class GridPredictorTask(Task):
         
         
 class SingleGridPredictor(Task):
-    # TODO
-    pass
+    def __call__(self, predict_time, length):
+        """Perform a prediction for the given time and window of time (which
+        may be ignored).
 
+        :param predict_time: Instance of :class:`datetime.datetime`
+        :param length: Instance of :class:`datetime.timedelta`
+
+        :return: TODO: ???
+        """
+        raise NotImplementedError()
 
 #_TYPE_CTS_PREDICTOR = 200
 

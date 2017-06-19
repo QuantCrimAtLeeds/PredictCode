@@ -86,7 +86,13 @@ _text = {
     "run" : "Launch predictors",
     "runbutton" : "Run current analysis",
     "runmsg" : "Messages",
+    "runmsgtt" : "Not enough predictors and comparators have been selected to allow an analysis run.  The message here suggest what needs selecting.",
+    "runbuttt" : "Click to run an analysis",
     "oldrun" : "Previous analysis",
+    "noproj" : "Input data is Longitude/Latitude, so you need to select a projection method.",
+    "nogrid" : "Need to select a method of laying a grid over the input data",
+    "nopreds" : "Need to select at least one prediction method",
+    "nostrat" : "Need to select a prediction requirement in the comparators list"
 }
 
 class AnalysisView(tk.Frame):
@@ -307,11 +313,13 @@ class AnalysisView(tk.Frame):
         if len(messages) == 0:
             button = ttk.Button(self._run_frame, text=_text["runbutton"], command=self._run)
             button.grid(sticky=tk.NSEW, row=0, column=0)
+            tooltips.ToolTipYellow(button, _text["runbuttt"])
         else:
             labelframe = ttk.LabelFrame(self._run_frame, text=_text["runmsg"])
             labelframe.grid(sticky=tk.NSEW, row=0, column=0)
             for r, text in enumerate(messages):
                 ttk.Label(labelframe, text=text).grid(row=r, column=0, padx=1, pady=1, sticky=tk.W)
+            tooltips.ToolTipYellow(labelframe, _text["runmsgtt"])
         
     def set_previous_analysis(self):
         labelframe = ttk.LabelFrame(self._run_frame, text=_text["oldrun"])
@@ -320,7 +328,7 @@ class AnalysisView(tk.Frame):
         
     def _run(self):
         """Launch the analysis."""
-        pass
+        self._controller.run_analysis()
 
     def _save(self):
         filename = util.ask_save_filename(filetypes = [("JSON session", "*.json")],
