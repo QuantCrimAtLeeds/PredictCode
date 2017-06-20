@@ -39,6 +39,7 @@ References
 from . import predictors
 from . import kernels
 import numpy as _np
+import logging as _logging
 
 def _normalise_matrix(p):
     column_sums = _np.sum(p, axis=0)
@@ -232,6 +233,9 @@ class StocasticDecluster():
           compute `p`, and `tkernel` the kernel for triggered events.
         """
         backgrounds, triggered = sample_points(self.points, p)
+        logger = _logging.getLogger(__name__)
+        logger.debug("Sample gives %s background events and %s triggered events",
+                     backgrounds.shape, triggered.shape)
         bkernel = self.background_kernel_estimator(backgrounds)
         tkernel = self.trigger_kernel_estimator(triggered)
 
@@ -257,10 +261,12 @@ class StocasticDecluster():
         """
         p = initial_p_matrix(self.points, self.initial_time_bandwidth, self.initial_space_bandwidth)
         errors = []
-        for _ in range(iterations):
+        logger = _logging.getLogger(__name__)
+        for iter in range(iterations):
             pnew, bkernel, tkernel = self.next_iteration(p)
             errors.append(_np.sum((pnew - p) ** 2))
             p = pnew
+            logger.debug("Completed iteration %s", iter)
         kernel = make_kernel(self.points, bkernel, tkernel)
         return OptimisationResult(kernel=kernel, p=p, background_kernel=bkernel,
             trigger_kernel=tkernel, ell2_error=_np.sqrt(_np.asarray(errors)),

@@ -265,6 +265,9 @@ class SEPPTrainer(predictors.DataTrainer):
     estimated.  The returned object can be used to make predictions of risk
     from other data.
 
+    For interpretting the parameters, we note that a time unit of "minutes" is
+    used internally.
+
     :param region: The rectangular region the grid should cover.
     :param grid_size: The size of grid to use.
     :param grid: Alternative to specifying the region and grid_size is to pass
@@ -285,7 +288,7 @@ class SEPPTrainer(predictors.DataTrainer):
         cells = _make_cells(self.region, self.grid_size, events, times)
         return cells, times[-1]
 
-    def train(self, cutoff_time=None, iterations=20):
+    def train(self, cutoff_time=None, iterations=20, use_corrected=False):
         """Perform the (slow) training step on historical data.  This estimates
         kernels, and returns an object which can make predictions.
 
@@ -300,7 +303,11 @@ class SEPPTrainer(predictors.DataTrainer):
         # time unit of minutes, want mean to be a day
         omega = 1 / (60 * 24)
         mu = _np.zeros_like(cells, dtype=_np.float) + 0.5
-        for _ in range(iterations):
-            omega, theta, mu = maximisation(cells, omega, theta, mu, time_duration)
+        if use_corrected:
+            for _ in range(iterations):
+                omega, theta, mu = maximisation_corrected(cells, omega, theta, mu, time_duration)
+        else:
+            for _ in range(iterations):
+                omega, theta, mu = maximisation(cells, omega, theta, mu, time_duration)
 
         return SEPPPredictor(self.region, self.grid_size, omega, theta, mu)

@@ -3,12 +3,19 @@
 - Sort out convergence issues in SEPP code
    - See comment on github
 - Look at the grid-based SEPP method which seems to perform badly
+- Add some logging functionality in the library
 
 
 # GUI
 
 - Predictors:
   - Do the 2 naive predictors
+
+- If an exception is thrown in a thread, we log it:
+
+2017-06-20 09:00:38,408 ERROR open_cp.gui.tk.threads - Exception: ['Traceback (most recent call last):\n', '  File "/nfs/see-fs-02_users/matmdpd/Crime Predict Project/PredictCode/open_cp/gui/tk/threads.py", line 126, in task_wrapper\n    value = task()\n', '  File "/nfs/see-fs-02_users/matmdpd/Crime Predict Project/PredictCode/open_cp/gui/process_file.py", line 131, in __call__\n    self._total_rows = self._calc_total_rows()\n', '  File "/nfs/see-fs-02_users/matmdpd/Crime Predict Project/PredictCode/open_cp/gui/process_file.py", line 124, in _calc_total_rows\n    for row in self._yield_rows():\n', '  File "/nfs/see-fs-02_users/matmdpd/Crime Predict Project/PredictCode/open_cp/gui/process_file.py", line 97, in _yield_rows\n    with open(self._filename, encoding="UTF8", mode="rt") as f:\n', "FileNotFoundError: [Errno 2] No such file or directory:...
+
+But then we don't do anything.  Should signal back somehow...
 
 
 - Session saving/loading
