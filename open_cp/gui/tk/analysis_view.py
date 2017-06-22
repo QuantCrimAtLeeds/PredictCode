@@ -92,7 +92,12 @@ _text = {
     "noproj" : "Input data is Longitude/Latitude, so you need to select a projection method.",
     "nogrid" : "Need to select a method of laying a grid over the input data",
     "nopreds" : "Need to select at least one prediction method",
-    "nostrat" : "Need to select a prediction requirement in the comparators list"
+    "nostrat" : "Need to select a prediction requirement in the comparators list",
+    "results" : "Analysis run results",
+    "r_runat" : "Run @ {} {}",
+    "r_runat_tt" : "Click to view analysis results",
+    "r_load" : "Load saved run",
+    
 }
 
 class AnalysisView(tk.Frame):
@@ -297,10 +302,42 @@ class AnalysisView(tk.Frame):
         return frame
 
     def _run_panel(self, parent):
-        frame = ttk.LabelFrame(parent, text=_text["run"])
-        self._run_frame = ttk.Frame(frame)
+        frame = ttk.Frame(parent)
+        #frame = ttk.LabelFrame(parent, text=_text["run"])
+        #self._run_frame = ttk.Frame(frame)
+        self._run_frame = ttk.LabelFrame(frame, text=_text["run"])
         self._run_frame.grid(row=0, column=0, padx=1, pady=1, sticky=tk.NSEW)
+        self._result_frame = ttk.LabelFrame(frame, text=_text["results"])
+        self._result_frame.grid(row=0, column=1, padx=1, pady=1, sticky=tk.NSEW)
+        self.update_run_analysis_results()
         return frame
+
+    @staticmethod
+    def _remove_children(widget):
+        for w in widget.winfo_children():
+            w.destroy()
+
+    def update_run_analysis_results(self):
+        self._remove_children(self._result_frame)
+        row = 0
+        for row, result in enumerate(self._model.analysis_runs):
+            button = ttk.Button(self._result_frame,
+                text = _text["r_runat"].format(
+                    result.run_time.strftime(_text["date_format"]),
+                    result.run_time.strftime(_text["time_format"]) ),
+                command = lambda r=row : self._view_run(r) )
+            button.grid(row=row, column=0, padx=1, pady=1, sticky=tk.NSEW)
+            tooltips.ToolTipYellow(button, _text["r_runat_tt"])
+        ttk.Button(self._result_frame, text=_text["r_load"],
+            command=self._load_saved_run).grid(
+            row=row + 1, column=0, padx=1, pady=1, sticky=tk.NSEW)
+
+    def _view_run(self, run):
+        self._controller.view_past_run(run)
+
+    def _load_saved_run(self):
+        # TODO
+        pass
 
     def set_run_messages(self, messages):
         """Set a list of messages giving prerequisits for launching a run, or
@@ -308,8 +345,7 @@ class AnalysisView(tk.Frame):
         
         :param messages: List of messages; none indicates that a run can start.
         """
-        for w in self._run_frame.winfo_children():
-            w.destroy()
+        self._remove_children(self._run_frame)
         if len(messages) == 0:
             button = ttk.Button(self._run_frame, text=_text["runbutton"], command=self._run)
             button.grid(sticky=tk.NSEW, row=0, column=0)

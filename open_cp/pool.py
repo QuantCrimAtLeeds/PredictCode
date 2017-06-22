@@ -125,6 +125,11 @@ class PoolExecutor():
         self._executor.shutdown(False)
         self._executor = None
 
+    def terminate(self):
+        """Terminate the executor immediately."""
+        self._executor.terminate()
+        self._executor = None
+
     def submit(self, task):
         """Submit the task to be run.
 

@@ -15,6 +15,7 @@ import collections
 import logging
 import queue
 import time
+import datetime
 
 class RunAnalysis():
     """
@@ -22,11 +23,16 @@ class RunAnalysis():
     :param parent: Parent `tk` widget
     :param model: The :class:`analyis.Model` model.
     """
-    def __init__(self, parent, model):
+    def __init__(self, parent, controller):
         self.view = run_analysis_view.RunAnalysisView(parent, self)
-        self.main_model = model
+        self.controller = controller
         self._msg_logger = predictors.get_logger()
         self._logger = logging.getLogger(__name__)
+
+    @property
+    def main_model(self):
+        """The :class:`analysis.Model` instance"""
+        return self.controller.model
 
     def run(self):
         try:
@@ -85,11 +91,28 @@ class RunAnalysis():
         locator.get("pool").submit_gui_task(lambda : self.view.stop_progress_bar())
 
     def _finished(self, out=None):
-        # TODO: Extract result etc.
-        #self._off_thread.results()
         self.view.done()
         if self._off_thread.cancelled:
             self.view.cancel()
+        else:
+            result = RunAnalysisResult(self._off_thread.results)
+            self.controller.new_run_analysis_result(result)
+
+
+class RunAnalysisResult():
+    def __init__(self, results):
+        self._results = results
+        self._time = datetime.datetime.now()
+
+    @property
+    def results(self):
+        """List of :class:`PredictionResult` instances."""
+        return self._results
+
+    @property
+    def run_time(self):
+        """:class:`datetime` of when the result was completed."""
+        return self._time
 
 
 class RunAnalysisModel():
@@ -273,8 +296,11 @@ class _RunnerThread():
                 self._controller.set_progress(done, out_of)
             if self.cancelled:
                 break
-            time.sleep(0.1)
-        self._executor.shutdown()
+            time.sleep(0.5)
+        if self.cancelled:
+            self._executor.terminate()
+        else:
+            self._executor.shutdown()
         self._controller.end_progress()
 
     def cancel(self):
