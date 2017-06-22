@@ -26,7 +26,8 @@ _text = {
     "back" : "Go back to import options",
     "ct" : "Crime types",
     "nullct" : "No crime types imported",
-    "ct1" : "Crime type field {} has {} unique types"
+    "ct1" : "Crime type field {} has {} unique types",
+    
 }
 
 class LoadFullFile(util.ModalWindow):

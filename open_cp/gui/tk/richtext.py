@@ -90,6 +90,11 @@ class RichText(tk.Frame):
         tag = self._colours[colour]
         self.add_text(text, (tag, ))
 
+    @property
+    def widget(self):
+        """The underlying `tk.Text` widget."""
+        return self._text
+
 
 class _SizeFinder():
     def __init__(self, text, min_height, max_height):

@@ -11,6 +11,10 @@ from open_cp.gui.common import CoordType
 import open_cp.pool as pool
 import open_cp.gui.tk.threads as tk_threads
 import open_cp.gui.locator as locator
+import collections
+import logging
+import queue
+import time
 
 class RunAnalysis():
     """
@@ -19,46 +23,73 @@ class RunAnalysis():
     :param model: The :class:`analyis.Model` model.
     """
     def __init__(self, parent, model):
-        self.view = run_analysis_view.RunAnalysisView(parent)
+        self.view = run_analysis_view.RunAnalysisView(parent, self)
         self.main_model = model
         self._msg_logger = predictors.get_logger()
+        self._logger = logging.getLogger(__name__)
 
     def run(self):
         try:
             self._model = RunAnalysisModel(self, self.view, self.main_model)
-            self._log_total_tasks()
             self._run_tasks()
             self.view.wait_window(self.view)
         except:
             self._msg_logger.exception(run_analysis_view._text["genfail"])
             self.view.done()
 
+    def cancel(self):
+        """Called when we wish to cancel the running tasks"""
+        self._logger.warning("Analysis run being cancelled.")
+        self._msg_logger.warning(run_analysis_view._text["log10"])
+        if hasattr(self, "_off_thread"):
+            self._off_thread.cancel()
+
+    _Task = collections.namedtuple("RunAnalysis_Task", ["task", "off_thread",
+            "projection", "grid", "type"])
+
+    @staticmethod
+    def _chain_dict(dictionary):
+        for name, li in dictionary.items():
+            for x in li:
+                yield (name, x)
+
     def _run_tasks(self):
         tasks = []
-        for proj in self._model.projector_tasks:
-            for grid in self._model.grid_tasks:
-                for pred in self._model.grid_pred_tasks:
-                    task = self._Wrapper(lambda : pred(self.main_model, grid, proj),
-                        pred.off_thread())
+        for proj_name, proj in self._chain_dict(self._model.projectors):
+            for grid_name, grid in self._chain_dict(self._model.grids):
+                for pred_name, pred in self._chain_dict(self._model.grid_prediction_tasks):
+                    task = self._Task(
+                        task = lambda : pred(self.main_model, grid, proj),
+                        off_thread = pred.off_thread(),
+                        projection = proj_name,
+                        grid = grid_name,
+                        type = pred_name )
                     tasks.append(task)
+
+        total = len(tasks) * len(self._model.predict_tasks)
+        self._msg_logger.info(run_analysis_view._text["log7"], total)
         
-        off_thread = _RunnerThread(tasks, self._model.predict_tasks)
-        locator.get("pool").submit(off_thread, lambda value : self.view.done())
+        self._off_thread = _RunnerThread(tasks, self._model.predict_tasks, self)
+        locator.get("pool").submit(self._off_thread, self._finished)
 
-    class _Wrapper():
-        def __init__(self, task, off_thread):
-            self._task = task
-            self.off_thread = off_thread
+    def to_msg_logger(self, msg, *args, level=logging.DEBUG):
+        self._msg_logger.log(level, msg, *args)
 
-        def __call__(self):
-            self._task()            
+    def start_progress(self):
+        locator.get("pool").submit_gui_task(lambda : self.view.start_progress_bar())
 
-    def _log_total_tasks(self):
-        total = ( len(self._model.grid_pred_tasks)
-            * len(self._model.projector_tasks)
-            * len(self._model.grid_tasks)
-            * len(self._model.predict_tasks) )
-        self._logger.info(run_analysis_view._text["log7"], total)
+    def set_progress(self, done, out_of):
+        locator.get("pool").submit_gui_task(lambda : self.view.set_progress(done, out_of))
+
+    def end_progress(self):
+        locator.get("pool").submit_gui_task(lambda : self.view.stop_progress_bar())
+
+    def _finished(self, out=None):
+        # TODO: Extract result etc.
+        #self._off_thread.results()
+        self.view.done()
+        if self._off_thread.cancelled:
+            self.view.cancel()
 
 
 class RunAnalysisModel():
@@ -84,10 +115,11 @@ class RunAnalysisModel():
         self._build_grid_preds()
 
     def _build_grid_preds(self):
-        self.grid_pred_tasks = []
+        self._grid_pred_tasks = dict()
         for pred in self.predictors.predictors_of_type(predictors.predictor._TYPE_GRID_PREDICTOR):
-            self.grid_pred_tasks.extend( pred.make_tasks() )
-        self._logger.info(run_analysis_view._text["log1"], len(self.grid_pred_tasks))
+            self._grid_pred_tasks[pred.pprint()] = pred.make_tasks()
+        self._logger.info(run_analysis_view._text["log1"],
+            sum( len(li) for li in self._grid_pred_tasks.values() ) )
 
     def _build_date_ranges(self):
         self.predict_tasks = []
@@ -101,20 +133,43 @@ class RunAnalysisModel():
                 self.predict_tasks[-1][0].strftime(run_analysis_view._text["dtfmt"]))
 
     def _build_grids(self):
-        self.grid_tasks = []
+        self._grid_tasks = dict()
         for grid in self.predictors.predictors_of_type(predictors.predictor._TYPE_GRID):
-            self.grid_tasks.extend( grid.make_tasks() )
-        self._logger.info(run_analysis_view._text["log5"], len(self.grid_tasks))
+            tasks = grid.make_tasks()
+            self._grid_tasks[grid.pprint()] = tasks
+        self._logger.info(run_analysis_view._text["log5"],
+            sum( len(li) for li in self._grid_tasks.values() ) )
 
     def _build_projectors(self):
         if self.main_model.coord_type == CoordType.XY:
-            tasks = predictors.lonlat.PassThrough().make_tasks()
+            projector = predictors.lonlat.PassThrough(self.main_model)
+            projectors = [projector]
         else:
-            tasks = []
-            for proj in self.predictors.predictors_of_type(predictors.predictor._TYPE_COORD_PROJ):
-                tasks.extend( proj.make_tasks() )
-        self.projector_tasks = tasks
-        self._logger.info(run_analysis_view._text["log6"], len(tasks))
+            projectors = list(self.predictors.predictors_of_type(
+                predictors.predictor._TYPE_COORD_PROJ))
+        
+        count = 0
+        self._projector_tasks = dict()
+        for projector in projectors:
+            tasks = projector.make_tasks()
+            self._projector_tasks[projector.pprint()] = tasks
+            count += len(tasks)
+        self._logger.info(run_analysis_view._text["log6"], count)
+
+    @property
+    def grid_prediction_tasks(self):
+        """Dictionary from string name to task(s)."""
+        return self._grid_pred_tasks
+
+    @property
+    def grids(self):
+        """Dictionary from string name to task(s)."""
+        return self._grid_tasks
+
+    @property
+    def projectors(self):
+        """Dictionary from string name to task(s)."""
+        return self._projector_tasks
 
     @property
     def predictors(self):
@@ -125,6 +180,66 @@ class RunAnalysisModel():
         return self.main_model.comparison_model
 
 
+class TaskKey():
+    """Describes the prediction task which was run.  We don't make any
+    assumptions about the components of the key (they are currently strings,
+    but in future may be richer objects) and don't implement custom hashing
+    or equality.
+    
+    :param projection: The projection used.
+    :param grid: The grid used.
+    :param pred_type: The prediction algorithm (etc.) used.
+    :param pred_date: The prediction date.
+    """
+    def __init__(self, projection, grid, pred_type, pred_date):
+        self._projection = projection
+        self._grid = grid
+        self._pred_type = pred_type
+        self._pred_date = pred_date
+
+    @property
+    def projection(self):
+        return self._projection
+
+    @property
+    def grid(self):
+        return self._grid
+
+    @property
+    def prediction_type(self):
+        return self._pred_type
+
+    @property
+    def prediction_date(self):
+        return self._pred_date
+
+    def __repr__(self):
+        return "projection: {}, grid: {}, prediction_type: {}, prediction_date: {}".format(
+            self.projection, self.grid, self.prediction_type, self.prediction_date)
+
+
+class PredictionResult():
+    """The result of running the prediction, but not including any analysis
+    results.
+
+    :param key: Instance of :class:`TaskKey`
+    :param prediction: The result of the prediction.  Slightly undefined, but
+      at present, should be an :class:`GridPrediction` instance.
+    """
+    def __init__(self, key, prediction):
+        self._key = key
+        self._pred = prediction
+
+    @property
+    def key(self):
+        """The :class:`TaskKey` describing the prediction."""
+        return self._key
+
+    @property
+    def prediction(self):
+        """An instance of :class:`GridPrediction` (or most likely a subclass)
+        giving the actual prediction."""
+        return self._pred
 
 
 class _RunnerThread():
@@ -133,35 +248,78 @@ class _RunnerThread():
         return instances of :class:`SingleGridPredictor`.
     :param predict_tasks: Iterable of pairs `(start_time, score_length)`
     """
-    def __init__(self, grid_prediction_tasks, predict_tasks):
-        self._tasks = [ (key, task)
-            for key, task in enumerate(grid_prediction_tasks) ]
+    def __init__(self, grid_prediction_tasks, predict_tasks, controller):
+        self._tasks = list(grid_prediction_tasks)
         self._date_ranges = list(predict_tasks)
-        self._executor = pool.PoolExecutor().__enter__()
+        self._executor = pool.PoolExecutor()
+        self._executor.start()
+        self._results = []
+        self._controller = controller
+        self._cancel_queue = queue.Queue()
 
     def __call__(self):
         """To be run off-thread"""
-        futures, futures2 = [], []
-        for key, task in self._tasks:
+        self._controller.start_progress()
+        self._controller.to_msg_logger(run_analysis_view._text["log9"])
+        tasks = self._make_tasks()
+        futures = [ self._executor.submit(t) for t in tasks ]
+        done, out_of = 0, len(futures)
+        while len(futures) > 0:
+            results, futures = pool.check_finished(futures)
+            for key, result in results:
+                self._results.append( PredictionResult(key, result) )
+                self._controller.to_msg_logger(run_analysis_view._text["log8"], key)
+                done += 1
+                self._controller.set_progress(done, out_of)
+            if self.cancelled:
+                break
+            time.sleep(0.1)
+        self._executor.shutdown()
+        self._controller.end_progress()
+
+    def cancel(self):
+        self._cancel_queue.put("stop")
+
+    @property
+    def cancelled(self):
+        return not self._cancel_queue.empty()
+
+    @property
+    def results(self):
+        """Array of :class:`PredictionResult` instances which will be populated
+        once the task has been run."""
+        return self._results
+
+    def _make_tasks(self):
+        tasks = []
+        futures = []
+        for task in self._tasks:
             if task.off_thread:
-                task = self.RunPredTask(key, task)
+                task = self.RunPredTask(task, task.task)
                 futures.append(self._executor.submit(task))
             else:
-                futures2.extend( self._executor.submit(t)
-                        for t in self._make_new_task(key, task()) )
-        for (key, task) in pool.yield_task_results(futures):
-            futures2.extend( self._executor.submit(t)
-                    for t in self._make_new_task(key, task) )
-        for key, result in pool.yield_task_results(futures2):
-            # TODO
-            pass
-        self._executor.__exit__()
-        # TODO: Set "done" in view
+                tasks.extend( self._make_new_task(task, task.task()) )
+        if len(futures) > 0:
+            to_gui_pool = locator.get("pool")
+            for key, result in pool.yield_task_results(futures):
+                tasks.extend( self._make_new_task(key, result) )
+        return tasks
 
     def _make_new_task(self, key, task):
         for dr in self._date_ranges:
-            new_task = lambda start=dr[0], length=dr[1] : task(start, length)
-            yield self.RunPredTask((key, dr), new_task)
+            new_task = self.StartLengthTask(task=task, start=dr[0], length=dr[1])
+            k = TaskKey(projection=key.projection, grid=key.grid,
+                    pred_type=key.type, pred_date=dr[0] )
+            yield self.RunPredTask(k, new_task)
+
+    class StartLengthTask():
+        def __init__(self, task, start, length):
+            self.start = start
+            self.length = length
+            self.task = task
+        
+        def __call__(self):
+            return self.task(self.start, self.length)
 
     class RunPredTask(pool.Task):
         def __init__(self, key, task):

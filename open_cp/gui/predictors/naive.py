@@ -60,11 +60,12 @@ class CountingGrid(predictor.Predictor):
         return [self.Task()]
         
     class Task(predictor.GridPredictorTask):
-        def __call__(self, analysis_model, grid, project_task):
+        def __call__(self, analysis_model, grid_task, project_task):
             timed_points = self.projected_data(analysis_model, project_task)
             training_start, _, _, _ = analysis_model.time_range
             timed_points = timed_points[timed_points.timestamps >= training_start]
-            CountingGrid.SubTask(timed_points, grid)
+            grid = grid_task(timed_points)
+            return CountingGrid.SubTask(timed_points, grid)
 
     class SubTask(predictor.SingleGridPredictor):
         def __init__(self, timed_points, grid):

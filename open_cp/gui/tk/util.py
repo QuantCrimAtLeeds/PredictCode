@@ -302,8 +302,7 @@ class ModalWindow(tk.Toplevel):
         # Have had trouble with this, but the current placement seems to work
         # on Windows and X-Windows okay.
         self.transient(self._parent)
-        #self.after(100, lambda : self.bind("<Unmap>", self._minim))
-        self.bind("<Unmap>", self._minim)
+        self.after(100, lambda : self.bind("<Unmap>", self._minim))
 
     def _minim(self, event):
         # If we're being minimised then also minimise the parent!
