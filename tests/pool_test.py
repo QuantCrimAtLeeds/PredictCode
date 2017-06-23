@@ -2,20 +2,59 @@ import pytest
 import unittest.mock
 import tests.helpers
 import pickle
+import concurrent.futures
+import datetime, time
 
 import open_cp.pool as pool
 
 class OurTask(pool.Task):
-    def __init__(self, key):
+    def __init__(self, key, wait=0, ex=None):
         super().__init__(key)
+        self._wait = wait
+        self._ex = ex
 
     def __call__(self):
+        if self._wait > 0:
+            time.sleep(self._wait)
+        if self._ex is not None:
+            raise self._ex
         return "ahgsga"
+
+def test_runs():
+    with pool.PoolExecutor() as executor:
+        futures = [executor.submit(OurTask("absvs"))]
+        for key, result in pool.yield_task_results(futures):
+            assert key == "absvs"
+            assert result == "ahgsga"
+
+def test_runs_timeout():
+    with pool.PoolExecutor() as executor:
+        now = datetime.datetime.now()        
+        futures = [executor.submit(OurTask("ab", wait=0.5))]
+        for key, result in pool.yield_task_results(futures):
+            assert key == "ab"
+            assert result == "ahgsga"
+            assert datetime.datetime.now() - now >= datetime.timedelta(seconds=0.5)
+
+def test_runs_exception():
+    with pool.PoolExecutor() as executor:
+        futures = [executor.submit(OurTask("ab", ex=RuntimeError()))]
+        with pytest.raises(RuntimeError):
+            for key, result in pool.yield_task_results(futures):
+                pass
+        
+def test_runs_exception_get_exceptions():
+    with pool.PoolExecutor() as executor:
+        future = executor.submit(OurTask("ab", ex=RuntimeWarning()))
+        assert isinstance(future.exception(), RuntimeWarning)
 
 @pytest.fixture
 def mockPPE():
-    with unittest.mock.patch("concurrent.futures.ProcessPoolExecutor") as mockPPEClass:
+    with unittest.mock.patch("open_cp.pool._ProcessPoolExecutor") as mockPPEClass:
         mockPPEClass.return_value = unittest.mock.MagicMock()
+        fut = concurrent.futures.Future()
+        fut.set_result(result=("test key", "test result"))
+        mockPPEClass.return_value.submit.return_value = fut
         yield mockPPEClass.return_value
 
 def test_PoolExecutor(mockPPE):
@@ -32,12 +71,26 @@ def test_PoolExecutor_cantSubmitBeforeEntered(mockPPE):
     with pytest.raises(RuntimeError):
         executor.submit(OurTask(1))
 
-@unittest.mock.patch("concurrent.futures.as_completed")
-def test_yield_task_results(mock):
-    x = [1,2,3]
-    for y in pool.yield_task_results(x, 100):
-        pass
-    mock.assert_called_once_with(x, 100)
+def test_yield_task_results():
+    fut = concurrent.futures.Future()
+    fut.set_result(1)
+    fut1 = concurrent.futures.Future()
+    fut1.set_result(10)
+    assert list(pool.yield_task_results([fut, fut1])) == [1, 10]
+
+def test_check_finished():
+    fut = concurrent.futures.Future()
+    fut.set_running_or_notify_cancel()
+    results, futures = pool.check_finished([fut])
+    assert len(results) == 0
+    assert futures == [fut]
+
+def test_yield_task_results_timeout():
+    fut = concurrent.futures.Future()
+    fut.set_running_or_notify_cancel()
+    with pytest.raises(TimeoutError):
+        for x in pool.yield_task_results([fut], 0.1):
+            raise AssertionError()
 
 @unittest.mock.patch("concurrent.futures.as_completed")
 def test_RestorableExecutor(mock, mockPPE):
@@ -51,14 +104,10 @@ def test_RestorableExecutor(mock, mockPPE):
 
 class ResultsTest():
     def __iter__(self):
-        r = unittest.mock.MagicMock()
-        r.result.return_value = ("ytreqe", "adgas")
-        yield r
-        r = unittest.mock.MagicMock()
-        r.result.return_value = ("111", "22")
-        yield r
+        yield ("ytreqe", "adgas")
+        yield ("111", "22")
 
-@unittest.mock.patch("concurrent.futures.as_completed")
+@unittest.mock.patch("open_cp.pool.yield_task_results")
 def test_RestorableExecutor_getResults(mock, mockPPE):
     mock.return_value = ResultsTest()
     executor = pool.RestorableExecutor("")
@@ -67,7 +116,7 @@ def test_RestorableExecutor_getResults(mock, mockPPE):
 
     assert(executor.results == {"111": "22", "ytreqe": "adgas"})
 
-@unittest.mock.patch("concurrent.futures.as_completed")
+@unittest.mock.patch("open_cp.pool.yield_task_results")
 def test_RestorableExecutor_cannotGetResultInContext(mock, mockPPE):
     executor = pool.RestorableExecutor("")
     with executor:
@@ -80,7 +129,7 @@ def test_RestorableExecutor_cannotSubmitBeforeEntering(mockPPE):
     with pytest.raises(RuntimeError):
         executor.submit(OurTask(1))
 
-@unittest.mock.patch("concurrent.futures.as_completed")
+@unittest.mock.patch("open_cp.pool.yield_task_results")
 def test_RestorableExecutor_dontRecompute(mock, mockPPE):
     existing = {"absvs": 5}
     with unittest.mock.patch("builtins.open", tests.helpers.MockOpen(pickle.dumps(existing))):
@@ -95,20 +144,19 @@ def test_RestorableExecutor_dontRecompute(mock, mockPPE):
 
         assert( executor.results == existing )
 
-@unittest.mock.patch("concurrent.futures.as_completed")
+@unittest.mock.patch("open_cp.pool.yield_task_results")
 def test_RestorableExecutor_savePartialResult(mock, mockPPE):
     file = tests.helpers.BytesIOWrapper()
 
-    def yield_once(a, b):
-        future = unittest.mock.MagicMock()
-        future.result.return_value = ("absa", 123)
-        yield future
-        raise KeyboardInterrupt()
+    class YieldOnce():
+        def __iter__(self):
+            yield ("absa", 123)
+            raise KeyboardInterrupt()
 
     with pytest.raises(KeyboardInterrupt):
         with unittest.mock.patch("builtins.open", tests.helpers.MockOpen(file)) as open_mock:
             open_mock.filter = tests.helpers.ExactlyTheseFilter([2])
-            mock.side_effect = yield_once
+            mock.return_value = YieldOnce()
             executor = pool.RestorableExecutor("")
             with executor:
                 fut = executor.submit(OurTask("absvs"))

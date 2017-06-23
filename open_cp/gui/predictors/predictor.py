@@ -55,7 +55,7 @@ class GridTask(Task):
 _TYPE_GRID_PREDICTOR = 100
 
 class GridPredictorTask(Task):
-    def __call__(self, analysis_model, grid, project_task):
+    def __call__(self, analysis_model, grid_task, project_task):
         """For the given instance of :class:`analysis.Model` generate one or
         more instances of :class:`SingleGridPredictor` making actual
         predictions."""
@@ -84,7 +84,8 @@ class SingleGridPredictor(Task):
         :param predict_time: Instance of :class:`datetime.datetime`
         :param length: Instance of :class:`datetime.timedelta`
 
-        :return: TODO: ???
+        :return: Instance of :class:`GridPrediction` (or most likely a
+          subclass)
         """
         raise NotImplementedError()
 
@@ -107,7 +108,6 @@ class Predictor():
     :param model: An instance of :class:`analysis.Model` from which we can
       obtain data.  We should directly access `times`, `xcoords`, `ycoords`
       but not worry about which events are actually in the time range etc.
-      TODO: How will the eventual prediction method get data?
     """
     def __init__(self, model):
         self._times = model.times
@@ -164,6 +164,12 @@ class Predictor():
     def from_dict(self, data):
         """Restore state from a dictionary."""
         raise NotImplementedError()
+
+    def pprint(self):
+        settings = self.settings_string
+        if settings is not None:
+            return self.name + " : " + settings
+        return self.name
 
     _Coords = _collections.namedtuple("Coords", "xcoords ycoords")
     def _as_coords(self, xcoords=None, ycoords=None):

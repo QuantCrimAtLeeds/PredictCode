@@ -320,7 +320,6 @@ class PopUpDatePicker():
         self._dp_widget.date_picker.selected_date = date
         self._dp_widget.date_picker.month_year =(date.month, date.year)
         self._dp_widget.date_picker.command = self._cmd
-        #self._dp_widget.wait_window(self._dp_widget)
         self._parent.wait_window(self._dp_widget)
         if self._date is not None:
             self._sink(self._date)

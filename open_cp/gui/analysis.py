@@ -17,6 +17,7 @@ import open_cp.gui.predictors as predictors
 import open_cp.gui.tk.analysis_view as analysis_view
 from open_cp.gui.import_file_model import CoordType
 import open_cp.gui.run_analysis as run_analysis
+import open_cp.gui.browse_analysis as browse_analysis
 
 class Analysis():
     def __init__(self, model, root):
@@ -138,7 +139,13 @@ class Analysis():
         return self._comparisons
 
     def run_analysis(self):
-        run_analysis.RunAnalysis(self.view, self.model).run()
+        run_analysis.RunAnalysis(self.view, self).run()
+
+    def new_run_analysis_result(self, result):
+        existing = list(self.model.analysis_runs)
+        existing.append(result)
+        self.model.analysis_runs = existing
+        self.view.update_run_analysis_results()
 
     def update_run_messages(self, pred_msgs=None, comp_msgs=None):
         if pred_msgs is not None:
@@ -151,6 +158,10 @@ class Analysis():
         if hasattr(self, "_comp_msgs"):
             combine.extend(self._comp_msgs)
         self.view.set_run_messages(combine)
+
+    def view_past_run(self, run):
+        result = self.model.analysis_runs[run]
+        browse_analysis.BrowseAnalysis(self._root, result).run()
 
 
 ## The model #############################################################
@@ -179,6 +190,16 @@ class Model():
         self._selected_crime_types = set()
         self._logger = logging.getLogger(__name__)
         self.reset_times()
+        self._analysis_runs = []
+
+    @property
+    def analysis_runs(self):
+        """List of results of previous runs."""
+        return self._analysis_runs
+
+    @analysis_runs.setter
+    def analysis_runs(self, v):
+        self._analysis_runs = list(v)
 
     @staticmethod
     def init_from_process_file_model(filename, model):

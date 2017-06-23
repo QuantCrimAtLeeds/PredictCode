@@ -13,6 +13,60 @@ or not) and to then restart roughly where they left off.
 import logging as _log
 import concurrent.futures as _futures
 import pickle as _pickle
+import multiprocessing as _mp
+import multiprocessing.pool as _mp_pool
+
+class OurProcessPoolExecutor():
+    """Minimal version of the standard library :class:`ProcessPoolExecutor`
+    which raises exceptions on failure to launch a worker task.  Uses
+    :mod:`multiprocessing.Pool` internally.
+    """
+    def __init__(self):
+        self._pool = _mp.Pool()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, ex, b, c):
+        self.shutdown(True)
+
+    def shutdown(self, wait):
+        self._pool.close()
+        if wait:
+            self._pool.join()
+        self._pool = None
+
+    def terminate(self):
+        """Terminates the process pool immediately."""
+        self._pool.terminate()
+
+    def submit(self, task, *args, **kwargs):
+        if self._pool is None:
+            raise RuntimeError("Pool already shutdown")
+        async_result = self._pool.apply_async(task, *args, **kwargs)
+        return self.OurFuture(async_result)
+
+    class OurFuture(_futures.Future):
+        def __init__(self, result):
+            self._async_result = result
+
+        def result(self, timeout=None):
+            return self._async_result.get(timeout)
+
+        def exception(self, timeout=None):
+            try:
+                res = self._async_result.get(timeout)
+            except Exception as ex:
+                return ex
+            return None
+
+        def done(self):
+            return self._async_result.ready()
+
+
+#_ProcessPoolExecutor = _futures.ProcessPoolExecutor
+_ProcessPoolExecutor = OurProcessPoolExecutor
+
 
 class Task():
     """Abstract base class for "tasks".  Each task has a "key" which should be
@@ -39,6 +93,7 @@ class _TaskWrapper():
     def __call__(self):
         return self.task.key, self.task()
 
+
 class PoolExecutor():
     """Executor which runs :class:`Task` instances.  Implements the context
     manager interface, and exiting the context will wait until all tasks are
@@ -55,11 +110,24 @@ class PoolExecutor():
         self._logger = _log.getLogger(PoolExecutor.__name__)
     
     def __enter__(self):
-        self._executor = _futures.ProcessPoolExecutor()
+        self.start()
         return self
 
     def __exit__(self,a,b,c):
+        self.shutdown()
+
+    def start(self):
+        """Manually start the executor, instead of using as a context."""
+        self._executor = _ProcessPoolExecutor()
+
+    def shutdown(self):
+        """Manually stop the executor"""
         self._executor.shutdown(False)
+        self._executor = None
+
+    def terminate(self):
+        """Terminate the executor immediately."""
+        self._executor.terminate()
         self._executor = None
 
     def submit(self, task):
@@ -72,15 +140,56 @@ class PoolExecutor():
             raise RuntimeError("Executor not started: use as a context manager.")
         func = _TaskWrapper(task)
         self._logger.debug("Submitting task %s to executor", task.key)
-        return self._executor.submit(func)
+        fut = self._executor.submit(func)
+        return fut
 
 
-def yield_task_results(futures, timeout=None):
+def check_finished(futures):
+    """Pass over the list of :class:`Future` or :class:`AsyncResult` objects,
+    and find results for those which are done, also returning a list of those
+    which are still running.  This is not terribly efficient, as it linearly
+    walks over the futures checking each one.
+
+    :param futures: Iterable of :class:`Future` or :class:`AsyncResult`
+      objects, or a mixture.
+
+    :return: Pair `(results, futures)` where `results` is a list of the pairs
+       `(key, return value)`, and `futures` is a list of those inputs which are
+       still running.
+    """
+    results, still_to_complete = [], []
+    for future in futures:
+        if isinstance(future, _mp_pool.AsyncResult):
+            done = future.ready()
+        elif isinstance(future, _futures.Future):
+            done = future.done()
+        else:
+            raise ValueError("Unexpected class: ", type(future))
+        if done:
+            results.append( future.result() )
+        else:
+            still_to_complete.append( future )
+    return (results, still_to_complete)
+
+def yield_task_results(async_results, timeout=None):
     """Standard way to extract the key and return value from a future wrapping
     a task.  Yields pairs `(key, return value)` as the futures complete.
+
+    This is a simple implementation that repeatedly checks the future objects
+    for completion, and then `sleep`s for a short time.  As such, it is not
+    suitable for low-latency applications.
     """
-    for fut in _futures.as_completed(futures, timeout):
-        yield fut.result()
+    if timeout is not None:
+        import datetime
+        end = datetime.datetime.now() + datetime.timedelta(seconds=timeout)
+    wait_for = list(async_results)
+    while len(wait_for) > 0:
+        results, wait_for = check_finished(wait_for)
+        yield from results
+        if timeout is not None and datetime.datetime.now() > end:
+            raise TimeoutError()
+        import time
+        time.sleep(0.1)
 
 
 class RestorableExecutor():
@@ -143,17 +252,18 @@ class RestorableExecutor():
         return self._results
 
     def __enter__(self):
-        self._executor = _futures.ProcessPoolExecutor()
+        self._executor = _ProcessPoolExecutor()
         return self
 
     def __exit__(self, ex, b, c):
         if ex is None:
             try:
+                print("Here...")
                 for k, v in yield_task_results(self._futures):
-                    print(k, v)
+                    print("Got", k, v)
                     self._results[k] = v
             except KeyboardInterrupt as ex:
-                self._logger.warn("KeyboardInterrupt detected; saving results so far...")
+                self._logger.warning("KeyboardInterrupt detected; saving results so far...")
                 self._save()
                 raise ex
         self._executor.shutdown(False)

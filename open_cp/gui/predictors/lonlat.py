@@ -99,6 +99,9 @@ class PassThrough():
     def make_tasks(self):
         return [self.Task()]
 
+    def pprint(self):
+        return "Coordinates already projected"
+
 
 class LonLatConverter(predictor.Predictor):
     def __init__(self, model):
