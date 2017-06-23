@@ -44,8 +44,8 @@ class ProcessFile():
           `False` means quit to main menu
         """
         task = LoadTask(self._filename, self._total_rows, self._parse_settings, self)
-        locator.get("pool").submit(task)
         self._view = process_file_view.LoadFullFile(self._parent, task)
+        locator.get("pool").submit(task)
         self._view.wait_window(self._view)
         if self._view.cancelled:
             return None
@@ -67,6 +67,10 @@ class ProcessFile():
                 settings = self._parse_settings)
         self._view.destroy()
 
+    def error_in_process_file(self, ex):
+        self._view.alert_error(ex)
+        self._view.cancel()
+    
 
 def rows_in_csv(filename):
     """Helper function to quickly count the number of rows in the passed csv
@@ -163,6 +167,7 @@ class LoadTask(threads.OffThreadTask, locator.GuiThreadTask):
         self._view = view
 
     def on_gui_thread(self, value):
-        if value is None:
-            return
-        self._controller.done_process_whole_file(value)
+        if isinstance(value, Exception):
+            self._controller.error_in_process_file(value)
+        else:
+            self._controller.done_process_whole_file(value)

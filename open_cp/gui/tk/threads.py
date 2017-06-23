@@ -9,7 +9,6 @@ and communicating with the main GUI thread.
 # Helpful resources:
 # http://stupidpythonideas.blogspot.co.uk/2013/10/why-your-gui-app-freezes.html
 
-
 import concurrent.futures as _futures
 import queue as _queue
 import threading as _threading
@@ -95,6 +94,7 @@ class Pool():
     def __init__(self, root, max_threads=None):
         self._task_manager = BackgroundTasks(root)
         self._executor = _futures.ThreadPoolExecutor(max_threads)
+        self._logger = logging.getLogger(__name__)
         
     def submit_gui_task(self, task):
         """Directly submit a task to be run on the main GUI thread.  Can be
@@ -103,7 +103,9 @@ class Pool():
         self._task_manager.submit(task)
         
     def submit(self, task, at_finish=None):
-        """Submit a task to be run by the thread pool.
+        """Submit a task to be run by the thread pool.  Any exception thrown by
+        the `task` will be caught, logged, and returned to the `at_finish`
+        task.
         
         :param task: A callable object to be run.  Once completed, its return
           value will be passed to `at_finish`.  Or an instance of
@@ -124,11 +126,9 @@ class Pool():
         def task_wrapper():
             try:
                 value = task()
-            except Exception:
-                logger = logging.getLogger(__name__)
-                err = traceback.format_exception(*sys.exc_info())
-                logger.error("Exception: %s", err)
-                value = None
+            except Exception as ex:
+                self._logger.exception("In task")
+                value = ex
             def on_gui_thread_task():
                 at_finish(value)
             self._task_manager.submit(on_gui_thread_task)

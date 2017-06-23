@@ -16,6 +16,7 @@ class BrowseAnalysis():
     def __init__(self, parent, result):
         self.model = BrowseAnalysisModel(self, result)
         self.view = browse_analysis_view.BrowseAnalysisView(parent, self)
+        self.view.update_projections()
 
     def run(self):
         self.view.wait_window(self.view)

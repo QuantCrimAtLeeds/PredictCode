@@ -289,8 +289,6 @@ class ModalWindow(tk.Toplevel):
             self._parent = parent.master
         self._parent = parent
         self.title(title)
-        self.grab_set()
-        self.focus_force()
         self.minsize(50, 50)
         if resize is None:
             self.resizable(width=False, height=False)
@@ -302,7 +300,10 @@ class ModalWindow(tk.Toplevel):
         # Have had trouble with this, but the current placement seems to work
         # on Windows and X-Windows okay.
         self.transient(self._parent)
-        self.after(100, lambda : self.bind("<Unmap>", self._minim))
+        self.wait_visibility()
+        self.grab_set()
+        self.focus_force()
+        self.bind("<Unmap>", self._minim)
 
     def _minim(self, event):
         # If we're being minimised then also minimise the parent!

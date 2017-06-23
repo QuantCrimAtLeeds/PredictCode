@@ -48,6 +48,21 @@ def test_runs_exception_get_exceptions():
         future = executor.submit(OurTask("ab", ex=RuntimeWarning()))
         assert isinstance(future.exception(), RuntimeWarning)
 
+def test_catches_internal_error():
+    class LambdaTask(pool.Task):
+        def __init__(self, task):
+            super().__init__("key")
+            self._task = task
+            
+        def __call__(self):
+            return self._task()
+    
+    with pool.PoolExecutor() as executor:
+        task = LambdaTask(lambda : 5)
+        future = executor.submit(task)
+        with pytest.raises(AttributeError):
+            future.result(timeout=1)
+
 @pytest.fixture
 def mockPPE():
     with unittest.mock.patch("open_cp.pool._ProcessPoolExecutor") as mockPPEClass:

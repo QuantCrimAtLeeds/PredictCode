@@ -7,6 +7,7 @@ View for processing the full file.
 
 import tkinter as tk
 import tkinter.ttk as ttk
+import tkinter.messagebox as tkmessagebox
 from . import util
 
 _text = {
@@ -27,6 +28,8 @@ _text = {
     "ct" : "Crime types",
     "nullct" : "No crime types imported",
     "ct1" : "Crime type field {} has {} unique types",
+    "load_error" : "Could not load file",
+    "load_error1" : "Unable to process file: {}",
     
 }
 
@@ -66,6 +69,9 @@ class LoadFullFile(util.ModalWindow):
         self.bar = ttk.Progressbar(self, mode="determinate")
         self.bar_pos = 0
         self.bar.grid(row=1, column=0, pady=5, padx=10, sticky=tk.E+tk.W)
+
+    def alert_error(self, ex):
+        tkmessagebox.showwarning(_text["load_error"], _text["load_error1"].format(ex))
 
     def cancel(self):
         self.cancelled = True

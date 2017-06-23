@@ -21,24 +21,36 @@ class BrowseAnalysisView(util.ModalWindow):
         super().__init__(parent, title, resize="wh")
 
     def add_widgets(self):
-        projections = self.controller.model.projections
-        if len(projections) == 1:
-            p = projections[0]
-            self._proj_choice = 0
-            ttk.Label(self, text=str(p)).grid(row=0, column=0, padx=2, pady=2)
-            self._proj_cbox = None
-        else:
-            self._proj_cbox = ttk.Combobox(self, height=5, state="readonly")
-            self._proj_cbox["values"] = projections
-            self._proj_cbox.bind("<<ComboboxSelected>>", self._proj_chosen)
-            self._proj_choice = 0
-            self._proj_cbox.current(0)
-            self._proj_cbox.grid(row=0, column=0, padx=2, pady=2)
-            self._proj_cbox["width"] = max(len(t) for t in projections)
-        self.controller.notify_projection_choice(0)
+        pass
+    
+    def _cbox_or_label(self, choices, command=None):
+        """Produces a :class:`ttk.Combobox` unless `choices` is of length 1,
+        in which case just produces a label.
 
-    def update_grids(self):
-        self.controller.model.gri
+        :return: Pair of `(widget, flag)` where `flag` is True if and only if
+          we produced a box.
+        """
+        if len(choices) == 1:
+            p = choices[0]
+            label = ttk.Label(self, text=str(p))
+            return label, False
+        else:
+            cbox = ttk.Combobox(self, height=5, state="readonly")
+            cbox["values"] = choices
+            cbox.bind("<<ComboboxSelected>>", command)
+            cbox.current(0)
+            cbox["width"] = max(len(t) for t in choices)
+            return cbox, True
+
+    def update_projections(self):
+        w, flag = self._cbox_or_label(self.controller.model.projections, command=self._proj_chosen)
+        w.grid(row=0, column=0, padx=2, pady=2)
+        if flag:
+            self._proj_cbox = w
+        else:
+            self._proj_cbox = None
+        self._proj_choice = 0
+        self.controller.notify_projection_choice(0)
 
     def _proj_chosen(self, event):
         self._proj_choice = event.widget.current()
@@ -50,3 +62,7 @@ class BrowseAnalysisView(util.ModalWindow):
         if self._proj_cbox is None:
             return 0, self.controller.model.projections[0]
         return self._proj_choice, self._proj_cbox["values"][self._proj_choice]
+
+    def update_grids(self):
+        pass
+
