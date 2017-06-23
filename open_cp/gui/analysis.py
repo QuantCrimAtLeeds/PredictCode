@@ -9,6 +9,8 @@ import array
 import datetime
 import json
 import logging
+import pickle
+import lzma
 
 import numpy as np
 
@@ -18,6 +20,7 @@ import open_cp.gui.tk.analysis_view as analysis_view
 from open_cp.gui.import_file_model import CoordType
 import open_cp.gui.run_analysis as run_analysis
 import open_cp.gui.browse_analysis as browse_analysis
+import open_cp.gui.locator as locator
 
 class Analysis():
     def __init__(self, model, root):
@@ -162,6 +165,33 @@ class Analysis():
     def view_past_run(self, run):
         result = self.model.analysis_runs[run]
         browse_analysis.BrowseAnalysis(self._root, result).run()
+        
+    def save_run(self, run, filename):
+        view = analysis_view.Saving(self.view)
+        result = self.model.analysis_runs[run]
+        def save():
+            with lzma.open(filename, "wb") as file:
+                pickle.dump(result, file)
+        def done(out=None):
+            if out is not None and isinstance(out, Exception):
+                self.view.alert(analysis_view._text["r_save_fail"].format(out))
+            view.destroy()
+        locator.get("pool").submit(save, done)
+        view.wait_window(view)
+        
+    def load_saved_run(self, filename):
+        view = analysis_view.Saving(self.view, loading=True)
+        def load():
+            with lzma.open(filename, "rb") as file:
+                return pickle.load(file)
+        def done(result):
+            view.destroy()
+            if isinstance(result, Exception):
+                self.view.alert(analysis_view._text["r_load_fail"].format(out))
+            else:
+                self.new_run_analysis_result(result)
+        locator.get("pool").submit(load, done)
+        view.wait_window(view)
 
 
 ## The model #############################################################

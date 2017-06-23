@@ -133,6 +133,8 @@ class LoadTask(threads.OffThreadTask, locator.GuiThreadTask):
         if self._total_rows is None:
             self.submit_gui_task(lambda : self._view.start_indet_progress())
             self._total_rows = self._calc_total_rows()
+            if self._view.cancelled:
+                return
             self.submit_gui_task(lambda : self._view.start_det_progress())
         processor = import_file_model.Model.load_full_dataset(self._parse_settings)
         reader = self._yield_rows()
@@ -169,5 +171,8 @@ class LoadTask(threads.OffThreadTask, locator.GuiThreadTask):
     def on_gui_thread(self, value):
         if isinstance(value, Exception):
             self._controller.error_in_process_file(value)
+            return
+        elif value is None:
+            return
         else:
             self._controller.done_process_whole_file(value)

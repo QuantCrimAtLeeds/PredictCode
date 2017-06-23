@@ -22,8 +22,13 @@ class BrowseAnalysis():
         self.view.wait_window(self.view)
 
     def notify_projection_choice(self, choice):
-        # Index of the choice, so index into self.model.projections
-        print(self.view.projection_choice)
+        index, proj_str = self.view.projection_choice
+        grid_options = self.model.grids(projection=proj_str)
+        self.view.update_grids(grid_options)
+        
+    def notify_grid_choice(self, choice):
+        pass
+
 
 class BrowseAnalysisModel():
     def __init__(self, controller, result):

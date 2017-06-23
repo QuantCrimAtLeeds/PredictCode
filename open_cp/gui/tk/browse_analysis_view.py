@@ -11,7 +11,9 @@ import open_cp.gui.tk.util as util
 _text = {
     "title" : "Previous Analysis results.  Run @ {}",
     "dtfmt" : "%d %b %Y %H:%M",
-
+    "cp" : "Coordinate projection:",
+    "grid" : "Grid system used:",
+    
 }
 
 class BrowseAnalysisView(util.ModalWindow):
@@ -21,6 +23,8 @@ class BrowseAnalysisView(util.ModalWindow):
         super().__init__(parent, title, resize="wh")
 
     def add_widgets(self):
+        ttk.Label(self, text=_text["cp"]).grid(row=0, column=0, padx=2, pady=2)
+        ttk.Label(self, text=_text["grid"]).grid(row=1, column=0, padx=2, pady=2)
         pass
     
     def _cbox_or_label(self, choices, command=None):
@@ -44,7 +48,7 @@ class BrowseAnalysisView(util.ModalWindow):
 
     def update_projections(self):
         w, flag = self._cbox_or_label(self.controller.model.projections, command=self._proj_chosen)
-        w.grid(row=0, column=0, padx=2, pady=2)
+        w.grid(row=0, column=1, padx=2, pady=2)
         if flag:
             self._proj_cbox = w
         else:
@@ -63,6 +67,24 @@ class BrowseAnalysisView(util.ModalWindow):
             return 0, self.controller.model.projections[0]
         return self._proj_choice, self._proj_cbox["values"][self._proj_choice]
 
-    def update_grids(self):
-        pass
+    def update_grids(self, choices):
+        self._grid_choices = choices
+        w, flag = self._cbox_or_label(choices, command=self._grid_chosen)
+        w.grid(row=1, column=1, padx=2, pady=2)
+        if flag:
+            self._grid_cbox = w
+        else:
+            self._grid_cbox = None
+        
+    def _grid_chosen(self, event):
+        self._grid_choice = event.widget.current()
+        self.controller.notify_grid_choice(self._grid_choice)
+
+    @property
+    def grid_choice(self):
+        """Pair of (index, string_value)"""
+        if self._grid_cbox is None:
+            return 0, self._grid_choices[0]
+        return self._grid_choice, self._grid_cbox["values"][self._grid_choice]
+        
 

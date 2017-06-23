@@ -24,6 +24,8 @@ _text = {
             + "This is a simple predictor mainly designed for testing.\n\n"
             + "Training Data usage: For each prediction point, all event from the start of the training data range until the prediction point are used.  The 'end' of the training data range is ignored."
             ),
+    "no_data" : "No data points found in time range: have enough crime types been selected?",
+    
 }
 
 class CountingGrid(predictor.Predictor):
@@ -64,6 +66,8 @@ class CountingGrid(predictor.Predictor):
             timed_points = self.projected_data(analysis_model, project_task)
             training_start, _, _, _ = analysis_model.time_range
             timed_points = timed_points[timed_points.timestamps >= training_start]
+            if timed_points.number_data_points == 0:
+                raise predictor.PredictionError(_text["no_data"])
             grid = grid_task(timed_points)
             return CountingGrid.SubTask(timed_points, grid)
 

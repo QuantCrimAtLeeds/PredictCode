@@ -8,6 +8,7 @@ Model / Controller for running the actual analysis.
 import open_cp.gui.tk.run_analysis_view as run_analysis_view
 import open_cp.gui.predictors as predictors
 from open_cp.gui.common import CoordType
+import open_cp.gui.predictors.predictor as predictor
 import open_cp.pool as pool
 import open_cp.gui.tk.threads as tk_threads
 import open_cp.gui.locator as locator
@@ -92,6 +93,15 @@ class RunAnalysis():
 
     def _finished(self, out=None):
         self.view.done()
+        if out is not None:
+            if isinstance(out, predictor.PredictionError):
+                self.view.alert(str(out))
+                self._msg_logger.error(run_analysis_view._text["warning1"].format(out))
+            elif isinstance(out, Exception):
+                self._msg_logger.error(run_analysis_view._text["log11"].format(out))
+            else:
+                self._msg_logger.error(run_analysis_view._text["log12"].format(out))
+            return
         if self._off_thread.cancelled:
             self.view.cancel()
         else:
@@ -275,7 +285,6 @@ class _RunnerThread():
         self._tasks = list(grid_prediction_tasks)
         self._date_ranges = list(predict_tasks)
         self._executor = pool.PoolExecutor()
-        self._executor.start()
         self._results = []
         self._controller = controller
         self._cancel_queue = queue.Queue()
@@ -284,23 +293,23 @@ class _RunnerThread():
         """To be run off-thread"""
         self._controller.start_progress()
         self._controller.to_msg_logger(run_analysis_view._text["log9"])
-        tasks = self._make_tasks()
-        futures = [ self._executor.submit(t) for t in tasks ]
-        done, out_of = 0, len(futures)
-        while len(futures) > 0:
-            results, futures = pool.check_finished(futures)
-            for key, result in results:
-                self._results.append( PredictionResult(key, result) )
-                self._controller.to_msg_logger(run_analysis_view._text["log8"], key)
-                done += 1
-                self._controller.set_progress(done, out_of)
-            if self.cancelled:
-                break
-            time.sleep(0.5)
-        if self.cancelled:
+        self._executor.start()
+        try:
+            tasks = self._make_tasks()
+            futures = [ self._executor.submit(t) for t in tasks ]
+            done, out_of = 0, len(futures)
+            while len(futures) > 0:
+                results, futures = pool.check_finished(futures)
+                for key, result in results:
+                    self._results.append( PredictionResult(key, result) )
+                    self._controller.to_msg_logger(run_analysis_view._text["log8"], key)
+                    done += 1
+                    self._controller.set_progress(done, out_of)
+                if self.cancelled:
+                    break
+                time.sleep(0.5)
+        finally:
             self._executor.terminate()
-        else:
-            self._executor.shutdown()
         self._controller.end_progress()
 
     def cancel(self):

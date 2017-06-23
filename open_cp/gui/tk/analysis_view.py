@@ -8,7 +8,6 @@ The view for the analysis panel.
 import tkinter as tk
 import tkinter.ttk as ttk
 import tkinter.messagebox
-import tkinter.filedialog
 import datetime
 from . import util
 from .. import funcs
@@ -67,6 +66,10 @@ _text = {
     "emsg1" : "From loading saved session",
     "okay" : "Okay",
     "fail_save" : "Failed to save session.\nCause: {}/{}",
+    "jsonses" : "JSON session",
+    "saveses" : "Please select a session file to save to",
+    "saving" :  "Saving file...",
+    "loading" :  "Loading file...",
     "ctfail1" : "Crime type selection {} doesn't make sense for input file as we don't have that many selected crime type fields!",
     "ctfail2" : "Crime type selection {} doesn't make sense for input file",
     "ctfail3" : "Number of crimes types is {} which is too many!  No crime types will be considered...",
@@ -96,7 +99,13 @@ _text = {
     "results" : "Analysis run results",
     "r_runat" : "Run @ {} {}",
     "r_runat_tt" : "Click to view analysis results",
+    "r_runatsave_tt" : "Save the analysis results to disk",
     "r_load" : "Load saved run",
+    "r_save" : "Please select a file to save analysis run to",
+    "r_save1" : "Saved Analysis File",
+    "r_save_fail" : "Failed to save analysis file because: {}",
+    "r_load1" : "Please select a file to load old analysis run from",
+    "r_load_fail" : "Failed to load old analysis file because: {}",
     
 }
 
@@ -303,8 +312,6 @@ class AnalysisView(tk.Frame):
 
     def _run_panel(self, parent):
         frame = ttk.Frame(parent)
-        #frame = ttk.LabelFrame(parent, text=_text["run"])
-        #self._run_frame = ttk.Frame(frame)
         self._run_frame = ttk.LabelFrame(frame, text=_text["run"])
         self._run_frame.grid(row=0, column=0, padx=1, pady=1, sticky=tk.NSEW)
         self._result_frame = ttk.LabelFrame(frame, text=_text["results"])
@@ -321,13 +328,19 @@ class AnalysisView(tk.Frame):
         self._remove_children(self._result_frame)
         row = 0
         for row, result in enumerate(self._model.analysis_runs):
-            button = ttk.Button(self._result_frame,
+            frame = ttk.Frame(self._result_frame)
+            frame.grid(row=row, column=0, sticky=tk.NSEW)
+            button = ttk.Button(frame,
                 text = _text["r_runat"].format(
                     result.run_time.strftime(_text["date_format"]),
                     result.run_time.strftime(_text["time_format"]) ),
                 command = lambda r=row : self._view_run(r) )
-            button.grid(row=row, column=0, padx=1, pady=1, sticky=tk.NSEW)
+            button.grid(row=0, column=0, padx=1, pady=1, sticky=tk.NSEW)
             tooltips.ToolTipYellow(button, _text["r_runat_tt"])
+            save_button = ttk.Button(frame, image=self._save_icon,
+                command = lambda r=row : self._save_run(r) )
+            save_button.grid(row=0, column=1, padx=1, pady=1, sticky=tk.NSEW)
+            tooltips.ToolTipYellow(save_button, _text["r_runatsave_tt"])
         ttk.Button(self._result_frame, text=_text["r_load"],
             command=self._load_saved_run).grid(
             row=row + 1, column=0, padx=1, pady=1, sticky=tk.NSEW)
@@ -335,9 +348,19 @@ class AnalysisView(tk.Frame):
     def _view_run(self, run):
         self._controller.view_past_run(run)
 
+    def _save_run(self, run):
+        filename = util.ask_save_filename(filetypes = [(_text["r_save1"], "*.pic.xz")],
+            title=_text["r_save"],
+            defaultextension=".pic.xz")
+        if filename is not None:
+            self._controller.save_run(run, filename)
+
     def _load_saved_run(self):
-        # TODO
-        pass
+        filename = util.ask_open_filename(filetypes = [(_text["r_save1"], "*.pic.xz")],
+            title=_text["r_load1"],
+            defaultextension=".pic.xz")
+        if filename is not None:
+            self._controller.load_saved_run(filename)
 
     def set_run_messages(self, messages):
         """Set a list of messages giving prerequisits for launching a run, or
@@ -367,8 +390,8 @@ class AnalysisView(tk.Frame):
         self._controller.run_analysis()
 
     def _save(self):
-        filename = util.ask_save_filename(filetypes = [("JSON session", "*.json")],
-            title="Please select a session file to save to",
+        filename = util.ask_save_filename(filetypes = [(_text["jsonses"], "*.json")],
+            title=_text["saveses"],
             defaultextension=".json")
         if filename is not None:
             self._controller.save(filename)
@@ -379,6 +402,7 @@ class AnalysisView(tk.Frame):
     def _load_resources(self):
         self._close_icon = ImageTk.PhotoImage(resources.close_icon)
         self._edit_icon = ImageTk.PhotoImage(resources.edit_icon)
+        self._save_icon = ImageTk.PhotoImage(resources.save_icon)
 
     def add_widgets(self):
         self._load_resources()
@@ -631,3 +655,19 @@ class TimeEntry(ttk.Entry):
     @time.setter
     def time(self, new_time):
         self._data_entry_txt_var.set(new_time.strftime(_text["time_format"]))
+
+
+class Saving(util.ModalWindow):
+    """Static "saving..." window"""
+    def __init__(self, parent, loading=False):
+        title = _text["saving"]
+        if loading:
+            title = _text["loading"]
+        super().__init__(parent, title=title)
+        
+    def add_widgets(self):
+        self.set_size_percentage(30,10)
+        util.stretchy_rows_cols(self, [0], [0])
+        bar = ttk.Progressbar(self, mode="indeterminate")
+        bar.grid(sticky=tk.EW, padx=5)
+        bar.start()

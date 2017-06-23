@@ -93,6 +93,11 @@ class SingleGridPredictor(Task):
 
 
 
+class PredictionError(Exception):
+    """For signally "expected" problems with running a prediction."""
+    def __init__(self, message):
+        super().__init__(message)
+        
 
 class Predictor():
     """Abstract base class which all prediction methods derive from.

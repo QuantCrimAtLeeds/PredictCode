@@ -28,7 +28,13 @@ _text = {
     "log8" : "Completed task %s",
     "log9" : "Collecting tasks to run...",
     "log10" : "Cancelling run...",
-
+    "log11" : "Unexpected error while running analysis: {}",
+    "log12" : "Internal error, got: '{}'",
+    "warning" : "Failed to complete analysis run",
+    "warning1" : "Analysis run stopped early due to: {}",
+    "cancel" : "Cancel tasks",
+    "cancel1" : "Do you want to cancel the runnnig tasks?",
+    
 }
 
 class RunAnalysisView(util.ModalWindow):
@@ -95,12 +101,15 @@ class RunAnalysisView(util.ModalWindow):
 
     def set_progress(self, done, out_of):
         new_pos = done * 100 / out_of
-        step = self._bar.step(new_pos - self._bar_pos)
+        self._bar.step(new_pos - self._bar_pos)
         self._bar_pos = new_pos
+
+    def alert(self, message):
+        messagebox.showwarning(_text["warning"], message)
 
     def _close(self):
         if not self._done:
-            if not messagebox.askyesno("Cancel tasks", "Do you want to cancel the runnnig tasks?"):
+            if not messagebox.askyesno(_text["cancel"], _text["cancel1"]):
                 return
         self._cancel()
 
