@@ -32,8 +32,10 @@ def runAnalysis(log_queue):
     model.analysis_tools_model.add(predictors.grid.GridProvider)
     model.comparison_model.add(predictors.pred_type.PredType)
     model.analysis_tools_model.add(predictors.naive.CountingGrid)
+    controller = mock.MagicMock()
+    controller.model = model
     with mock.patch("open_cp.gui.tk.run_analysis_view.RunAnalysisView") as mock_view:
-        yield run_analysis.RunAnalysis(None, model)
+        yield run_analysis.RunAnalysis(None, controller)
 
 @pytest.fixture
 def locator_mock():
@@ -90,7 +92,6 @@ def pool():
         yield pool_mock
 
 def test_controller_tasks(runAnalysis, log_queue, locator_mock):
-    model = runAnalysis.main_model
     runAnalysis.run()
     off_thread = get_thread(locator_mock)
     off_thread()
