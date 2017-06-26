@@ -124,6 +124,9 @@ class RectangularRegion():
         ysize = int(_np.ceil((self.ymax - self.ymin) / cell_height))
         return xsize, ysize
 
+    def __eq__(self, other):
+        return self.min == other.min and self.max == other.max
+
     def __repr__(self):
         return "RectangularRegion( ({},{}) -> ({},{}) )".format(self.xmin,
                                  self.ymin, self.xmax, self.ymax)

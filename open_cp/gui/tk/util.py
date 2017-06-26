@@ -176,6 +176,18 @@ class IntValidator(Validator):
         return True
 
 
+class PercentageValidator(IntValidator):
+    """An :class:`IntValidator` which limits to values between 0 and 100
+    inclusive.
+    """
+    def validate(self, value):
+        if not super().validate(value):
+            return False
+        if int(value) < 0 or int(value) > 100:
+            return False
+        return True
+        
+
 class DateTimeValidator(Validator):
     """A :class:`Validator` which only accepts values which parse using the
     given `strptime` string.

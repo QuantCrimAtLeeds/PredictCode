@@ -65,8 +65,8 @@ def top_slice(risk, fraction):
 
 def hit_rates(grid_pred, timed_points, percentage_coverage):
     """Computes the "hit rate" for the given prediction for the passed
-    collection of events.  For each percent, we top slice the that percentage
-    of cells from the grid prediction, and compute the fraction of events which
+    collection of events.  For each percent, we top slice that percentage of
+    cells from the grid prediction, and compute the fraction of events which
     fall in those cells.
 
     :param grid_pred: An instance of :class:`GridPrediction` to give a

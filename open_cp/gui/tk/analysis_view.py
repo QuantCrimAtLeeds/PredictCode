@@ -18,6 +18,7 @@ from open_cp.gui.common import CoordType
 import open_cp.gui.tk.error_list as error_list
 import open_cp.gui.resources as resources
 import PIL.ImageTk as ImageTk
+import PIL.Image
 
 _text = {
     "data" : "Input data",
@@ -34,6 +35,8 @@ _text = {
     "with_basemap" : "Plot with base map",
     "save" : "Save session",
     "back" : "Back to main menu",
+    "askquit" : "Quit to main menu?",
+    "long_askquit" : "Quit to the main menu?  Settings will be lost if not saved.",
     "preds" : "Predictions",
     "asses" : "Comparison methods",
     "time_select" : "Select time range",
@@ -99,7 +102,8 @@ _text = {
     "results" : "Analysis run results",
     "r_runat" : "Run @ {} {}",
     "r_runat_tt" : "Click to view analysis results",
-    "r_runatsave_tt" : "Save the analysis results to disk",
+    "r_runatsave_tt" : "Save the analysis results to disk.",
+    "r_runatsave_tt1" : "Analysis result saved as {}  Click to save again.",
     "r_load" : "Load saved run",
     "r_save" : "Please select a file to save analysis run to",
     "r_save1" : "Saved Analysis File",
@@ -337,10 +341,15 @@ class AnalysisView(tk.Frame):
                 command = lambda r=row : self._view_run(r) )
             button.grid(row=0, column=0, padx=1, pady=1, sticky=tk.NSEW)
             tooltips.ToolTipYellow(button, _text["r_runat_tt"])
-            save_button = ttk.Button(frame, image=self._save_icon,
-                command = lambda r=row : self._save_run(r) )
+            save_button = ttk.Button(frame, command = lambda r=row : self._save_run(r) )
             save_button.grid(row=0, column=1, padx=1, pady=1, sticky=tk.NSEW)
-            tooltips.ToolTipYellow(save_button, _text["r_runatsave_tt"])
+            filename = self._model.analysis_run_filename(row)
+            if filename is not None:
+                save_button["image"] = self._success_icon
+                tooltips.ToolTipYellow(save_button, _text["r_runatsave_tt1"].format(filename))
+            else:
+                save_button["image"] = self._save_icon
+                tooltips.ToolTipYellow(save_button, _text["r_runatsave_tt"])
         ttk.Button(self._result_frame, text=_text["r_load"],
             command=self._load_saved_run).grid(
             row=row + 1, column=0, padx=1, pady=1, sticky=tk.NSEW)
@@ -383,7 +392,6 @@ class AnalysisView(tk.Frame):
     def set_previous_analysis(self):
         labelframe = ttk.LabelFrame(self._run_frame, text=_text["oldrun"])
         labelframe.grid(sticky=tk.NSEW, row=0, column=1)
-        # TODO
         
     def _run(self):
         """Launch the analysis."""
@@ -403,6 +411,9 @@ class AnalysisView(tk.Frame):
         self._close_icon = ImageTk.PhotoImage(resources.close_icon)
         self._edit_icon = ImageTk.PhotoImage(resources.edit_icon)
         self._save_icon = ImageTk.PhotoImage(resources.save_icon)
+        self._success_icon = ImageTk.PhotoImage(resources.success_icon)
+        self._saved_icon = ImageTk.PhotoImage(PIL.Image.alpha_composite(
+                resources.save_icon, resources.success_icon))
 
     def add_widgets(self):
         self._load_resources()
@@ -430,9 +441,11 @@ class AnalysisView(tk.Frame):
         self._analysis_tools(frame)
 
     def cancel(self):
-        if tkinter.messagebox.askokcancel("Quit to main menu?",
-                "Quit to the main menu?  Settings will be lost if not saved."):
+        if self._model.session_changed():
             self.destroy()
+        else:
+            if tkinter.messagebox.askokcancel(_text["askquit"], _text["long_askquit"]):
+                self.destroy()
 
     def refresh_plot(self):
         if self._plot_widget is None:

@@ -90,13 +90,13 @@ def test_serialisation_out(saved_dict):
 
 def test_serialisation(saved_dict):
     mdl = model()
+    mdl._parse_settings = parse_settings()
     assert mdl.filename is None
     
     mdl.settings_from_dict(saved_dict)
 
     # Shouldn't be restored
     assert mdl.filename is None
-    assert mdl._parse_settings is None
 
     assert mdl.time_range[0] == datetime.datetime(2017,9,6,12,30)
     assert mdl.time_range[1] == datetime.datetime(2017,10,7,12,45)
@@ -122,6 +122,7 @@ def test_pred_serialisation(model_with_preds, parse_settings):
 
 def test_pred_serialisation_error(model_with_preds):
     mdl = model()
+    mdl._parse_settings = parse_settings()
     model_with_preds["analysis_tools"]["predictors"][0]["name"] = "bob"
     mdl.settings_from_dict(model_with_preds)
 

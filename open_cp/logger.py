@@ -23,15 +23,15 @@ def _set_handler(handler):
 
 def standard_formatter():
     """Our standard logging formatter"""
-    return logging.Formatter("{asctime} {levelname} {name} - {message}", style="{")
+    return _logging.Formatter("{asctime} {levelname} {name} - {message}", style="{")
 
 def log_to_stdout():
     """Start logging to `stdout`.  In a Jupyter notebook, this will print
     logging to the notebook.
     """
-    logger = logging.getLogger("open_cp")
-    logger.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler(sys.stdout)
+    logger = _logging.getLogger("open_cp")
+    logger.setLevel(_logging.DEBUG)
+    ch = _logging.StreamHandler(_sys.stdout)
     ch.setFormatter(standard_formatter())
     _set_handler(ch)
 
@@ -40,8 +40,8 @@ def log_to_true_stdout():
     print logging to the console the server is running in (and not to the
     notebook) itself.
     """
-    logger = logging.getLogger("open_cp")
-    logger.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler(sys.__stdout__)
+    logger = _logging.getLogger("open_cp")
+    logger.setLevel(_logging.DEBUG)
+    ch = _logging.StreamHandler(_sys.__stdout__)
     ch.setFormatter(standard_formatter())
     _set_handler(ch)

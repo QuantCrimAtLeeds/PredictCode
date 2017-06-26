@@ -104,6 +104,13 @@ class GridPredictionArray(GridPrediction):
         super().__init__(xsize, ysize, xoffset, yoffset)
         self._matrix = matrix
 
+    def clone(self):
+        """Return a new instance with the same data."""
+        matrix = _np.ma.masked_array(self._matrix)
+        copy = GridPredictionArray(xsize=self.xsize, ysize=self.ysize, xoffset=self.xoffset,
+            yoffset=self.yoffset, matrix=matrix)
+        return copy
+
     def grid_risk(self, gx, gy):
         """Find the risk in a grid cell.
 
@@ -141,7 +148,8 @@ class GridPredictionArray(GridPrediction):
         """Construct an instance from an instance of
         :class:`ContinuousPrediction` using the region and passed cell sizes.
 
-        :param prediction: An instance of ContinuousPrediction to sample from
+        :param prediction: An instance of :class:`ContinuousPrediction` to
+          sample from
         :param region: The :class:`RectangularRegion` the grid
         :param cell_width: Width of each cell in the resulting grid
         :param cell_height: Optional; height of each cell in the resulting

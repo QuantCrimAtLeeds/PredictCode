@@ -7,6 +7,7 @@ Very simple-minded prediction techniques.  For testing and benchmarking.
 
 from . import predictor
 import open_cp.naive
+import open_cp.predictors
 import tkinter as tk
 import tkinter.ttk as ttk
 import open_cp.gui.tk.util as util
@@ -124,8 +125,31 @@ class ScipyKDE(predictor.Predictor):
         pass
 
     def make_tasks(self):
-        raise NotImplementedError()
+        return [self.Task()]
         
+    class Task(predictor.GridPredictorTask):
+        def __call__(self, analysis_model, grid_task, project_task):
+            timed_points = self.projected_data(analysis_model, project_task)
+            training_start, _, _, _ = analysis_model.time_range
+            timed_points = timed_points[timed_points.timestamps >= training_start]
+            if timed_points.number_data_points == 0:
+                raise predictor.PredictionError(_text["no_data"])
+            grid = grid_task(timed_points)
+            return ScipyKDE.SubTask(timed_points, grid)
+
+    class SubTask(predictor.SingleGridPredictor):
+        def __init__(self, timed_points, grid):
+            self._timed_points = timed_points
+            self.predictor = open_cp.naive.ScipyKDE()
+            self._grid = grid
+
+        def __call__(self, predict_time, length):
+            mask = self._timed_points.timestamps < predict_time
+            self.predictor.data = self._timed_points[mask]
+            cts_pred = self.predictor.predict()
+            return open_cp.predictors.GridPredictionArray.from_continuous_prediction_region(
+                cts_pred, self._grid.region(), self._grid.xsize, self._grid.ysize)
+
         
 class ScipyKDEView(tk.Frame):
     def __init__(self, parent):

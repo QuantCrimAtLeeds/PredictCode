@@ -210,8 +210,6 @@ class GridView(tk.Frame):
             fig = mtp.new_figure(size)
             ax = fig.add_subplot(1,1,1)
             ax.scatter(coords[0], coords[1], marker="x", color="black", alpha=0.5)
-            #pc = open_cp.plot.patches_from_grid(self._controller.get_grid())
-            #ax.add_collection(mtp.matplotlib.collections.PatchCollection(pc, edgecolor="black", facecolor="None"))
             lc = open_cp.plot.lines_from_regular_grid(self._controller.get_grid())
             ax.add_collection(mtp.matplotlib.collections.LineCollection(lc, color="black", linewidth=0.5))
             ax.set(xlim=[xmin, xmax], ylim=[ymin, ymax])

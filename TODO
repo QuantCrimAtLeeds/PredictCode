@@ -3,18 +3,14 @@
 - Sort out convergence issues in SEPP code
    - See comment on github
 - Look at the grid-based SEPP method which seems to perform badly
-- Add some logging functionality in the library
 
 
 # GUI
 
 - Predictors:
-  - Finish browser view
-  - Do the 2nd naive predictors
   - Do other predictors
+  - Tests for the predictors (just test that the settings we _think_ we are applying get passed to the main `open_cp` code correctly.)
 
-- Store which analysis files have been saved, and their filename, in the "session".
-  - Adjust the "save" icon and tooltip text to show that file is already saved.
 
 
 

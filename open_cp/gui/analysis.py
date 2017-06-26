@@ -127,8 +127,10 @@ class Analysis():
     def save(self, filename):
         try:
             d = self.model.to_dict()
+            json_string = json.dumps(d, indent=2)
             with open(filename, "wt") as f:
-                json.dump(d, f, indent=2)
+                f.write(json_string)
+            self.model.reset_settings_dict()
         except Exception as e:
             self._logger.exception("Failed to save")
             self.view.alert(analysis_view._text["fail_save"].format(type(e), e))
@@ -144,10 +146,8 @@ class Analysis():
     def run_analysis(self):
         run_analysis.RunAnalysis(self.view, self).run()
 
-    def new_run_analysis_result(self, result):
-        existing = list(self.model.analysis_runs)
-        existing.append(result)
-        self.model.analysis_runs = existing
+    def new_run_analysis_result(self, result, filename=None):
+        self.model.new_analysis_run(result, filename)
         self.view.update_run_analysis_results()
 
     def update_run_messages(self, pred_msgs=None, comp_msgs=None):
@@ -166,12 +166,12 @@ class Analysis():
         result = self.model.analysis_runs[run]
         browse_analysis.BrowseAnalysis(self._root, result).run()
         
-    def save_run(self, run, filename):
+    def save_run(self, run_index, filename):
         view = analysis_view.Saving(self.view)
-        result = self.model.analysis_runs[run]
+        result = self.model.analysis_runs[run_index]
         def save():
-            with lzma.open(filename, "wb") as file:
-                pickle.dump(result, file)
+            self.model.save_analysis_run(run_index, filename)
+            self.view.update_run_analysis_results()
         def done(out=None):
             if out is not None and isinstance(out, Exception):
                 self.view.alert(analysis_view._text["r_save_fail"].format(out))
@@ -182,14 +182,13 @@ class Analysis():
     def load_saved_run(self, filename):
         view = analysis_view.Saving(self.view, loading=True)
         def load():
-            with lzma.open(filename, "rb") as file:
-                return pickle.load(file)
+            self.model.load_analysis_run(filename)
         def done(result):
             view.destroy()
             if isinstance(result, Exception):
                 self.view.alert(analysis_view._text["r_load_fail"].format(out))
             else:
-                self.new_run_analysis_result(result)
+                self.view.update_run_analysis_results()
         locator.get("pool").submit(load, done)
         view.wait_window(view)
 
@@ -221,15 +220,31 @@ class Model():
         self._logger = logging.getLogger(__name__)
         self.reset_times()
         self._analysis_runs = []
+        self._loaded_from_dict = None
 
     @property
     def analysis_runs(self):
         """List of results of previous runs."""
-        return self._analysis_runs
+        return [x[0] for x in self._analysis_runs]
 
-    @analysis_runs.setter
-    def analysis_runs(self, v):
-        self._analysis_runs = list(v)
+    def new_analysis_run(self, result, filename=None):
+        """Add a new analysis run with optional saved file name."""
+        self._analysis_runs.append( (result, filename) )
+
+    def analysis_run_filename(self, run_index):
+        """`None` indicates not saved."""
+        return self._analysis_runs[run_index][1]
+
+    def save_analysis_run(self, run_index, filename):
+        old = self._analysis_runs[run_index]
+        with lzma.open(filename, "wb") as file:
+            pickle.dump(old[0], file)
+        self._analysis_runs[run_index] = (old[0], filename)
+
+    def load_analysis_run(self, filename):
+        with lzma.open(filename, "rb") as file:
+            result = pickle.load(file)
+        self.new_analysis_run(result, filename)
 
     @staticmethod
     def init_from_process_file_model(filename, model):
@@ -250,7 +265,16 @@ class Model():
                 "comparison_tools" : self.comparison_model.to_dict(),
             }
         data["selected_crime_types"] = [ self.unique_crime_types[index] for index in self.selected_crime_types]
+        data["saved_analysis_runs"] = [ pair[1] for pair in self._analysis_runs if pair[1] is not None ]
         return data
+
+    def session_changed(self):
+        """Has the session changed since it was loaded?"""
+        return self.to_dict() == self._loaded_from_dict
+
+    def reset_settings_dict(self):
+        """Set the stored settings to be equal to the current settings."""
+        self._loaded_from_dict = self.to_dict()
 
     def settings_from_dict(self, data):
         """Over-write the current settings with the passed dictionary,
@@ -273,6 +297,14 @@ class Model():
                 self._errors.append(str(ex))
         else:
             self._logger.warn("Didn't find key 'comparison_tools': Is this an old input file?")
+        if "saved_analysis_runs" in data:
+            for filename in data["saved_analysis_runs"]:
+                try:
+                    self.load_analysis_run(filename)
+                except Exception as ex:
+                    self._errors.append(str(ex))
+        else:
+            self._logger.warn("Didn't find key 'saved_analysis_runs': Is this an old input file?")
         t = data["training_time_range"]
         a = data["assessment_time_range"]
         self.time_range = [funcs.string_to_datetime(t[0]), funcs.string_to_datetime(t[1]),
@@ -293,6 +325,8 @@ class Model():
         if len(self._errors) > 0:
             self._logger.warn("Errors in loading saved settings: %s", self._errors)
         self.selected_crime_types = sel_ctypes
+        
+        self.reset_settings_dict()
 
     def consume_errors(self):
         """Returns a list of error messages and resets the list to be empty."""

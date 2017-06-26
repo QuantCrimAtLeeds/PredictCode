@@ -19,7 +19,8 @@ import time
 import datetime
 
 class RunAnalysis():
-    """
+    """Controller for performing the computational tasks of actually producing
+    a prediction.  Using multi-processing.
 
     :param parent: Parent `tk` widget
     :param model: The :class:`analyis.Model` model.
@@ -273,6 +274,9 @@ class PredictionResult():
         """An instance of :class:`GridPrediction` (or most likely a subclass)
         giving the actual prediction."""
         return self._pred
+
+    def __repr__(self):
+        return "PredictionResult(key={}, prediction={}".format(self._key, self._pred)
 
 
 class _RunnerThread():
