@@ -236,6 +236,8 @@ class StocasticDecluster():
         logger = _logging.getLogger(__name__)
         logger.debug("Sample gives %s background events and %s triggered events",
                      backgrounds.shape, triggered.shape)
+        if triggered.shape[-1] < 10:
+            raise RuntimeError("Estimated only {} background points, which is too few to allow KDE to function".format(backgrounds.shape[-1]))
         bkernel = self.background_kernel_estimator(backgrounds)
         tkernel = self.trigger_kernel_estimator(triggered)
 
