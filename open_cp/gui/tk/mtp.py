@@ -50,6 +50,8 @@ class _MakeFigTask(_threads.OffThreadTask):
         #file = base64.b64encode(file.getvalue())
         #image = tk.PhotoImage(data=file)
         image = PIL.Image.open(file)
+        image.load()
+        file.close()
         self._canvas_figure.set_image(image)
 
     def on_gui_thread(self, value):
@@ -127,7 +129,8 @@ class CanvasFigure(tk.Frame):
         
     def _set_watch(self):
         def set():
-            self._canvas["cursor"] = "watch"
+            if self._canvas.winfo_exists():
+                self._canvas["cursor"] = "watch"
         self._pool.submit_gui_task(set)
 
     def _draw(self):
@@ -153,6 +156,8 @@ class CanvasFigure(tk.Frame):
     def set_photo(self, photo):
         """Set the canvas photo; library use only.  Only call on GUI thread"""
         with self._rlock:
+            if not self._canvas.winfo_exists():
+                return
             if self._canvas_image is None:
                 self._canvas_image = self._canvas.create_image(0, 0, image=photo, anchor=tk.NW)
             else:

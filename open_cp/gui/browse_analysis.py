@@ -38,9 +38,14 @@ class BrowseAnalysis():
         _, proj_str = self.view.projection_choice
         _, grid_str = self.view.grid_choice
         _, pred_str = self.view.prediction_choice
-        options = self.model.prediction_dates(projection=proj_str,
-            grid=grid_str, pred_type=pred_str)
-        self.view.update_dates(options)
+        _, old_date_str = self.view.date_choice
+        options = [str(x) for x in self.model.prediction_dates(projection=proj_str,
+            grid=grid_str, pred_type=pred_str)]
+        try:
+            index = options.index(old_date_str)
+        except ValueError:
+            index = 0
+        self.view.update_dates(options, index)
 
     def notify_date_choice(self, choice):
         _, proj_str = self.view.projection_choice
@@ -53,6 +58,7 @@ class BrowseAnalysis():
                 len(predictions), (proj_str, grid_str, pred_str, date_str))
         self.model.current_prediction = predictions[0]
         self.view.update_prediction(level=self.model.plot_risk_level)
+        self._logger.debug("Ploting %s -> %s / %s", (proj_str, grid_str, pred_str, date_str), self.model.current_prediction, id(self.model.current_prediction.prediction))
 
     def notify_plot_type_risk(self):
         self.model.plot_risk_level = -1

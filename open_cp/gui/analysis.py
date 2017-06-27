@@ -168,14 +168,14 @@ class Analysis():
         
     def save_run(self, run_index, filename):
         view = analysis_view.Saving(self.view)
-        result = self.model.analysis_runs[run_index]
         def save():
             self.model.save_analysis_run(run_index, filename)
-            self.view.update_run_analysis_results()
         def done(out=None):
-            if out is not None and isinstance(out, Exception):
-                self.view.alert(analysis_view._text["r_save_fail"].format(out))
             view.destroy()
+            if out is not None and isinstance(out, Exception):
+                self.view.alert(analysis_view._text["r_save_fail"].format(type(out), out))
+            else:
+                self.view.update_run_analysis_results()
         locator.get("pool").submit(save, done)
         view.wait_window(view)
         
@@ -186,7 +186,7 @@ class Analysis():
         def done(result):
             view.destroy()
             if isinstance(result, Exception):
-                self.view.alert(analysis_view._text["r_load_fail"].format(out))
+                self.view.alert(analysis_view._text["r_load_fail"].format(result))
             else:
                 self.view.update_run_analysis_results()
         locator.get("pool").submit(load, done)

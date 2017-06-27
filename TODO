@@ -7,10 +7,12 @@
 
 # GUI
 
+- Finish the `retro.py` code
+- Add ability to delete analysis runs (not from disk, just from the view)
+
 - Predictors:
   - Do other predictors
   - Tests for the predictors (just test that the settings we _think_ we are applying get passed to the main `open_cp` code correctly.)
-
 
 
 
@@ -19,3 +21,4 @@
   - New dialog to select a recent session
 
 - Would be nice to bind the scroll wheel to a vertical scroll bar...
+  - Works on linux.  Need to check on Windows.

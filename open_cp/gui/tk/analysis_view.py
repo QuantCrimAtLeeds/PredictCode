@@ -107,7 +107,7 @@ _text = {
     "r_load" : "Load saved run",
     "r_save" : "Please select a file to save analysis run to",
     "r_save1" : "Saved Analysis File",
-    "r_save_fail" : "Failed to save analysis file because: {}",
+    "r_save_fail" : "Failed to save analysis file because: {}/{}",
     "r_load1" : "Please select a file to load old analysis run from",
     "r_load_fail" : "Failed to load old analysis file because: {}",
     

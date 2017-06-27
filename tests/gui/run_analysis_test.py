@@ -76,7 +76,7 @@ def test_model(runAnalysis):
     import open_cp.gui.predictors.naive
     assert isinstance(model.grid_prediction_tasks['Counting Grid naive predictor'][0],
         open_cp.gui.predictors.naive.CountingGrid.Task)
-    
+
 
 def get_thread(locator_mock):
     pool = locator_mock.get("pool")
@@ -98,3 +98,19 @@ def test_controller_tasks(runAnalysis, log_queue, locator_mock):
 
     assert str(off_thread.results[0].key) == "projection: Coordinates already projected, grid: Grid 100x100m @ (0m, 0m), prediction_type: Counting Grid naive predictor, prediction_date: 2017-05-10 00:00:00"
     assert isinstance(off_thread.results[0].prediction, open_cp.predictors.GridPredictionArray)
+
+def test_controller_type_of_tasks(runAnalysis, log_queue, locator_mock, pool):
+    runAnalysis.controller.model.analysis_tools_model.add(predictors.naive.ScipyKDE)
+    runAnalysis.run()
+    off_thread = get_thread(locator_mock)
+    
+    executor = pool.PoolExecutor.return_value
+    pool.check_finished.return_value = ([],[])
+    off_thread()
+
+    assert len(executor.submit.call_args_list) == 2
+    task = executor.submit.call_args_list[0][0][0]
+    assert isinstance(task._task.task, open_cp.gui.predictors.naive.CountingGrid.SubTask)
+    task = executor.submit.call_args_list[1][0][0]
+    assert isinstance(task._task.task, open_cp.gui.predictors.naive.ScipyKDE.SubTask)
+    

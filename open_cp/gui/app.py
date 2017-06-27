@@ -39,7 +39,7 @@ def run():
     root = main_window_view.TopWindow()
     locator._make_pool(root)
 
-    #import open_cp.gui.predictors.grid as pred
+    #import open_cp.gui.predictors.retro as pred
     #pred.test(root)
     #return
 

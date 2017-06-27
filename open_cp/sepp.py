@@ -246,8 +246,9 @@ class StocasticDecluster():
         number_triggered_events = number_events - number_background_events
         bkernel.set_scale(number_background_events)
         tkernel.set_scale(number_triggered_events / number_events)
-        pnew = p_matrix_fast(self.points, bkernel, tkernel,
-            time_cutoff = self.time_cutoff, space_cutoff = self.space_cutoff)
+        #pnew = p_matrix_fast(self.points, bkernel, tkernel,
+        #    time_cutoff = self.time_cutoff, space_cutoff = self.space_cutoff)
+        pnew = p_matrix(self.points, bkernel, tkernel)
         return pnew, bkernel, tkernel
     
     def initial_p_matrix(self):

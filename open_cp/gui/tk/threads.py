@@ -12,9 +12,7 @@ and communicating with the main GUI thread.
 import concurrent.futures as _futures
 import queue as _queue
 import threading as _threading
-import traceback
 import logging
-import sys
 
 class BackgroundTasks():
     """Provides a way for multiple threads to queue up callable objects which

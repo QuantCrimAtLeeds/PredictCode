@@ -23,7 +23,7 @@ class RunAnalysis():
     a prediction.  Using multi-processing.
 
     :param parent: Parent `tk` widget
-    :param model: The :class:`analyis.Model` model.
+    :param controller: The :class:`analyis.Analysis` model.
     """
     def __init__(self, parent, controller):
         self.view = run_analysis_view.RunAnalysisView(parent, self)
@@ -67,7 +67,7 @@ class RunAnalysis():
             for grid_name, grid in self._chain_dict(self._model.grids):
                 for pred_name, pred in self._chain_dict(self._model.grid_prediction_tasks):
                     task = self._Task(
-                        task = lambda : pred(self.main_model, grid, proj),
+                        task = lambda g=grid, p=proj, pr=pred: pr(self.main_model, g, p),
                         off_thread = pred.off_thread(),
                         projection = proj_name,
                         grid = grid_name,

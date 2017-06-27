@@ -53,10 +53,29 @@ class Quartic(Weight):
         self._cutoff = bandwidth ** 2
 
     def __call__(self, x, y):
+        x, y = _np.asarray(x), _np.asarray(y)
         distance_sq = x*x + y*y
         weight = (1 - distance_sq / self._cutoff) ** 2
-        return weight * ( distance_sq <= self._cutoff)
+        return weight * ( distance_sq <= self._cutoff )
 
+
+class TruncatedGaussian(Weight):
+    """A Gaussian weight, truncated at a certain number of standard deviations.
+    
+    :param bandwidth: The maximum extend of the kernel.
+    :param standard_devs: The range of the standard Gaussian to use.
+    """
+    def __init__(self, bandwidth = 200, standard_devs=3.0):
+        self._cutoff = bandwidth ** 2
+        self._range = standard_devs
+        
+    def __call__(self, x, y):
+        x, y = _np.asarray(x), _np.asarray(y)
+        distance_sq = x*x + y*y
+        normalised = distance_sq / self._cutoff * self._range * self._range
+        out = _np.exp(-normalised / 2)
+        return out * ( distance_sq <= self._cutoff )
+        
 
 def _clip_data(data, start_time, end_time):
     mask = None

@@ -12,7 +12,6 @@ import tkinter.filedialog
 import datetime as _datetime
 import webbrowser as _web
 import logging as _logging
-import time as _time
 
 NSEW = tk.N + tk.S + tk.E + tk.W
 
@@ -500,9 +499,23 @@ class ScrolledFrame(tk.Frame):
             self._yscroll = None
 
         self._frame = tk.Frame(self._subframe)
+        self._frame.bind("<MouseWheel>", self._mouse_wheel)
+        self._frame.bind("<Button>", self._mouse_button)
         self._canvas.create_window(0, 0, window=self._frame, anchor=tk.NW)
         self._frame.bind('<Configure>', self._conf)  
         self._subframe.bind('<Configure>', self._conf1)
+        if self._yscroll is not None:
+            self._yscroll.bind("<MouseWheel>", self._mouse_wheel)
+            self._yscroll.bind("<Button>", self._mouse_button)            
+
+    def _mouse_wheel(self, event):
+        print(event)
+
+    def _mouse_button(self, event):
+        if event.num == 4:
+            self._canvas.yview(tk.SCROLL, -1, tk.UNITS)
+        if event.num == 5:
+            self._canvas.yview(tk.SCROLL, 1, tk.UNITS)
 
     @property
     def frame(self):

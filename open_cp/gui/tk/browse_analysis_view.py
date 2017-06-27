@@ -37,6 +37,7 @@ class BrowseAnalysisView(util.ModalWindow):
         self.controller = controller
         title = _text["title"].format(self.controller.model.result.run_time.strftime(_text["dtfmt"]))
         super().__init__(parent, title, resize="wh")
+        self.set_size_percentage(50, 60)
 
     def add_widgets(self):
         ttk.Label(self, text=_text["cp"]).grid(row=0, column=0, padx=2, sticky=tk.E)
@@ -173,16 +174,17 @@ class BrowseAnalysisView(util.ModalWindow):
             return 0, self._pred_choices[0]
         return self._pred_choice, self._pred_cbox["values"][self._pred_choice]
 
-    def update_dates(self, choices):
+    def update_dates(self, choices, choice_index=0):
         self._date_choices = list(choices)
         w, flag = self._cbox_or_label(self._date_choices, command=self._date_chosen)
         w.grid(row=3, column=1, padx=2, pady=2, sticky=tk.W)
         if flag:
             self._date_cbox = w
+            self._date_cbox.current(choice_index)
         else:
             self._date_cbox = None
-        self._date_choice = 0
-        self.controller.notify_date_choice(0)
+        self._date_choice = choice_index
+        self.controller.notify_date_choice(choice_index)
         
     def _date_chosen(self, event):
         self._date_choice = event.widget.current()
@@ -191,6 +193,8 @@ class BrowseAnalysisView(util.ModalWindow):
     @property
     def date_choice(self):
         """Pair of (index, string_value)"""
+        if not hasattr(self, "_date_cbox"):
+            return -1, ""
         if self._date_cbox is None:
             return 0, self._date_choices[0]
         return self._date_choice, self._date_cbox["values"][self._date_choice]
