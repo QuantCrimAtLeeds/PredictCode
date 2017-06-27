@@ -250,6 +250,10 @@ class StocasticDecluster():
             time_cutoff = self.time_cutoff, space_cutoff = self.space_cutoff)
         return pnew, bkernel, tkernel
     
+    def initial_p_matrix(self):
+        """Return the initial "p matrix"."""
+        return initial_p_matrix(self.points, self.initial_time_bandwidth, self.initial_space_bandwidth)
+
     def run_optimisation(self, iterations=20):
         """Runs the optimisation algorithm by taking an initial estimation of
         the probability matrix, and then running the optimisation step.  If
@@ -261,7 +265,7 @@ class StocasticDecluster():
 
         :return: :class:`OptimisationResult` instance
         """
-        p = initial_p_matrix(self.points, self.initial_time_bandwidth, self.initial_space_bandwidth)
+        p = self.initial_p_matrix()
         errors = []
         logger = _logging.getLogger(__name__)
         for iter in range(iterations):
@@ -470,7 +474,7 @@ class SEPPTrainer(predictors.DataTrainer):
     """
     def __init__(self, k_time=100, k_space=15):
         self.k_time = k_time
-        self.k_space = k_space # TODO: Shouldn't expose this, as changing it is unpredictable
+        self.k_space = k_space
         self._space_cutoff = 500
         self._time_cutoff = 120 * 24 * 60 # minutes
         self._trigger_kernel_estimator = kernels.KthNearestNeighbourGaussianKDE(self.k_space)
@@ -520,6 +524,25 @@ class SEPPTrainer(predictors.DataTrainer):
         events = self.data.events_before(cutoff_time)
         return events.to_time_space_coords()
 
+    def make_stocastic_decluster(self, cutoff_time=None):
+        """Returns a :class:`StocasticDecluster` object which actually performs
+        the optimsiation.  It may be interesting to use this directly when
+        understanding the algorithm.
+
+        :param cutoff_time: If specified, then limit the historical data to
+          before this time.
+        """
+        decluster = StocasticDecluster()
+        decluster.trigger_kernel_estimator = self._trigger_kernel_estimator
+        decluster.background_kernel_estimator = kernels.KNNG1_NDFactors(self.k_time, self.k_space)
+        # From Rosser, Cheng, suggested 0.1 day^{-1} and 50 metres
+        decluster.initial_time_bandwidth = 24 * 60 / 10 # minutes
+        decluster.initial_space_bandwidth = 50.0
+        decluster.space_cutoff = self._space_cutoff
+        decluster.time_cutoff = self._time_cutoff
+        decluster.points = self.as_time_space_points(cutoff_time)
+        return decluster
+
     def train(self, cutoff_time=None, iterations=40):
         """Perform the (slow) training step on historical data.  This estimates
         kernels, and returns an object which can make predictions.
@@ -531,14 +554,6 @@ class SEPPTrainer(predictors.DataTrainer):
         
         :return: A :class:`SEPPPredictor` instance.
         """
-        decluster = StocasticDecluster()
-        decluster.trigger_kernel_estimator = self._trigger_kernel_estimator
-        decluster.background_kernel_estimator = kernels.KNNG1_NDFactors(self.k_time, self.k_space)
-        # From Rosser, Cheng, suggested 0.1 day^{-1} and 50 metres
-        decluster.initial_time_bandwidth = 24 * 60 / 10 # minutes
-        decluster.initial_space_bandwidth = 50.0
-        decluster.space_cutoff = self._space_cutoff
-        decluster.time_cutoff = self._time_cutoff
-        decluster.points = self.as_time_space_points(cutoff_time)
+        decluster = self.make_stocastic_decluster(cutoff_time)
         result = decluster.run_optimisation(iterations=iterations)
         return SEPPPredictor(result, self.data.timestamps[0], self.data.timestamps[-1])
