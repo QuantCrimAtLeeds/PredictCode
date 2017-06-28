@@ -169,7 +169,7 @@ class RetroHotspotCtsGrid(RetroHotspot):
         return "RetroHotspot continuous to grid predictor"
 
     def make_view(self, parent):
-        return RetroHotspotView(parent, self)
+        return RetroHotspotView(parent, self, mode=1)
 
     @property
     def name(self):

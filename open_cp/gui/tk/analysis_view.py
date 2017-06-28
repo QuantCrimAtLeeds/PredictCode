@@ -110,6 +110,7 @@ _text = {
     "r_save_fail" : "Failed to save analysis file because: {}/{}",
     "r_load1" : "Please select a file to load old analysis run from",
     "r_load_fail" : "Failed to load old analysis file because: {}",
+    "r_remove_tt" : "Forget about this run.  If this run has been saved, it will *not* be deleted from disk.",
     
 }
 
@@ -343,6 +344,9 @@ class AnalysisView(tk.Frame):
             tooltips.ToolTipYellow(button, _text["r_runat_tt"])
             save_button = ttk.Button(frame, command = lambda r=row : self._save_run(r) )
             save_button.grid(row=0, column=1, padx=1, pady=1, sticky=tk.NSEW)
+            remove_button = ttk.Button(frame, image=self._close_icon, command = lambda r=row : self._remove_run(r) )
+            remove_button.grid(row=0, column=2, padx=1, pady=1, sticky=tk.NSEW)
+            tooltips.ToolTipYellow(remove_button, _text["r_remove_tt"])
             filename = self._model.analysis_run_filename(row)
             if filename is not None:
                 save_button["image"] = self._success_icon
@@ -353,6 +357,9 @@ class AnalysisView(tk.Frame):
         ttk.Button(self._result_frame, text=_text["r_load"],
             command=self._load_saved_run).grid(
             row=row + 1, column=0, padx=1, pady=1, sticky=tk.NSEW)
+
+    def _remove_run(self, run):
+        self._controller.remove_past_run(run)
 
     def _view_run(self, run):
         self._controller.view_past_run(run)

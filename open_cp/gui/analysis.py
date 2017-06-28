@@ -166,6 +166,10 @@ class Analysis():
         result = self.model.analysis_runs[run]
         browse_analysis.BrowseAnalysis(self._root, result).run()
         
+    def remove_past_run(self, run):
+        self.model.remove_analysis_run(run)
+        self.view.update_run_analysis_results()
+
     def save_run(self, run_index, filename):
         view = analysis_view.Saving(self.view)
         def save():
@@ -234,6 +238,9 @@ class Model():
     def analysis_run_filename(self, run_index):
         """`None` indicates not saved."""
         return self._analysis_runs[run_index][1]
+
+    def remove_analysis_run(self, run_index):
+        del self._analysis_runs[run_index]
 
     def save_analysis_run(self, run_index, filename):
         old = self._analysis_runs[run_index]

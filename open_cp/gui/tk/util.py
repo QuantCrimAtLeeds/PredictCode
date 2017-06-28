@@ -509,7 +509,12 @@ class ScrolledFrame(tk.Frame):
             self._yscroll.bind("<Button>", self._mouse_button)            
 
     def _mouse_wheel(self, event):
-        print(event)
+        # This is not ideal, but I've found online hints that there are differences
+        # between windows and OS/X, so this is a compromise.
+        if event.delta > 0:
+            self._canvas.yview(tk.SCROLL, -1, tk.UNITS)
+        else:
+            self._canvas.yview(tk.SCROLL, 1, tk.UNITS)
 
     def _mouse_button(self, event):
         if event.num == 4:
