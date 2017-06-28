@@ -109,8 +109,8 @@ def test_controller_type_of_tasks(runAnalysis, log_queue, locator_mock, pool):
     off_thread()
 
     assert len(executor.submit.call_args_list) == 2
-    task = executor.submit.call_args_list[0][0][0]
-    assert isinstance(task._task.task, open_cp.gui.predictors.naive.CountingGrid.SubTask)
-    task = executor.submit.call_args_list[1][0][0]
-    assert isinstance(task._task.task, open_cp.gui.predictors.naive.ScipyKDE.SubTask)
+    tasks = [executor.submit.call_args_list[x][0][0] for x in [0,1]]
+    task_types = [type(t._task.task) for t in tasks]
+    assert set(task_types) == {open_cp.gui.predictors.naive.CountingGrid.SubTask,
+              open_cp.gui.predictors.naive.ScipyKDE.SubTask}
     
