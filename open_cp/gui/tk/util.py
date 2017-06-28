@@ -478,12 +478,8 @@ class ScrolledFrame(tk.Frame):
         super().__init__(parent)
         stretchy_columns(self, [0])
         stretchy_rows(self, [0])
-        self._subframe = tk.Frame(self)
-        self._subframe.grid(row=0, column=0, sticky=tk.NSEW)
-        stretchy_columns(self._subframe, [0])
-        stretchy_rows(self._subframe, [0])
 
-        self._canvas = tk.Canvas(self._subframe, borderwidth=0, highlightthickness=0)
+        self._canvas = tk.Canvas(self, borderwidth=0, highlightthickness=0)
         self._canvas.grid(row=0, column=0, sticky=tk.NSEW)
         if "h" in mode:
             self._xscroll = ttk.Scrollbar(self, orient = "horizontal", command = self._canvas.xview)
@@ -498,12 +494,12 @@ class ScrolledFrame(tk.Frame):
         else:
             self._yscroll = None
 
-        self._frame = tk.Frame(self._subframe)
+        self._frame = tk.Frame(self)
         self._frame.bind("<MouseWheel>", self._mouse_wheel)
         self._frame.bind("<Button>", self._mouse_button)
         self._canvas.create_window(0, 0, window=self._frame, anchor=tk.NW)
         self._frame.bind('<Configure>', self._conf)  
-        self._subframe.bind('<Configure>', self._conf1)
+        self.bind('<Configure>', self._conf1)
         if self._yscroll is not None:
             self._yscroll.bind("<MouseWheel>", self._mouse_wheel)
             self._yscroll.bind("<Button>", self._mouse_button)            
@@ -529,6 +525,8 @@ class ScrolledFrame(tk.Frame):
         return self._frame
 
     def _conf1(self, e):
+        # Listens to the outer frame being resized and adds or removes the
+        # scrollbars as necessary.
         if self._xscroll is not None:
             if int(self._canvas["width"]) <= e.width:
                 self._xscroll.grid_remove()
@@ -541,11 +539,13 @@ class ScrolledFrame(tk.Frame):
                 self._yscroll.grid()
         
     def _conf(self, e):
+        # Listens to the inner frame and resizes the canvas to fit
         if self._canvas["width"] != self.frame.winfo_reqwidth():
             self._canvas["width"] = self.frame.winfo_reqwidth()
-        if self._canvas["height"] != self.frame.winfo_reqheight():
-            self._canvas["height"] = self.frame.winfo_reqheight()
-        self._canvas["scrollregion"] = (0, 0, self._canvas["width"], self._canvas["height"])
+        height = self.frame.winfo_reqheight()
+        if self._canvas["height"] != height:
+            self._canvas["height"] = height
+        self._canvas["scrollregion"] = (0, 0, self._canvas["width"], height)
 
 
 class HREF(ttk.Label):
