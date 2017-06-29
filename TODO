@@ -2,6 +2,8 @@
 
 - Sort out convergence issues in SEPP code
    - See comment on github
+   - Add the ability to somehow visualise the "triggered" events not just as offsets from the origin, but
+     offsets from their "parent" event...
 - Look at the grid-based SEPP method which seems to perform badly
 
 

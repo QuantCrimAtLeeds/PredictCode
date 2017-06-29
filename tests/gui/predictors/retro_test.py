@@ -8,6 +8,9 @@ def test_RetroHotspot(model, project_task, analysis_model, grid_task):
     assert provider.settings_string == "60 Days, Quartic(200m)"
     standard_calls(provider, project_task, analysis_model, grid_task)
 
+def test_RetroHotspot_serialise(model, project_task, analysis_model, grid_task):
+    serialise( retro.RetroHotspot(model) )
+
 @mock.patch("open_cp.retrohotspot.RetroHotSpotGrid")
 def test_RetroHotspot_subtask(model, project_task, analysis_model, grid_task):
     provider = retro.RetroHotspot(model)

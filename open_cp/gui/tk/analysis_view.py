@@ -257,10 +257,9 @@ class AnalysisView(tk.Frame):
                 sticky=tk.NSEW, row=row, padx=5, pady=2)
 
     def _analysis_tools(self, frame):
-        util.stretchy_columns(frame, [0])
-        util.stretchy_rows(frame, [1,2])
+        util.stretchy_rows_cols(frame, [1,2], [0])
         button_frame = ttk.Frame(frame)
-        button_frame.grid(row=0, column=0, sticky=tk.EW)
+        button_frame.grid(row=0, column=0, sticky=tk.EW+tk.N)
         util.stretchy_columns(button_frame, [0])
         ttk.Button(button_frame, text=_text["save"], command=self._save).grid(row=0, column=0, sticky=tk.NSEW, padx=5, pady=3)
         ttk.Button(button_frame, text=_text["back"], command=self.cancel).grid(row=1, column=0, sticky=tk.NSEW, padx=5, pady=3)
@@ -272,6 +271,7 @@ class AnalysisView(tk.Frame):
         f.grid(sticky=tk.NSEW)
         self._prediction_frame = f.frame
         self.update_predictors_list()
+        pred_frame.bind("<<Configure>>")
 
         compare_frame = ttk.LabelFrame(frame, text=_text["asses"])
         compare_frame.grid(row=2, column=0, sticky=tk.NSEW, padx=5, pady=3)
@@ -445,6 +445,7 @@ class AnalysisView(tk.Frame):
 
         frame = ttk.LabelFrame(self, text=_text["tasks"])
         frame.grid(row=0, column=1, sticky=util.NSEW, padx=3, pady=3)
+        #util.stretchy_rows_cols(frame, [0], [0])
         self._analysis_tools(frame)
 
     def cancel(self):

@@ -2,6 +2,7 @@ import pytest
 import unittest.mock as mock
 import datetime
 import numpy as np
+import json
 
 import open_cp.data
 import open_cp.gui.predictors
@@ -56,3 +57,10 @@ def standard_calls(provider, project_task, analysis_model, grid_task):
     np.testing.assert_array_equal(tp.xcoords, [0,10,20])
     np.testing.assert_array_equal(tp.ycoords, [10,20,0])
     return subtask
+
+def serialise(provider):
+    old = provider.settings_string
+    data = provider.to_dict()
+    json_str = json.dumps(data)
+    provider.from_dict(json.loads(json_str))
+    assert old == provider.settings_string

@@ -12,6 +12,7 @@ from . import naive
 from . import grid
 from . import lonlat
 from . import retro
+from . import prohotspot
 
 # End #######################################################################
 

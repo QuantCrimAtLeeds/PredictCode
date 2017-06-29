@@ -45,6 +45,7 @@ _text = {
     "g_bandwidth1" : "Metres",
     "g_std_devs" : "Standard Deviations:",
     "g_std_devs_tt" : "The number of standard deviations the kernel should extend for",
+    "no_data" : "No data points found in time range: have enough crime types been selected?",
 
 }
 
