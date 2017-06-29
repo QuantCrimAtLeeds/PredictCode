@@ -30,19 +30,26 @@ import open_cp.evaluation
 
 import open_cp.retrohotspot as retro
 
-def load_data(datadir):
+side_choices = {"Far North", "Northwest", "North", "West", "Central",
+        "South", "Southwest", "Far Southwest", "Far Southeast"}
+
+def get_side(side="South"):
+    return chicago.get_side(side)
+
+def load_data(datadir, side="South"):
     """Load the data: Burglary, in the South side only, limit to events happening
-    on the days 2011-03-01 to 2012-01-06 inclusive."""
-    global points
-    global south_side
+    on the days 2011-03-01 to 2012-01-06 inclusive.
+    
+    :return: Pair of `(geometry, points)`
+    """
     chicago.set_data_directory(datadir)
-    south_side = chicago.get_side("South")
     points = chicago.load(os.path.join(datadir, "chicago_two.csv"), {"BURGLARY"}, type="all_other")
     start = np.datetime64("2011-03-01")
     end = np.datetime64("2012-01-07")
     points = points[(points.timestamps >= start) & (points.timestamps <= end)]
-    points = open_cp.geometry.intersect_timed_points(points, south_side)
-    return south_side, points
+    geo = get_side(side)
+    points = open_cp.geometry.intersect_timed_points(points, geo)
+    return geo, points
 
 _cdict = {'red':   [(0.0,  1.0, 1.0),
                    (1.0,  1.0, 1.0)],
@@ -52,16 +59,23 @@ _cdict = {'red':   [(0.0,  1.0, 1.0),
                    (1.0,  0.2, 0.2)]}
 yellow_to_red = matplotlib.colors.LinearSegmentedColormap("yellow_to_red", _cdict)
 
+def grid_for_side(xoffset=0, yoffset=0, xsize=250, ysize=250, side="South"):
+    """Generated a masked grid for the passed side value.
+    
+    :param xoffset: How much to move the left side by
+    :param yoffset: How much to move the bottom side by
+    """
+    grid = open_cp.data.Grid(xsize=xsize, ysize=ysize, xoffset=xoffset, yoffset=yoffset)
+    return open_cp.geometry.mask_grid_by_intersection(get_side(side), grid)
+
 def grid_for_south_side(xoffset=0, yoffset=0, xsize=250, ysize=250):
     """Generated a masked grid for the South side geometry.
     
     :param xoffset: How much to move the left side by
     :param yoffset: How much to move the bottom side by
     """
-    grid = open_cp.data.Grid(xsize=xsize, ysize=ysize, xoffset=xoffset, yoffset=yoffset)
-    global south_side
-    return open_cp.geometry.mask_grid_by_intersection(south_side, grid)
-
+    return grid_for_side(xoffset, yoffset, xsize, ysize, "South")
+    
 def time_range():
     """28th September 2011 – 6th January 2012"""
     return open_cp.evaluation.HitRateEvaluator.time_range(np.datetime64("2011-09-28"),

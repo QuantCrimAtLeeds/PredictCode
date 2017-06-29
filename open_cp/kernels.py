@@ -121,6 +121,8 @@ class GaussianKernel(Kernel):
     """
     def __init__(self, means, variances, scale=1.0):
         self.means = means.T
+        if _np.any(_np.abs(variances) < 1e-8):
+            raise ValueError("Too small variance!")
         self.variances = variances.T
         self.scale = scale
     
@@ -154,7 +156,7 @@ def compute_kth_distance(coords, k=15):
     tree = _spatial.KDTree(points)
     distance_to_k = _np.empty(points.shape[0])
     for i, p in enumerate(points):
-        distances, indexes = tree.query(p, k=k+1)
+        distances, _ = tree.query(p, k=k+1)
         distance_to_k[i] = distances[-1]
     
     return distance_to_k
@@ -210,9 +212,9 @@ def kth_nearest_neighbour_gaussian_kde(coords, k=15):
         stds = _np.std(means, axis=0, ddof=1)
         points = coords / stds[:, None]
     distance_to_k = compute_kth_distance(points, k)
-
+    # We have a problem if the `k`th neighbour is 0 distance
+    distance_to_k[distance_to_k == 0] = 1.0
     var = _np.tensordot(distance_to_k, stds, axes=0) ** 2
-
     return GaussianKernel(means.T, var.T)
 
 def marginal_knng(coords, coord_index=0, k=15):

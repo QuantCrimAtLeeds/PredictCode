@@ -119,6 +119,13 @@ def initial_p_matrix(points, initial_time_bandwidth = 0.1,
         return time * space
     return p_matrix(points, bkernel, tkernel)
 
+def _make_mask_choice(points, p):
+    number_data_points = points.shape[-1]
+    choice = _np.array([ _np.random.choice(j+1, p=p[0:j+1, j])
+        for j in range(number_data_points) ])
+    mask = ( choice == _np.arange(number_data_points) )
+    return choice, mask    
+
 def sample_points(points, p):
     """Using the probability matrix, sample background and triggered points.
 
@@ -132,16 +139,28 @@ def sample_points(points, p):
       each triggered event and the event which triggered it, as sampled from
       the probability matrix.
     """
-
-    number_data_points = points.shape[-1]
-    choice = _np.array([ _np.random.choice(j+1, p=p[0:j+1, j])
-        for j in range(number_data_points) ])
-    mask = ( choice == _np.arange(number_data_points) )
-    
+    choice, mask = _make_mask_choice(points, p)
     backgrounds = points[:,mask]
     triggered = (points - points[:,choice])[:,~mask]
     return backgrounds, triggered
 
+def sample_offsets(points, p):
+    """Like :func:`sample_points` but also returns the coordinates of the
+    events which were the "trigger".  This is not needed for the algorithm,
+    but can be useful in visualising what the algorithm is doing.
+    
+    :param points: The (time, x, y) data.
+    :param p: The probability matrix.
+
+    :return: A triple of `(backgrounds, triggered, trigger)` where `trigger`
+      is the coordinates of the trigger for each `triggered` entry.
+    """
+    choice, mask = _make_mask_choice(points, p)
+    backgrounds = points[:,mask]
+    trigger = points[:,choice][:,~mask]
+    triggered = points[:,~mask] - trigger
+    return backgrounds, triggered, trigger
+    
 def make_kernel(data, background_kernel, trigger_kernel):
     """Produce a kernel object which evaluates the background kernel, and
     the trigger kernel based on the space-time locations in the data.
@@ -246,9 +265,8 @@ class StocasticDecluster():
         number_triggered_events = number_events - number_background_events
         bkernel.set_scale(number_background_events)
         tkernel.set_scale(number_triggered_events / number_events)
-        #pnew = p_matrix_fast(self.points, bkernel, tkernel,
-        #    time_cutoff = self.time_cutoff, space_cutoff = self.space_cutoff)
-        pnew = p_matrix(self.points, bkernel, tkernel)
+        pnew = p_matrix_fast(self.points, bkernel, tkernel,
+            time_cutoff = self.time_cutoff, space_cutoff = self.space_cutoff)
         return pnew, bkernel, tkernel
     
     def initial_p_matrix(self):
