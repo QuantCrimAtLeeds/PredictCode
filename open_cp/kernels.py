@@ -37,7 +37,9 @@ e.g. scipy convention:
 import scipy.spatial as _spatial
 import numpy as _np
 import abc as _abc
+import logging as _logging
 
+_logger = _logging.getLogger(__name__)
 
 class Kernel(metaclass=_abc.ABCMeta):
     """Abstract base class for classes implementing kernels.  You are not
@@ -213,7 +215,11 @@ def kth_nearest_neighbour_gaussian_kde(coords, k=15):
         points = coords / stds[:, None]
     distance_to_k = compute_kth_distance(points, k)
     # We have a problem if the `k`th neighbour is 0 distance
-    distance_to_k[distance_to_k == 0] = 1.0
+    mask = (distance_to_k == 0)
+    if _np.any(mask):
+        _logger.debug("Nearest neighbour distance is 0, so adjusting to 1")
+        distance_to_k[mask] = 1.0
+    
     var = _np.tensordot(distance_to_k, stds, axes=0) ** 2
     return GaussianKernel(means.T, var.T)
 
