@@ -476,6 +476,7 @@ class ScrolledFrame(tk.Frame):
     """
     def __init__(self, parent, mode="hv"):
         super().__init__(parent)
+        self._parent = parent
         stretchy_columns(self, [0])
         stretchy_rows(self, [0])
 
@@ -524,16 +525,16 @@ class ScrolledFrame(tk.Frame):
         to display."""
         return self._frame
 
-    def _conf1(self, e):
+    def _conf1(self, e=None):
         # Listens to the outer frame being resized and adds or removes the
         # scrollbars as necessary.
         if self._xscroll is not None:
-            if int(self._canvas["width"]) <= e.width:
+            if int(self._canvas["width"]) <= self.winfo_width():
                 self._xscroll.grid_remove()
             else:
                 self._xscroll.grid()
         if self._yscroll is not None:
-            if int(self._canvas["height"]) <= e.height:
+            if int(self._canvas["height"]) <= self.winfo_height():
                 self._yscroll.grid_remove()
             else:
                 self._yscroll.grid()
@@ -546,6 +547,10 @@ class ScrolledFrame(tk.Frame):
         if self._canvas["height"] != height:
             self._canvas["height"] = height
         self._canvas["scrollregion"] = (0, 0, self._canvas["width"], height)
+        # Resize outer as well
+        self._conf1(None)
+        # Notify parent we changed, in case of manual position control
+        self.after_idle(lambda : self._parent.event_generate("<Configure>", when="tail"))
 
 
 class HREF(ttk.Label):

@@ -257,7 +257,6 @@ class AnalysisView(tk.Frame):
                 sticky=tk.NSEW, row=row, padx=5, pady=2)
 
     def _analysis_tools(self, frame):
-        util.stretchy_rows_cols(frame, [1,2], [0])
         button_frame = ttk.Frame(frame)
         button_frame.grid(row=0, column=0, sticky=tk.EW+tk.N)
         util.stretchy_columns(button_frame, [0])
@@ -271,7 +270,6 @@ class AnalysisView(tk.Frame):
         f.grid(sticky=tk.NSEW)
         self._prediction_frame = f.frame
         self.update_predictors_list()
-        pred_frame.bind("<<Configure>>")
 
         compare_frame = ttk.LabelFrame(frame, text=_text["asses"])
         compare_frame.grid(row=2, column=0, sticky=tk.NSEW, padx=5, pady=3)
@@ -280,6 +278,22 @@ class AnalysisView(tk.Frame):
         f.grid(sticky=tk.NSEW)
         self._comparison_frame = f.frame
         self.update_comparitors_list()
+ 
+        # Manually manage the size
+        self._tools_frames = (frame, button_frame, pred_frame, compare_frame)
+        pred_frame["height"] = 200
+        pred_frame["width"] = 400
+        pred_frame.grid_propagate(0)
+        compare_frame["height"] = 200
+        compare_frame.grid_propagate(0)
+        compare_frame["width"] = 400
+        frame.bind("<Configure>", self._tools_frame_conf)
+        
+    def _tools_frame_conf(self, event=None):
+        """Manually manage the heights of the two lists."""
+        space = self._tools_frames[0].winfo_height() - self._tools_frames[1].winfo_height() - 30
+        self._tools_frames[2]["height"] = space // 2
+        self._tools_frames[3]["height"] = space - space // 2
 
     def _crime_types_all(self):
         box = self._crime_type_box
