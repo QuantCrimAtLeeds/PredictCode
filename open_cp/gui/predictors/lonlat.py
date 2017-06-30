@@ -84,7 +84,8 @@ class BritishNationalGrid(EPSG):
 ## The Predictor class ###################################################
 
 class PassThrough():
-    """For use when the data is already projected.  Selected automatically by the model."""
+    """For use when the data is already projected.  Selected automatically by
+    the model."""
     def __init__(self, model):
         if model.coord_type != import_file_model.CoordType.XY:
             raise ValueError("Can only be used on data already projected.")

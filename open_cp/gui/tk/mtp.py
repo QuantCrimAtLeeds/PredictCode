@@ -166,6 +166,16 @@ class CanvasFigure(tk.Frame):
             self._photo = photo
             self._canvas["cursor"] = "arrow"
 
+    def set_blank(self):
+        """Set so we display nothing.  Only call on GUI thread"""
+        with self._rlock:
+            if not self._canvas.winfo_exists():
+                return
+            if self._canvas_image is None:
+                return
+            self._canvas.itemconfig(self._canvas_image, image=None)
+            self._photo = None
+
     def set_figure(self, figure, dpi=150):
         """Set the figure to use."""
         with self._rlock:

@@ -1,9 +1,7 @@
 # Main code
 
 - Sort out convergence issues in SEPP code
-   - See comment on github
-   - Add the ability to somehow visualise the "triggered" events not just as offsets from the origin, but
-     offsets from their "parent" event...
+   - See comment on GitHub
 - Look at the grid-based SEPP method which seems to perform badly
 
 
@@ -13,7 +11,9 @@
   - Do other predictors
   - Tests for the predictors (just test that the settings we _think_ we are applying get passed to the main `open_cp` code correctly.)
 
-
+- geo_clip:
+  - Test!
+  - Use in the run_analysis code (add a post-step after the prediction, for efficiency).
 
 
 - Session saving/loading

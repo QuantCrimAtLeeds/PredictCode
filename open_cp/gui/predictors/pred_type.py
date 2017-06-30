@@ -6,7 +6,7 @@ Describe the top level prediction required.  E.g.:
 
     - Produce a prediction for each day in the assessment time range, and score
       the prediction using the actual events which occurred that day.
-    - Same, but on a weekly basis.
+    - Or... same, but on a weekly basis.
 """
 
 from . import comparitor

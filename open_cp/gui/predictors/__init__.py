@@ -19,6 +19,7 @@ from . import prohotspot
 # Add new comparator modules here ###########################################
 
 from . import pred_type
+from . import geo_clip
 
 # End #######################################################################
 

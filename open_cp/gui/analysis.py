@@ -515,7 +515,10 @@ class Model():
 class _ListController():
     """Base class for a "list" of objects.
     
-    :param model: Instance of :class:`Model`
+    :param controller: The main controller, :class:`Analysis`
+    :param basemodel: Instance of :class:`Model`
+    :param model: The sub-model, sub-class of :class:`_ListModel`
+    :param pick_model: Model for "picking" a new object
     """
     def __init__(self, controller, basemodel, model, pick_model):
         self.controller = controller
@@ -528,11 +531,13 @@ class _ListController():
         raise NotImplementedError()
 
     def add(self):
-        pred = Pick(self.view, self._pick_model).run()
-        if pred is None:
+        pred_class = Pick(self.view, self._pick_model).run()
+        if pred_class is None:
             return
         try:
-            self.model.add(pred)
+            obj = pred_class(self.main_model)
+            if self._edit(obj):
+                self.model.add(obj)
         except ValueError as ex:
             self.view.alert(str(ex))
         self.update()
@@ -541,8 +546,7 @@ class _ListController():
         self.model.remove(index)
         self.update()
 
-    def edit(self, index):
-        pred = self.model.objects[index]
+    def _edit(self, pred):
         resize = None
         if "resize" in pred.config():
             if pred.config()["resize"]:
@@ -551,9 +555,15 @@ class _ListController():
         edit_view = pred.make_view(view)
         data = pred.to_dict()
         view.run(edit_view)
-        if not view.result:
+        result = view.result
+        if not result:
             pred.from_dict(data)
         self.update()
+        return result
+
+    def edit(self, index):
+        pred = self.model.objects[index]
+        self._edit(pred)
 
 
 class _ListModel():
@@ -584,9 +594,11 @@ class _ListModel():
         v.sort(key = lambda p : p.order())
         self._objects = v
 
-    def add(self, clazz):
+    def add(self, obj):
+        if isinstance(obj, type):
+            obj = obj(self._model)
         v = list(self.objects)
-        v.append( clazz(self._model) )
+        v.append(obj)
         self.objects = v
 
     def remove(self, index):
@@ -662,15 +674,23 @@ class AnalysisToolsModel(_ListModel):
         """Get all predictors of the given order/type."""
         return [p for p in self.objects if p.order() == order]
 
+    def coordinate_projector(self):
+        """Obtain the first chosen coordinate projection stage, if there is
+        one, or `None` otherwise."""
+        preds = self.predictors_of_type(predictors.predictor._TYPE_COORD_PROJ)
+        if len(preds) == 0:
+            return None
+        return preds[0]
+
     def projected_coords(self):
         """Obtain, if possible using the current settings, the entire data-set
         of projected coordinates.  Returns `None` otherwise."""
         if self._model.coord_type == CoordType.XY:
             return self._model.xcoords, self._model.ycoords
-        preds = self.predictors_of_type(predictors.predictor._TYPE_COORD_PROJ)
-        if len(preds) == 0:
+        pred = self.coordinate_projector()
+        if pred is None:
             return None
-        task = preds[0].make_tasks()[0]
+        task = pred.make_tasks()[0]
         return task(self._model.xcoords, self._model.ycoords)
 
 

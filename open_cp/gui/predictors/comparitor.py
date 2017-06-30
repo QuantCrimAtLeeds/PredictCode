@@ -11,10 +11,16 @@ crime events).
 import open_cp.data
 
 COMPARATOR_LOGGER_NAME = "__interactive_warning_logger__"
+
+# Provides actual tasks
 TYPE_TOP_LEVEL = 0
+# Adjust the prediction in some way
+TYPE_ADJUST = 50
 
 class Comparitor():
-    """Still a work in progress as I think about what we need to support,
+    """Still a work in progress as I think about what we need to support:
+    currently the business end of how to get "output" is not specified in this
+    base class.
     
     :param model: An instance of :class:`analysis.Model` from which we can
       obtain data and settings.

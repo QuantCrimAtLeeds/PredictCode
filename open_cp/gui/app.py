@@ -40,6 +40,7 @@ def run():
     locator._make_pool(root)
 
     #import open_cp.gui.predictors.prohotspot as pred
+    #import open_cp.gui.predictors.geo_clip as pred
     #pred.test(root)
     #return
 
