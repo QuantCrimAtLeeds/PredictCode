@@ -638,6 +638,7 @@ class AnalysisToolsController(_ListController):
             out.append(analysis_view._text["nopreds"])
         self.controller.update_run_messages(pred_msgs=out)
 
+
 class AnalysisToolsModel(_ListModel):
     """Model for the prediction and analysis settings.
     Separated out just to make the classes easier to read.

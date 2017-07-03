@@ -29,7 +29,6 @@ import open_cp.gui.tk.tooltips as tooltips
 import open_cp.gui.tk.richtext as richtext
 import open_cp.gui.funcs as funcs
 import open_cp.gui.tk.mtp as mtp
-import open_cp.geometry
 import functools
 
 _logger = logging.getLogger(__name__)
@@ -86,8 +85,6 @@ class CropToGeometry(comparitor.Comparitor):
 
         self._frame = None
         self._error = None
-
-        open_cp.geometry.configure_gdal()
     
     @staticmethod
     def describe():

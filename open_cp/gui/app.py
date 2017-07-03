@@ -15,16 +15,8 @@ def start_logging():
     ch.setFormatter(fmt)
     logger.addHandler(ch)
 
-def run():
-    start_logging()
-    logger = logging.getLogger(__name__)
-    logger.info("Started...")
-
-    import os
-    from open_cp.gui import main_window
-    from open_cp.gui.tk import main_window_view
-    from open_cp.gui import locator
-
+def os_setup(logger):
+    """Perform operating system specific setup."""
     if "win" in sys.platform:
         logger.info("Platform is windows: '%s'", sys.platform)
         import ctypes
@@ -35,7 +27,23 @@ def run():
     else:
         logger.warn("Unexpected flatform: %s.  So visuals might be wrong", sys.platform)
 
+def gdal_setup():
+    import open_cp.geometry
+    open_cp.geometry.configure_gdal()
 
+def run():
+    start_logging()
+    logger = logging.getLogger(__name__)
+    logger.info("Started...")
+
+    gdal_setup()
+    os_setup(logger)
+
+    # Import these now so we run the logging code above as quickly as possible
+    import os
+    from open_cp.gui import main_window
+    from open_cp.gui.tk import main_window_view
+    from open_cp.gui import locator
     root = main_window_view.TopWindow()
     locator._make_pool(root)
 

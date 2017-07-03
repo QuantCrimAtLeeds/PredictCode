@@ -126,6 +126,71 @@ class RunAnalysisResult():
         return self._time
 
 
+class PredictionResult():
+    """The result of running the prediction, but not including any analysis
+    results.
+
+    :param key: Instance of :class:`TaskKey`
+    :param prediction: The result of the prediction.  Slightly undefined, but
+      at present, should be an :class:`GridPrediction` instance.
+    """
+    def __init__(self, key, prediction):
+        self._key = key
+        self._pred = prediction
+
+    @property
+    def key(self):
+        """The :class:`TaskKey` describing the prediction."""
+        return self._key
+
+    @property
+    def prediction(self):
+        """An instance of :class:`GridPrediction` (or most likely a subclass)
+        giving the actual prediction."""
+        return self._pred
+
+    def __repr__(self):
+        return "PredictionResult(key={}, prediction={}".format(self._key, self._pred)
+
+
+class TaskKey():
+    """Describes the prediction task which was run.  We don't make any
+    assumptions about the components of the key (they are currently strings,
+    but in future may be richer objects) and don't implement custom hashing
+    or equality.
+    
+    :param projection: The projection used.
+    :param grid: The grid used.
+    :param pred_type: The prediction algorithm (etc.) used.
+    :param pred_date: The prediction date.
+    """
+    def __init__(self, projection, grid, pred_type, pred_date):
+        self._projection = projection
+        self._grid = grid
+        self._pred_type = pred_type
+        self._pred_date = pred_date
+
+    @property
+    def projection(self):
+        return self._projection
+
+    @property
+    def grid(self):
+        return self._grid
+
+    @property
+    def prediction_type(self):
+        return self._pred_type
+
+    @property
+    def prediction_date(self):
+        return self._pred_date
+
+    def __repr__(self):
+        return "projection: {}, grid: {}, prediction_type: {}, prediction_date: {}".format(
+            self.projection, self.grid, self.prediction_type, self.prediction_date)
+
+
 class RunAnalysisModel():
     """The model for running an analysis.  Constructs lists:
       - :attr:`projector_tasks` Tasks to project coordinates
@@ -212,71 +277,6 @@ class RunAnalysisModel():
     @property
     def comparators(self):
         return self.main_model.comparison_model
-
-
-class TaskKey():
-    """Describes the prediction task which was run.  We don't make any
-    assumptions about the components of the key (they are currently strings,
-    but in future may be richer objects) and don't implement custom hashing
-    or equality.
-    
-    :param projection: The projection used.
-    :param grid: The grid used.
-    :param pred_type: The prediction algorithm (etc.) used.
-    :param pred_date: The prediction date.
-    """
-    def __init__(self, projection, grid, pred_type, pred_date):
-        self._projection = projection
-        self._grid = grid
-        self._pred_type = pred_type
-        self._pred_date = pred_date
-
-    @property
-    def projection(self):
-        return self._projection
-
-    @property
-    def grid(self):
-        return self._grid
-
-    @property
-    def prediction_type(self):
-        return self._pred_type
-
-    @property
-    def prediction_date(self):
-        return self._pred_date
-
-    def __repr__(self):
-        return "projection: {}, grid: {}, prediction_type: {}, prediction_date: {}".format(
-            self.projection, self.grid, self.prediction_type, self.prediction_date)
-
-
-class PredictionResult():
-    """The result of running the prediction, but not including any analysis
-    results.
-
-    :param key: Instance of :class:`TaskKey`
-    :param prediction: The result of the prediction.  Slightly undefined, but
-      at present, should be an :class:`GridPrediction` instance.
-    """
-    def __init__(self, key, prediction):
-        self._key = key
-        self._pred = prediction
-
-    @property
-    def key(self):
-        """The :class:`TaskKey` describing the prediction."""
-        return self._key
-
-    @property
-    def prediction(self):
-        """An instance of :class:`GridPrediction` (or most likely a subclass)
-        giving the actual prediction."""
-        return self._pred
-
-    def __repr__(self):
-        return "PredictionResult(key={}, prediction={}".format(self._key, self._pred)
 
 
 class _RunnerThread():

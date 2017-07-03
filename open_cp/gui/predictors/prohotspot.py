@@ -38,6 +38,7 @@ _text = {
     "time_bin_tt" : ("How large the 'bins' to place timestamps into.  For example, if '1 Week' then all timestamps less than "
             + "7 days from the prediction point count as 'this week'; those between 7 and 14 days count at 'one week in the past' "
             + "and so forth."),
+    "dist_tt" : "How distance from the current grid cell is calculated.",
     "time_bin_choices" : ["Week(s)", "Day(s)", "Hour(s)"],
     "kernel" : "Kernel choice",
     "kernels" : ["Classic"],
@@ -325,9 +326,9 @@ class ClassicalView(ttk.Frame):
         xcs = np.arange(0, self._model.space_bandwidth + 1)
         ycs = np.arange(0, self._model.time_bandwidth + 1)
         dists = np.empty((len(ycs)-1,len(xcs)-1))
-        for ix, x in enumerate(xcs[:-1]):
-            for iy, y in enumerate(ycs[:-1]):
-                dists[iy][ix] = weight(x,y)
+        for ix, d_space in enumerate(xcs[:-1]):
+            for iy, d_time in enumerate(ycs[:-1]):
+                dists[iy][ix] = weight(d_time,d_space)
         num, unit = ProHotspotView.timeunit(self._parent_model.time_window_length)
         pcm = ax.pcolormesh(xcs, ycs * num, dists, cmap="rainbow")
         fig.colorbar(pcm)
@@ -435,6 +436,7 @@ class ProHotspotView(tk.Frame):
         self._dist_cbox.grid(row=0, column=0, padx=2, pady=2, sticky=tk.W)
         self._dist_frame = ttk.Frame(subframe)
         self._dist_frame.grid(row=1, column=0, sticky=tk.NSEW)
+        tooltips.ToolTipYellow(self._dist_frame, _text["dist_tt"])
         util.stretchy_rows_cols(subframe, [1], [0])
 
         util.stretchy_rows_cols(frame, [1], [0,1])
