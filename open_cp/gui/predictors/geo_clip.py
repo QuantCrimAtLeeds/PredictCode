@@ -29,6 +29,7 @@ import open_cp.gui.tk.tooltips as tooltips
 import open_cp.gui.tk.richtext as richtext
 import open_cp.gui.funcs as funcs
 import open_cp.gui.tk.mtp as mtp
+import open_cp.geometry
 import functools
 
 _logger = logging.getLogger(__name__)
@@ -54,7 +55,9 @@ _text = {
     "load" : "Load Geometry",
     "filett" : "Filename of the loaded geometry",
     "icrs" : "Input crs: {}",
-    "icrstt" : "The input Coordinate Reference System (CRS) detected for the geometry.  Specifies how the geometry related to the real world.",
+    "icrstt" : ("The input Coordinate Reference System (CRS) detected for the geometry.  Specifies "
+            + "how the geometry related to the real world.  The code 'epsg:4326' indicates that "
+            + "the data is in Longitude/Latitude format; this is also often the default choice."),
     "icrstt1" : "No input projection information found, so we assumed the coordinates are longitude / latitude.",
     "newcrs" : "Transform to epsg:",
     "epsg_url" : "http://spatialreference.org/ref/epsg/",
@@ -83,6 +86,8 @@ class CropToGeometry(comparitor.Comparitor):
 
         self._frame = None
         self._error = None
+
+        open_cp.geometry.configure_gdal()
     
     @staticmethod
     def describe():

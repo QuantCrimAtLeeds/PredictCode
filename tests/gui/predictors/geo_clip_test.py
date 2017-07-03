@@ -11,6 +11,10 @@ import open_cp.gui.predictors.geo_clip as geo_clip
 def geojson_filename():
     return os.path.join("tests", "test_geometry", "test.geojson")
 
+@pytest.fixture
+def shp_filename():
+    return os.path.join("tests", "test_geometry", "test.shp")
+
 def test_can_find_file(geojson_filename):
     frame = gpd.read_file(geojson_filename)
     geo = frame.unary_union
@@ -23,6 +27,11 @@ def test_can_find_file(geojson_filename):
 @pytest.fixture
 def model():
     return None
+
+def test_setup_gdal(model):
+    geo_clip.CropToGeometry(model)
+    import os
+    assert "GDAL_DATA" in os.environ
 
 def test_build_CropToGeometry(model):
     comp = geo_clip.CropToGeometry(model)
@@ -45,3 +54,20 @@ def test_load(model, geojson_filename):
     assert geo.area == 0.5
     coords = np.asarray(geo.exterior.coords)
     np.testing.assert_allclose(coords, [[0,0], [1,0], [1,1], [0,0]])
+
+    assert comp.settings_string.startswith("Geometry file: ")
+    assert comp.epsg is None
+    assert comp.settings_string.endswith(geojson_filename)
+
+def test_load_shapefile(model, shp_filename):
+    comp = geo_clip.CropToGeometry(model)
+    comp.load(shp_filename)
+    geo = comp.geometry()
+    assert geo.area == 0.5
+    coords = np.asarray(geo.exterior.coords)
+    np.testing.assert_allclose(coords, [[0,0], [1,1], [1,0], [0,0]])
+
+    assert comp.settings_string.startswith("Geometry file: ")
+    assert comp.epsg is None
+    assert comp.settings_string.endswith(shp_filename)
+    

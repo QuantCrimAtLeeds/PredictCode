@@ -74,3 +74,8 @@ def test_mask_grid_by_points_intersection(points1):
     for x in range(3):
         for y in range(4):
             assert mg.is_valid(x, y) == ((x,y) in expected)
+
+def test_configure_gdal():
+    geometry.configure_gdal()
+    import os
+    assert "GDAL_DATA" in os.environ

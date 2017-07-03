@@ -7,13 +7,60 @@ Methods to help with geometry work.  Uses `shapely`.
 
 import numpy as _np
 from . import data as _data
+import logging as _logging
+
+_logger = _logging.getLogger(__name__)
+
 
 try:
     import shapely.geometry as _geometry
 except Exception:
     import logging
-    logging.getLogger(__name__).error("Failed to import `shapely`.")
+    _logger.error("Failed to import `shapely`.")
     _geometry = None
+
+def configure_gdal():
+    """On windows, I have found that by default, the GDAL_DATA environment
+    variable is not set.  One solution is to always use the (for example)
+    Anaconda Prompt instead of the usual Command Prompt.  Another is to
+    correctly set the variable programmatically, which is what this function
+    does.  You can tell if this is a problem by noticing the message:
+
+      > ERROR 4: Unable to open EPSG support file gcs.csv.
+      > Try setting the GDAL_DATA environment variable to point to the
+      > directory containing EPSG csv files.
+
+    Appearing on stderr when you use e.g. geopandas.
+    """
+    import os
+    if "GDAL_DATA" in os.environ:
+        _logger.debug("GDAL_DATA already set so nothing to do.")
+        return
+    _logger.info("GDAL_DATA not set, so searching...")
+    choices = _find_gdal_choices()
+    if len(choices) == 1:
+        _logger.info("Set GDAL_DATA = '%s'", choices[0])
+        os.environ["GDAL_DATA"] = choices[0]
+    else:
+        _logger.error("Found too many choices for setting GDAL_DATA: %s", str(choices))
+
+def _find_gdal_choices():
+    import os, sys
+    choices = []
+    for path, _, _ in os.walk(sys.exec_prefix):
+        if path.endswith("gdal"):
+            choices.append(path)
+
+    library_choices = [x for x in choices if x.lower().find("library") > -1
+        and x.lower().find("pkgs") == -1 and _contains_csv(x)]
+    if len(library_choices) == 1:
+        return library_choices
+    return choices
+
+def _contains_csv(path):
+    import os
+    csvs = [x for x in os.listdir(path) if x.endswith(".csv")]
+    return len(csvs) > 1
 
 def grid_intersection(geometry, grid):
     """Find the collection of grid cells which intersect with the geometry.
