@@ -2,17 +2,18 @@
 stscan2
 ~~~~~~~
 
-Work in progress to try to make the SaTScan code faster, and conform more
-exactly to what SaTScan does.
+Two further attempts at the algorithm.  The first tries harder to conform
+_exactly_ to what SaTScan does (but fails).  The second uses `numpy` to
+accelerate the (original) algorithm to speeds whereby this is a useful method.
 
 - A "cluster" never consists of just one event.
 - Discs are also centred on actual events.
 - If the boundary of a disc contains more than one event, then we test *all*
-  (to be verified...) possibilities of including / excluding events on the
-  boundary
+  possibilities of including / excluding events on the boundary
     - So, for example, if we have a disc centred at (1,1) and events at
       (0,0), (1,1) and (2,2) then we would consider the discs containing events
       {0,1}, {1,2} and {0,1,2}.  More naively, we'd only look at {0,1,2}.
+  This _still_ doesn't exactly reproduce what SaTScan does.
      
 """
 

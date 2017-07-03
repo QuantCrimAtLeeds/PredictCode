@@ -248,7 +248,6 @@ class _STSTrainerBase(predictors.DataTrainer):
         return events, time
 
 
-#import .stscan2 as _stscan2
 from . import stscan2 as _stscan2
 
 class STSTrainer(_STSTrainerBase):
@@ -285,8 +284,6 @@ class STSTrainer(_STSTrainerBase):
         _TIME_UNIT = _np.timedelta64(1, "ms")
         events, time = self._events_time(time)
         times_into_past = (time - events.timestamps) / _TIME_UNIT
-        #times_into_past = _np.flipud(times_into_past)
-        #coords = _np.fliplr(events.coords)
         scanner = _stscan2.STScanNumpy(events.coords, times_into_past)
         self._copy_settings(scanner)
         scanner.time_max_interval = self.time_max_interval / _TIME_UNIT
