@@ -37,7 +37,8 @@ def test_first_day_of_week(dp):
         dp.first_day_of_week = "Tue"
 
 def test_month_year(dp):
-    assert dp.month_year == (6, 2017)
+    now = datetime.datetime.now()
+    assert dp.month_year == (now.month, now.year)
 
     dp.month_year = (1, 1987)
     assert dp.month_year == (1, 1987)

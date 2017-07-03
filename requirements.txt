@@ -5,6 +5,7 @@ shapely
 python-dateutil
 matplotlib
 Pillow
+geopandas
 
 pytest
 codecov
