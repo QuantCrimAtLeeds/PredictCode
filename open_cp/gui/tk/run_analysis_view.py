@@ -30,6 +30,7 @@ _text = {
     "log10" : "Cancelling run...",
     "log11" : "Unexpected error while running analysis: {}",
     "log12" : "Internal error, got: '{}'",
+    "log13" : "All tasks collected, now running...",
     "warning" : "Failed to complete analysis run",
     "warning1" : "Analysis run stopped early due to: {}",
     "cancel" : "Cancel tasks",

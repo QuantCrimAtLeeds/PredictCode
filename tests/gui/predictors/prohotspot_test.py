@@ -21,7 +21,7 @@ def test_ProHotspot_serialise(model, project_task, analysis_model, grid_task):
     serialise( prohotspot.ProHotspot(model) )
 
 @mock.patch("open_cp.prohotspot.ProspectiveHotSpot")
-def test_RetroHotspot_subtask(model, project_task, analysis_model, grid_task):
+def test_ProHotspot_subtask(model, project_task, analysis_model, grid_task):
     provider = prohotspot.ProHotspot(model)
     subtask = standard_calls(provider, project_task, analysis_model, grid_task)
     prediction = subtask(datetime.datetime(2017,6,7))
@@ -52,7 +52,7 @@ def test_RetroHotspot_subtask(model, project_task, analysis_model, grid_task):
     assert prediction is pred.predict.return_value
 
 @mock.patch("open_cp.prohotspot.ProspectiveHotSpot")
-def test_RetroHotspot_window_length(model, project_task, analysis_model, grid_task):
+def test_ProHotspot_window_length(model, project_task, analysis_model, grid_task):
     provider = prohotspot.ProHotspot(model)
     provider.time_window_length = datetime.timedelta(days=4)
     assert provider.settings_string == "DiagsSame / Classic(8x8) @ 4 Day(s)"
@@ -64,7 +64,7 @@ def test_RetroHotspot_window_length(model, project_task, analysis_model, grid_ta
     assert timeunit == np.timedelta64(4 * 24, "h")
 
 @mock.patch("open_cp.prohotspot.ProspectiveHotSpot")
-def test_RetroHotspot_kernel(model, project_task, analysis_model, grid_task):
+def test_ProHotspot_kernel(model, project_task, analysis_model, grid_task):
     provider = prohotspot.ProHotspot(model)
     provider.weight_model.space_bandwidth = 5
     provider.weight_model.time_bandwidth = 9
@@ -77,7 +77,7 @@ def test_RetroHotspot_kernel(model, project_task, analysis_model, grid_task):
     assert pred.weight.time_bandwidth == 9
 
 @mock.patch("open_cp.prohotspot.ProspectiveHotSpot")
-def test_RetroHotspot_distance(model, project_task, analysis_model, grid_task):
+def test_ProHotspot_distance(model, project_task, analysis_model, grid_task):
     provider = prohotspot.ProHotspot(model)
     provider.distance_type = 1
     assert provider.settings_string == "DiagsDiff / Classic(8x8) @ 1 Week(s)"
@@ -87,3 +87,13 @@ def test_RetroHotspot_distance(model, project_task, analysis_model, grid_task):
     pred = open_cp.prohotspot.ProspectiveHotSpot.return_value
     assert isinstance(pred.distance, open_cp.prohotspot.DistanceDiagonalsDifferent)
 
+@mock.patch("open_cp.prohotspot.ProspectiveHotSpot")
+def test_ProHotspot_distance2(model, project_task, analysis_model, grid_task):
+    provider = prohotspot.ProHotspot(model)
+    provider.distance_type = 2
+    assert provider.settings_string == "DiagsCircle / Classic(8x8) @ 1 Week(s)"
+    subtask = standard_calls(provider, project_task, analysis_model, grid_task)
+    subtask(datetime.datetime(2017,6,7))
+    
+    pred = open_cp.prohotspot.ProspectiveHotSpot.return_value
+    assert isinstance(pred.distance, open_cp.prohotspot.DistanceCircle)

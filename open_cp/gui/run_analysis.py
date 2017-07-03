@@ -300,6 +300,7 @@ class _RunnerThread():
         self._executor.start()
         try:
             tasks = self._make_tasks()
+            self._controller.to_msg_logger(run_analysis_view._text["log13"])
             futures = [ self._executor.submit(t) for t in tasks ]
             done, out_of = 0, len(futures)
             while len(futures) > 0:

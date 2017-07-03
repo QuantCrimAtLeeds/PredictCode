@@ -1,19 +1,16 @@
 """
-prohotspot
-~~~~~~~~~~
+prohotspotcts
+~~~~~~~~~~~~~
 
-Uses the "prospective-hotspotting" technique.
-
-The `prohotspot` method takes parameters:
-
-  - The resolution to "bin" the times at (weeks, days, ?)
-  - The weight to use (which takes the space distance, and time distance)
-  - A way to calculate the space distance
-
-Then want to visualise all this!
+Uses the "prospective-hotspotting" technique, but now as a "continuous"
+prediction which is converted to a grid at the last stage.  This is less
+consistent with (my interpretation) of the literature, but is more "accurate"
+and is easier to use, as it removes the annoying coupling between grid size and
+"bandwidth".
 """
 
 from . import predictor
+from . import prohotspot
 import open_cp.prohotspot
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -25,79 +22,86 @@ import datetime
 import open_cp.gui.tk.mtp as mtp
 
 _text = {
-    "main" : ("Prospective-Hotspotting Grid Predictor.\n\n"
-            + "Both space and time are made discrete (by placing a grid over space, and 'binning' the times to the nearest week, or "
-            + "day, etc.) and then a kernel is placed around each event.  Compared to the more traditional 'retrospective' hot-spot "
-            + "technique(s) this algorithm takes account of time, and gives more weight to more recent events.\n"
-            + "As we follow the original literature, the 'kernel' or 'weight' used operates with 'areal' units, namely grid "
-            + "cells and the time window selected.  This means that if you change the grid cell size, then the real shape of the kernel "
-            + "will change, and the ratio between time and space will change.\n"
+    "main" : ("Prospective-Hotspotting Continuous Grid Predictor.\n\n"
+            + "A Kernel Density estimator which takes account of time.  Around each point is space/time we place a 'kernel' or "
+            + "'weight' which decays in space/time up to certain 'bandwidth's.  These kernels are then summed to produce an overall "
+            + "risk profile which is converted to a grid and used for prediction.\n"
+            + "Compared to the non-'Continuous' version of the Prospective-Hotspotting method, this version applies a grid at the "
+            + "very end of the process.  This is less true to the original litertare, and computationally slowly, but is more accurate, "
+            + "should reduce spurious effects due to the use of a grid, and makes setting bandwidths a lot easier (as they no longer "
+            + "depend on the, separately chosen, grid size).\n"
             + "Training Data usage: Ignored.  For each prediction point, all data in a 'window' before the prediction point is used."
         ),
-    "time_bin" : "Time resolution:",
-    "time_bin_tt" : ("How large the 'bins' to place timestamps into.  For example, if '1 Week' then all timestamps less than "
-            + "7 days from the prediction point count as 'this week'; those between 7 and 14 days count at 'one week in the past' "
-            + "and so forth."),
-    "dist_tt" : "How distance from the current grid cell is calculated.",
-    "time_bin_choices" : ["Week(s)", "Day(s)", "Hour(s)"],
+    "dgx" : "Horizontal distance (meters)",
+    "dgy" : "Vertical distance (meters)",
+    "time_bin" : "Time length:",
+    "time_bin_tt" : ("How much one 'unit' of time represents.  This changes the speed at which "
+            + "the weight falls off in time.  Remember that one day is 24 hours, and one week "
+            + "is 168 hours."),
+    "time_unit" : "Hours",
+    "space_bin" : "Space length:",
+    "space_bin_tt" : ("How much one 'unit' of space represents.  This changes the speed at which "
+            + "the weight falls off in space, and is used together with the distance calculator method."),
+    "space_unit" : "Meters",
     "kernel" : "Kernel choice",
     "kernels" : ["Classic"],
+    "dist_tt" : "How distance from the current grid cell is calculated.",
     "dist" : "Distance calculator",
     "dists" : ["Diagonals Same", "Diagonals Different", "Distance as a circle"],
-    "dgx" : "Horizontal grid distance",
-    "dgy" : "Vertical grid distance",
-    "spbw" : "Spacial bandwidth:",
-    "spbw1" : "grid cells",
-    "spbw_tt" : "The bandwidth in space, here in terms of grid cells.  So changing the grid size will change the bandwidth!",
-    "tbw" : "Time bandwidth:",
-    "tbw_tt" : "The time bandwidth, in terms of the time window selected above.",
-    "kgx" : "Distance in grid cells",
     "no_data" : "No data points found in time range: have enough crime types been selected?",
+    "spbw" : "Spacial bandwidth:",
+    "spbw_tt" : "The bandwidth in space, in terms of areal `units` which are scaled by the `space length` chosen.",
+    "tbw" : "Time bandwidth:",
+    "tbw_tt" : "The time bandwidth, in terms of areal `units` which are scaled by the `time lentgh` chosen.",
+    "kgx" : "Distance (meters)",
+    "kgy" : "Time (hours)",
 
 }
 
-class ProHotspot(predictor.Predictor):
+class ProHotspotCts(predictor.Predictor):
     def __init__(self, model):
         super().__init__(model)
         self._timelength = datetime.timedelta(days=7)
-        self._diags = [DiagonalsSame(), DiagonalsDiff(), DiagonalsCircle()]
+        self._spacelength = 50
+        self._diags = [DiagonalsSame(self), DiagonalsDiff(self), DiagonalsCircle(self)]
         self._diags_choice = 0
         self._weights = [Classical(self)]
         self._weight_choice = 0
 
     @staticmethod
     def describe():
-        return "ProspectiveHotspot grid predictor"
+        return "ProspectiveHotspot continuous grid predictor"
 
     @staticmethod
     def order():
         return predictor._TYPE_GRID_PREDICTOR
 
+    def make_view(self, parent):
+        return ProHotspotCtsView(parent, self)
+
     def config(self):
         return {"resize" : True}
 
-    def make_view(self, parent):
-        return ProHotspotView(parent, self)
-
     @property
     def name(self):
-        return "ProspectiveHotspot grid predictor"
+        return "ProspectiveHotspot cts grid predictor"
         
     @property
     def settings_string(self):
-        num, unit = ProHotspotView.timeunit(self.time_window_length)
-        return "{} / {} @ {} {}".format(str(self.distance_model),
-            str(self.weight_model), num, _text["time_bin_choices"][unit])
+        hours = int(self.time_window_length / datetime.timedelta(hours=1))
+        return "{} / {} @ {}m, {}h".format(str(self.distance_model),
+            str(self.weight_model), self.space_length, hours)
         
     def make_tasks(self):
         weight = self.weight_model.weight()
         dist = self.distance_model.grid_distance()
-        return [self.Task(weight, dist, self.time_window_length)]
+        return [self.Task(weight, dist, self.time_window_length, self.space_length)]
 
     def to_dict(self):
         data =  {"distance" : self.distance_type,
             "weight" : self.weight_type,
-            "time_window" : self.time_window_length.total_seconds()}
+            "time_window" : self.time_window_length.total_seconds(),
+            "space_length" : self.space_length}
         data["distance_settings"] = [d.to_dict() for d in self._diags]
         data["weight_settings"] = [w.to_dict() for w in self._weights]
         return data
@@ -106,6 +110,7 @@ class ProHotspot(predictor.Predictor):
         self.distance_type = data["distance"]
         self.weight_type = data["weight"]
         self.time_window_length = datetime.timedelta(seconds=data["time_window"])
+        self.space_length = data["space_length"]
         for dist, di in zip(self._diags, data["distance_settings"]):
             dist.from_dict(di)
         for kernel, di in zip(self._weights, data["weight_settings"]):
@@ -119,6 +124,16 @@ class ProHotspot(predictor.Predictor):
     @time_window_length.setter
     def time_window_length(self, value):
         self._timelength = value
+
+    @property
+    def space_length(self):
+        """The spatial "bandwidth".  Equivalent to the grid size in the
+        non-continuous version of this predictor."""
+        return self._spacelength
+
+    @space_length.setter
+    def space_length(self, value):
+        self._spacelength = value
 
     @property
     def distance_type(self):
@@ -147,47 +162,40 @@ class ProHotspot(predictor.Predictor):
         return self._weights[self._weight_choice]
 
     class Task(predictor.GridPredictorTask):
-        def __init__(self, weight, distance, timeunit):
+        def __init__(self, weight, distance, timeunit, space_bandwidth):
             self.weight = weight
             self.distance = distance
             self.timeunit = np.timedelta64(timeunit)
+            self.grid = space_bandwidth
         
         def __call__(self, analysis_model, grid_task, project_task):
             timed_points = self.projected_data(analysis_model, project_task)
             if timed_points.number_data_points == 0:
                 raise predictor.PredictionError(_text["no_data"])
             grid = grid_task(timed_points)
-            return ProHotspot.SubTask(timed_points, grid, self.weight,
-                self.distance, self.timeunit)
+            return ProHotspotCts.SubTask(timed_points, grid, self.weight,
+                self.distance, self.timeunit, self.grid)
 
     class SubTask(predictor.SingleGridPredictor):
-        def __init__(self, timed_points, grid, weight, distance, timeunit):
-            self._predictor = open_cp.prohotspot.ProspectiveHotSpot(
-                grid=grid, time_unit=timeunit)
+        def __init__(self, timed_points, grid, weight, distance, timeunit, grid_size):
+            self._predictor = open_cp.prohotspot.ProspectiveHotSpotContinuous(
+                grid_size=grid_size, time_unit=timeunit)
             self._predictor.data = timed_points
             self._predictor.weight = weight
             self._predictor.distance = distance
+            self._grid = grid
 
         def __call__(self, predict_time, length=None):
             predict_time = np.datetime64(predict_time)
-            return self._predictor.predict(predict_time, predict_time)
+            cts_pred = self._predictor.predict(predict_time, predict_time)
+            return open_cp.predictors.GridPredictionArray.from_continuous_prediction_region(
+                cts_pred, self._grid.region(), self._grid.xsize, self._grid.ysize)
 
 
-class DiagonalsSame():
-    def __init__(self):
-        pass
-
-    def to_dict(self):
-        return {}
-
-    def from_dict(self, data):
-        pass
-
-    def __str__(self):
-        return "DiagsSame"
-
-    def grid_distance(self):
-        return open_cp.prohotspot.DistanceDiagonalsSame()
+class DiagonalsSame(prohotspot.DiagonalsSame):
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
 
     def view(self, parent):
         return DiagonalsSameView(parent, self)
@@ -206,54 +214,33 @@ class DiagonalsSameView(ttk.Frame):
         fig = mtp.new_figure((5,5))
         ax = fig.add_subplot(1,1,1)
         dist_obj = self._model.grid_distance()
-        xcs = np.array([-3, -2, -1, 0, 1, 2, 3, 4])
-        ycs = np.array([-3, -2, -1, 0, 1, 2, 3, 4])
+        bandwidth = self._model.model.space_length
+        xcs = np.linspace(-5, 5, 100)
+        ycs = np.linspace(-5, 5, 100)
         dists = np.empty((len(ycs)-1,len(xcs)-1))
         for ix, x in enumerate(xcs[:-1]):
             for iy, y in enumerate(ycs[:-1]):
                 dists[iy][ix] = dist_obj(0,0,x,y)
-        pcm = ax.pcolormesh(xcs, ycs, dists, cmap="rainbow")
+        pcm = ax.pcolormesh(xcs * bandwidth, ycs * bandwidth, dists, cmap="rainbow")
         fig.colorbar(pcm)
         ax.set(xlabel=_text["dgx"], ylabel=_text["dgy"])
         fig.set_tight_layout(True)
         return fig
 
 
-class DiagonalsDiff():
-    def __init__(self):
-        pass
-
-    def to_dict(self):
-        return {}
-
-    def from_dict(self, data):
-        pass
-
-    def __str__(self):
-        return "DiagsDiff"
-
-    def grid_distance(self):
-        return open_cp.prohotspot.DistanceDiagonalsDifferent()
+class DiagonalsDiff(prohotspot.DiagonalsDiff):
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
 
     def view(self, parent):
         return DiagonalsSameView(parent, self)
 
 
-class DiagonalsCircle():
-    def __init__(self):
-        pass
-
-    def to_dict(self):
-        return {}
-
-    def from_dict(self, data):
-        pass
-
-    def __str__(self):
-        return "DiagsCircle"
-
-    def grid_distance(self):
-        return open_cp.prohotspot.DistanceCircle()
+class DiagonalsCircle(prohotspot.DiagonalsCircle):
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
 
     def view(self, parent):
         return DiagonalsSameView(parent, self)
@@ -319,7 +306,6 @@ class ClassicalView(ttk.Frame):
         entry = ttk.Entry(subframe, textvariable=self._space_bandwidth, width=5)
         entry.grid(row=0, column=1, padx=2)
         util.IntValidator(entry, self._space_bandwidth, callback=self._space_bw_changed)
-        ttk.Label(subframe, text=_text["spbw1"]).grid(row=0, column=2, padx=2)
 
         subframe = ttk.Frame(self)
         subframe.grid(row=1, column=0, sticky=tk.W)
@@ -346,17 +332,17 @@ class ClassicalView(ttk.Frame):
         fig = mtp.new_figure((5,5))
         ax = fig.add_subplot(1,1,1)
         weight = self._model.weight()
-        xcs = np.arange(0, self._model.space_bandwidth + 1)
-        ycs = np.arange(0, self._model.time_bandwidth + 1)
+        xcs = np.linspace(0, self._model.space_bandwidth, 100)
+        ycs = np.linspace(0, self._model.time_bandwidth, 100)
         dists = np.empty((len(ycs)-1,len(xcs)-1))
         for ix, d_space in enumerate(xcs[:-1]):
             for iy, d_time in enumerate(ycs[:-1]):
-                dists[iy][ix] = weight(d_time,d_space)
-        num, unit = ProHotspotView.timeunit(self._parent_model.time_window_length)
-        pcm = ax.pcolormesh(xcs, ycs * num, dists, cmap="rainbow")
+                dists[iy][ix] = weight(d_time, d_space)
+        xscale = self._parent_model.space_length
+        yscale = self._parent_model.time_window_length / datetime.timedelta(hours=1)
+        pcm = ax.pcolormesh(xcs * xscale, ycs * yscale, dists, cmap="rainbow")
         fig.colorbar(pcm)
-        yl = _text["time_bin_choices"][unit]
-        ax.set(xlabel=_text["kgx"], ylabel=yl)
+        ax.set(xlabel=_text["kgx"], ylabel=_text["kgy"])
         fig.set_tight_layout(True)
         return fig
 
@@ -369,7 +355,7 @@ class ClassicalView(ttk.Frame):
         self._update()
 
 
-class ProHotspotView(tk.Frame):
+class ProHotspotCtsView(tk.Frame):
     def __init__(self, parent, model):
         self._model = model
         super().__init__(parent)
@@ -383,9 +369,9 @@ class ProHotspotView(tk.Frame):
         self._update()
 
     def _update(self):
-        num, choice = self.timeunit(self._model.time_window_length)
+        num = int(self._model.time_window_length / datetime.timedelta(hours=1))
         self._time_resolution.set(num)
-        self._time_res_cbox.current(choice)
+        self._space_length_var.set(self._model.space_length)
         self._update_dist()
         self._update_weight()
 
@@ -403,26 +389,6 @@ class ProHotspotView(tk.Frame):
         self._model.weight_model.view(self._kernel_frame).grid(sticky=tk.NSEW)
         util.stretchy_rows_cols(self._kernel_frame, [0], [0])
 
-    @staticmethod
-    def timeunit(length):
-        """Convert `length` an instance of :class:`datetime.timedelta` to a
-        pair `(num, unit)` where:
-          - unit == 0 : Weeks
-          - 1 : Days
-          - 2 : Hours
-        """
-        weeks = length / datetime.timedelta(days=7)
-        days = length / datetime.timedelta(days=1)
-        hours = length / datetime.timedelta(hours=1)
-        if abs(weeks - int(weeks)) < 1e-7:
-            return int(weeks), 0
-        elif abs(days - int(days)) < 1e-7:
-            return int(days), 1
-        elif abs(hours - int(hours)) < 1e-7:
-            return int(hours), 2
-        else:
-            raise ValueError()
-
     def _add_controls(self, frame):
         subframe = ttk.Frame(frame)
         subframe.grid(row=0, column=0, columnspan=2, sticky=tk.NW)
@@ -430,14 +396,21 @@ class ProHotspotView(tk.Frame):
         label.grid(row=0, column=0, padx=2, pady=2)
         tooltips.ToolTipYellow(label, _text["time_bin_tt"])
         self._time_resolution = tk.StringVar()
-        entry = ttk.Entry(subframe, textvariable=self._time_resolution)
+        entry = ttk.Entry(subframe, textvariable=self._time_resolution, width=8)
         entry.grid(row=0, column=1, padx=2, pady=2)
         util.IntValidator(entry, self._time_resolution, callback=self._time_res_changed)
-        self._time_res_cbox = ttk.Combobox(subframe, height=5, state="readonly", width=10)
-        self._time_res_cbox["values"] = _text["time_bin_choices"]
-        self._time_res_cbox.bind("<<ComboboxSelected>>", self._time_res_changed)
-        self._time_res_cbox.current(0)
-        self._time_res_cbox.grid(row=0, column=2, padx=2, pady=2)
+        ttk.Label(subframe, text=_text["time_unit"]).grid(row=0, column=2, padx=2)
+
+        ttk.Frame(subframe).grid(row=0, column=3, ipadx=20)
+
+        label = ttk.Label(subframe, text=_text["space_bin"])
+        label.grid(row=0, column=4, padx=2, pady=2)
+        tooltips.ToolTipYellow(label, _text["space_bin_tt"])
+        self._space_length_var = tk.StringVar()
+        entry = ttk.Entry(subframe, textvariable=self._space_length_var, width=8)
+        entry.grid(row=0, column=5, padx=2, pady=2)
+        util.IntValidator(entry, self._space_length_var, callback=self._space_length_change)
+        ttk.Label(subframe, text=_text["space_unit"]).grid(row=0, column=6, padx=2)
 
         subframe = ttk.LabelFrame(frame, text=_text["kernel"])
         subframe.grid(row=1, column=0, sticky=tk.NSEW, padx=2, pady=2)
@@ -464,17 +437,14 @@ class ProHotspotView(tk.Frame):
 
         util.stretchy_rows_cols(frame, [1], [0,1])
 
+    def _space_length_change(self, event=None):
+        num = int(self._space_length_var.get())
+        self._model.space_length = num
+        self._update_weight()
+
     def _time_res_changed(self, event=None):
         num = int(self._time_resolution.get())
-        choice = self._time_res_cbox.current()
-        if choice == 0:
-            self._model.time_window_length = datetime.timedelta(days=7*num)
-        elif choice == 1:
-            self._model.time_window_length = datetime.timedelta(days=num)
-        elif choice == 2:
-            self._model.time_window_length = datetime.timedelta(hours=num)
-        else:
-            raise ValueError()
+        self._model.time_window_length = datetime.timedelta(hours=num)
         self._update_weight()
 
     def _kernel_changed(self, event=None):
@@ -487,5 +457,5 @@ class ProHotspotView(tk.Frame):
 
 
 def test(root):
-    ll = ProHotspot(predictor.test_model())
+    ll = ProHotspotCts(predictor.test_model())
     predictor.test_harness(ll, root)

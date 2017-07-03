@@ -13,6 +13,11 @@ def test_DistanceDiagonalsSame():
     assert( distance(1, 1, 1, 1) == 0 )
     assert( distance(2, 1, 1, 2) == 1 )
     assert( distance(2, 1, 4, 3) == 2 )
+    xcs1 = np.array([1,1,1,2,2])
+    ycs1 = np.array([1,1,1,1,1])
+    xcs2 = np.array([2,1,1,1,4])
+    ycs2 = np.array([2,2,1,2,3])
+    np.testing.assert_allclose(distance(xcs1, ycs1, xcs2, ycs2), [1,1,0,1,2])
     
 def test_DistanceDiagonalsDifferent():
     distance = testmod.DistanceDiagonalsDifferent()
@@ -20,7 +25,24 @@ def test_DistanceDiagonalsDifferent():
     assert( distance(1, 1, 1, 2) == 1 )
     assert( distance(1, 1, 2, 1) == 1 )
     assert( distance(1, 1, 4, 5) == 7 )
+    xcs1 = np.array([1,1,1,1])
+    ycs1 = np.array([1,1,1,1])
+    xcs2 = np.array([2,1,2,4])
+    ycs2 = np.array([2,2,1,5])
+    np.testing.assert_allclose(distance(xcs1, ycs1, xcs2, ycs2), [2,1,1,7])
     
+def test_DistanceCircle():
+    distance = testmod.DistanceCircle()
+    assert distance(1, 1, 1, 1) == pytest.approx(0)
+    assert distance(1, 1, 1, 2) == pytest.approx(1)
+    assert distance(1, 1, 2, 1) == pytest.approx(1)
+    assert distance(1, 1, 4, 5) == pytest.approx(5)
+    xcs1 = np.array([1,1,1,1])
+    ycs1 = np.array([1,1,1,1])
+    xcs2 = np.array([1,1,2,4])
+    ycs2 = np.array([1,2,1,5])
+    np.testing.assert_allclose(distance(xcs1,ycs1,xcs2,ycs2), [0,1,1,5])
+
 def test_ClassicWeight():
     weight = testmod.ClassicWeight()
     weight.time_bandwidth = 5
