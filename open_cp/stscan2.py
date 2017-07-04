@@ -352,6 +352,16 @@ class STScanNumpy():
             if len(stats) > 0:
                 yield centre, used_dists, used_times, stats
 
+    @staticmethod
+    def _calc_actual(space_masks, time_masks, time_counts):
+        # Does this, but >9 times quicker:
+        # uber_mask = space_masks[:,:,None] & time_masks[:,None,:]
+        # actual = _np.sum(uber_mask, axis=0)
+        x = _np.empty((space_masks.shape[1], time_masks.shape[1]))
+        for i, c in enumerate(time_counts):
+            x[:,i] = _np.sum(space_masks[-c:,:], axis=0)
+        return x
+
     def faster_score_all(self):
         """As :method:`score_all` but yields tuples (centre, distance_array,
         time_array, statistic_array)."""
@@ -360,8 +370,7 @@ class STScanNumpy():
         for centre in self.coords.T:
             space_masks, space_counts, dists = self.find_discs(centre)
 
-            uber_mask = space_masks[:,:,None] & time_masks[:,None,:]
-            actual = _np.sum(uber_mask, axis=0)
+            actual = self._calc_actual(space_masks, time_masks, time_counts)
             expected = space_counts[:,None] * time_counts[None,:] / N
             _mask = (actual > 1) & (actual > expected)
             actual = _np.ma.array(actual, mask=~_mask)
@@ -372,7 +381,7 @@ class STScanNumpy():
                 continue
             m = _np.ma.argmax(stats, axis=1)[_mask1]
             stats = stats[_mask1,:]
-            stats = stats[range(stats.shape[0]),m]
+            stats = stats[range(stats.shape[0]),m].data
             used_dists = dists[_mask1]
             used_times = times[m]
 
@@ -429,7 +438,7 @@ class STScanNumpy():
     def find_all_clusters(self):
         scores = []
         count = 0
-        for centre, dists, times, stats in self.faster_score_all_new():
+        for centre, dists, times, stats in self.faster_score_all():
             dists = _np.sqrt(dists)
             scores.extend(zip(_itertools.repeat(centre[0]),
                             _itertools.repeat(centre[1]), dists, times, stats))

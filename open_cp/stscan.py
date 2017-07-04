@@ -294,6 +294,25 @@ class STSTrainer(_STSTrainerBase):
         self._copy_settings(new)
         return new
 
+    _TIME_UNIT = _np.timedelta64(1, "ms")
+
+    def to_scanner(self, time=None):
+        """Transform the input data into the "abstract representation".  For
+        testing.
+        
+        :param time: Timestamp of the prediction point.  Only data up to
+          and including this time is used when computing clusters.  If `None`
+          then use the last timestamp of the data.
+
+        :return: An instance of :class:`STScanNumpy`.
+        """
+        events, time = self._events_time(time)
+        times_into_past = (time - events.timestamps) / self._TIME_UNIT
+        scanner = _stscan2.STScanNumpy(events.coords, times_into_past)
+        self._copy_settings(scanner)
+        scanner.time_max_interval = self.time_max_interval / self._TIME_UNIT
+        return scanner, time
+
     def predict(self, time=None, max_clusters=None):
         """Make a prediction.
         
@@ -305,19 +324,13 @@ class STSTrainer(_STSTrainerBase):
         
         :return: A instance of :class:`STSResult` giving the found clusters.
         """
-        _TIME_UNIT = _np.timedelta64(1, "ms")
-        events, time = self._events_time(time)
-        times_into_past = (time - events.timestamps) / _TIME_UNIT
-        scanner = _stscan2.STScanNumpy(events.coords, times_into_past)
-        self._copy_settings(scanner)
-        scanner.time_max_interval = self.time_max_interval / _TIME_UNIT
-
+        scanner, time = self.to_scanner(time)
         clusters = []
         time_regions = []
         stats = []
         for cluster in scanner.find_all_clusters():
             clusters.append(Cluster(cluster.centre, cluster.radius))
-            start_time = time - cluster.time * _TIME_UNIT
+            start_time = time - cluster.time * self._TIME_UNIT
             time_regions.append((start_time, time))
             stats.append(cluster.statistic)
 
