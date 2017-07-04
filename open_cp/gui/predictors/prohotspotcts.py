@@ -163,6 +163,7 @@ class ProHotspotCts(predictor.Predictor):
 
     class Task(predictor.GridPredictorTask):
         def __init__(self, weight, distance, timeunit, space_bandwidth):
+            super().__init__()
             self.weight = weight
             self.distance = distance
             self.timeunit = np.timedelta64(timeunit)
@@ -178,6 +179,7 @@ class ProHotspotCts(predictor.Predictor):
 
     class SubTask(predictor.SingleGridPredictor):
         def __init__(self, timed_points, grid, weight, distance, timeunit, grid_size):
+            super().__init__()
             self._predictor = open_cp.prohotspot.ProspectiveHotSpotContinuous(
                 grid_size=grid_size, time_unit=timeunit)
             self._predictor.data = timed_points

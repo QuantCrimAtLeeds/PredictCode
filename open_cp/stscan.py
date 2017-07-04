@@ -70,6 +70,37 @@ def _possible_space_clusters(points, max_radius=_np.inf):
             set_masks.add(m)
     return [discs[i] for i in masks]
 
+def grid_timed_points(timed_points, region, grid_size):
+    """Return a new instance of :class:`TimedPoints` where each space
+    coordinate is moved to the centre of each grid cell.
+    
+    :param timed_points: Input data.
+    :param region: A `data.RectangularRegion` instance giving the
+        region to grid to.  Only the x,y offset is used.
+    :param grid_size: The width and height of each grid cell.
+    """
+    offset = _np.array([region.xmin, region.ymin])
+    newcoords = _np.floor((timed_points.coords - offset[:,None]) / grid_size) + 0.5
+    newcoords = newcoords * grid_size + offset[:,None]
+    return data.TimedPoints(timed_points.timestamps, newcoords)
+
+def bin_timestamps(timed_points, offset, bin_length):
+    """Return a new instance of :class:`TimedPoints` where each timestamped is
+    adjusted.  Any timestamp between `offset` and `offset + bin_length` is
+    mapped to `offset`; timestamps between `offset + bin_length` and
+    `offset + 2 * bin_length` are mapped to `offset + bin_length`, and so
+    forth.
+    
+    :param timed_points: Input data.
+    :param offset: A datetime-like object which is the start of the binning.
+    :param bin_length: A timedelta-like object which is the length of each bin.
+    """
+    offset = _np.datetime64(offset)
+    bin_length = _np.timedelta64(bin_length)
+    new_times = _np.floor((timed_points.timestamps - offset) / bin_length)
+    new_times = offset + new_times * bin_length
+    return data.TimedPoints(new_times, timed_points.coords)
+
 
 class _STSTrainerBase(predictors.DataTrainer):
     """Internal class, abstracting out some common features."""
@@ -159,12 +190,8 @@ class _STSTrainerBase(predictors.DataTrainer):
         :param bin_length: A timedelta-like object which is the length of
           each bin.
         """
-        offset = _np.datetime64(offset)
-        bin_length = _np.timedelta64(bin_length)
-        new_times = _np.floor((self.data.timestamps - offset) / bin_length)
-        new_times = offset + new_times * bin_length
         new = self.clone()
-        new.data = data.TimedPoints(new_times, self.data.coords)
+        new.data = bin_timestamps(self.data, offset, bin_length)
         return new
     
     def grid_coords(self, region, grid_size):
@@ -175,11 +202,8 @@ class _STSTrainerBase(predictors.DataTrainer):
           region to grid to.  Only the x,y offset is used.
         :param grid_size: The width and height of each grid cell.
         """
-        offset = _np.array([region.xmin, region.ymin])
-        newcoords = _np.floor((self.data.coords - offset[:,None]) / grid_size) + 0.5
-        newcoords = newcoords * grid_size + offset[:,None]
         new = self.clone()
-        new.data = data.TimedPoints(self.data.timestamps, newcoords)
+        new.data = grid_timed_points(self.data, region, grid_size)
         return new
 
     @staticmethod        

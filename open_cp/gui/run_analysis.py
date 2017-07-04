@@ -52,7 +52,7 @@ class RunAnalysis():
         if hasattr(self, "_off_thread"):
             self._off_thread.cancel()
 
-    _Task = collections.namedtuple("RunAnalysis_Task", ["task", "off_thread",
+    _Task = collections.namedtuple("RunAnalysis_Task", ["task", "off_process",
             "projection", "grid", "type"])
 
     @staticmethod
@@ -68,7 +68,7 @@ class RunAnalysis():
                 for pred_name, pred in self._chain_dict(self._model.grid_prediction_tasks):
                     task = self._Task(
                         task = lambda g=grid, p=proj, pr=pred: pr(self.main_model, g, p),
-                        off_thread = pred.off_thread(),
+                        off_process = pred.off_process,
                         projection = proj_name,
                         grid = grid_name,
                         type = pred_name )
@@ -301,21 +301,38 @@ class _RunnerThread():
         try:
             tasks = self._make_tasks()
             self._controller.to_msg_logger(run_analysis_view._text["log13"])
-            futures = [ self._executor.submit(t) for t in tasks ]
-            done, out_of = 0, len(futures)
-            while len(futures) > 0:
-                results, futures = pool.check_finished(futures)
-                for key, result in results:
-                    self._results.append( PredictionResult(key, result) )
-                    self._controller.to_msg_logger(run_analysis_view._text["log8"], key)
+            futures = [ self._executor.submit(t) for t in tasks if t.off_process ]
+            on_thread_tasks = [t for t in tasks if not t.off_process]
+            done, out_of = 0, len(futures) + len(on_thread_tasks)
+
+            while len(futures) > 0 or len(on_thread_tasks) > 0:
+                if len(futures) > 0:
+                    futures, count = self._process_futures(futures)
+                    done += count
+                if len(on_thread_tasks) > 0:
+                    task = on_thread_tasks.pop()
+                    self._notify_result(task.key, task())
                     done += 1
-                    self._controller.set_progress(done, out_of)
+                else:
+                    time.sleep(0.5)
+                self._controller.set_progress(done, out_of)
                 if self.cancelled:
                     break
-                time.sleep(0.5)
         finally:
             self._executor.terminate()
         self._controller.end_progress()
+
+    def _process_futures(self, futures):
+        results, futures = pool.check_finished(futures)
+        done = 0
+        for key, result in results:
+            self._notify_result(key, result)
+            done += 1
+        return futures, done
+
+    def _notify_result(self, key, result):
+        self._results.append( PredictionResult(key, result) )
+        self._controller.to_msg_logger(run_analysis_view._text["log8"], key)
 
     def cancel(self):
         self._cancel_queue.put("stop")
@@ -334,7 +351,7 @@ class _RunnerThread():
         tasks = []
         futures = []
         for task in self._tasks:
-            if task.off_thread:
+            if task.off_process:
                 task = self.RunPredTask(task, task.task)
                 futures.append(self._executor.submit(task))
             else:
@@ -361,10 +378,18 @@ class _RunnerThread():
         def __call__(self):
             return self.task(self.start, self.length)
 
+        @property
+        def off_process(self):
+            return self.task.off_process
+
     class RunPredTask(pool.Task):
         def __init__(self, key, task):
             super().__init__(key)
             self._task = task
+
+        @property
+        def off_process(self):
+            return self._task.off_process
 
         def __call__(self):
             return self._task()

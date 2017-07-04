@@ -63,6 +63,9 @@ class CountingGrid(predictor.Predictor):
         return [self.Task()]
         
     class Task(predictor.GridPredictorTask):
+        def __init__(self):
+            super().__init__()
+
         def __call__(self, analysis_model, grid_task, project_task):
             timed_points = self.projected_data(analysis_model, project_task)
             training_start, _, _, _ = analysis_model.time_range
@@ -74,6 +77,7 @@ class CountingGrid(predictor.Predictor):
 
     class SubTask(predictor.SingleGridPredictor):
         def __init__(self, timed_points, grid):
+            super().__init__()
             self._timed_points = timed_points
             self.predictor = open_cp.naive.CountingGridKernel(grid.xsize,
                 grid.ysize, grid.region())
@@ -128,6 +132,9 @@ class ScipyKDE(predictor.Predictor):
         return [self.Task()]
         
     class Task(predictor.GridPredictorTask):
+        def __init__(self):
+            super().__init__()
+
         def __call__(self, analysis_model, grid_task, project_task):
             timed_points = self.projected_data(analysis_model, project_task)
             training_start, _, _, _ = analysis_model.time_range
@@ -139,6 +146,7 @@ class ScipyKDE(predictor.Predictor):
 
     class SubTask(predictor.SingleGridPredictor):
         def __init__(self, timed_points, grid):
+            super().__init__()
             self._timed_points = timed_points
             self.predictor = open_cp.naive.ScipyKDE()
             self._grid = grid

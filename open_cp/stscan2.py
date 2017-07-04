@@ -210,7 +210,7 @@ class AbstractSTScan():
     def to_satscan(self, filename, offset):
         """Writes the training data to two SaTScan compatible files.  Does
         *not* currently write settings, so these will need to be entered
-        manually.  The timestamps
+        manually.  The timestamps are rounded down to an integer.
         
         :param filename: Saves files "filename.geo" and "filename.cas"
           containing the geometry and "cases" repsectively.
@@ -295,7 +295,7 @@ class STScanNumpy():
         unique_times.sort()
         time_masks = self.timestamps[:,None] <= unique_times[None,:]
         
-        limit = self.timestamps.shape[0] *self.time_population_limit
+        limit = self.timestamps.shape[0] * self.time_population_limit
         time_counts = _np.sum(time_masks, axis=0)
         m = time_counts <= limit
         
@@ -322,7 +322,70 @@ class STScanNumpy():
         
         return mask[:,m], space_counts[m], unique_dists[m]
 
+    def faster_score_all_new(self):
+        """Cuts down on redundancy by, for each centre and disk radius, only
+        returning the highest statistic time range.  This is sufficient, as we
+        calculate possible secondary clusters using the "geographic distinct"
+        method, so the 2nd best (etc.) statistic for a given disk will never be
+        considered."""
+        time_masks, time_counts, times = self.make_time_ranges()
+        N = self.timestamps.shape[0]
+        for centre in self.coords.T:
+            space_masks, space_counts, dists = self.find_discs(centre)
+
+            used_dists, used_times, stats = [], [], []
+            for i in range(space_masks.shape[1]):
+                mask = time_masks & space_masks[:,i][:,None]
+                actual = _np.sum(mask, axis=0)
+                expected = space_counts[i] * time_counts / N
+                _mask = (actual > 1) & (actual > expected)
+                actual = actual[_mask]
+                expected = expected[_mask]
+                if actual.shape[0] == 0:
+                    continue
+                statistics = AbstractSTScan._statistic(actual, expected, N)
+                best_index = _np.argmax(statistics)
+                used_dists.append(dists[i])
+                used_times.append(times[_mask][best_index])
+                stats.append(statistics[best_index])
+
+            if len(stats) > 0:
+                yield centre, used_dists, used_times, stats
+
     def faster_score_all(self):
+        """As :method:`score_all` but yields tuples (centre, distance_array,
+        time_array, statistic_array)."""
+        time_masks, time_counts, times = self.make_time_ranges()
+        N = self.timestamps.shape[0]
+        for centre in self.coords.T:
+            space_masks, space_counts, dists = self.find_discs(centre)
+
+            uber_mask = space_masks[:,:,None] & time_masks[:,None,:]
+            actual = _np.sum(uber_mask, axis=0)
+            expected = space_counts[:,None] * time_counts[None,:] / N
+            _mask = (actual > 1) & (actual > expected)
+            actual = _np.ma.array(actual, mask=~_mask)
+            expected = _np.ma.array(expected, mask=~_mask)
+            stats = self._ma_statistic(actual, expected, N)
+            _mask1 = _np.any(_mask, axis=1)
+            if not _np.any(_mask1):
+                continue
+            m = _np.ma.argmax(stats, axis=1)[_mask1]
+            stats = stats[_mask1,:]
+            stats = stats[range(stats.shape[0]),m]
+            used_dists = dists[_mask1]
+            used_times = times[m]
+
+            yield centre, used_dists, used_times, stats
+
+    @staticmethod
+    def _ma_statistic(actual, expected, total):
+        """Calculate the log likelihood"""
+        stat = actual * (_np.ma.log(actual) - _np.ma.log(expected))
+        stat += (total - actual) * (_np.ma.log(total - actual) - _np.ma.log(total - expected))
+        return stat
+
+    def faster_score_all_old(self):
         """As :method:`score_all` but yields tuples (centre, distance_array,
         time_array, statistic_array)."""
         time_masks, time_counts, times = self.make_time_ranges()
@@ -335,13 +398,12 @@ class STScanNumpy():
             actual = _np.sum(uber_mask, axis=0)
             expected = space_counts[:,None] * time_counts[None,:] / N
             _mask = (actual > 1) & (actual > expected)
-    
+
             used_dists = _np.broadcast_to(dists[:,None], _mask.shape)[_mask]
             used_times = _np.broadcast_to(times[None,:], _mask.shape)[_mask]
             actual = actual[_mask]
             expected = expected[_mask]
-            #uber_mask = uber_mask[:,_mask]
-            stats = self._statistic(actual, expected, N)
+            stats = AbstractSTScan._statistic(actual, expected, N)
 
             if len(stats) > 0:
                 yield centre, used_dists, used_times, stats
@@ -366,10 +428,13 @@ class STScanNumpy():
         
     def find_all_clusters(self):
         scores = []
-        for centre, dists, times, stats in self.faster_score_all():
+        count = 0
+        for centre, dists, times, stats in self.faster_score_all_new():
             dists = _np.sqrt(dists)
             scores.extend(zip(_itertools.repeat(centre[0]),
                             _itertools.repeat(centre[1]), dists, times, stats))
+            count += 1
+            print(count, len(scores))
         if len(scores) == 0:
             return
         scores = _np.asarray(scores)
@@ -386,10 +451,3 @@ class STScanNumpy():
             distances = (scores[:,0] - best[0])**2 + (scores[:,1] - best[1])**2
             mask = distances > (radius + scores[:,2]) ** 2
             scores = scores[mask,:]
-
-    @staticmethod
-    def _statistic(actual, expected, total):
-        """Calculate the log likelihood"""
-        stat = actual * (_np.log(actual) - _np.log(expected))
-        stat += (total - actual) * (_np.log(total - actual) - _np.log(total - expected))
-        return stat

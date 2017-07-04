@@ -104,16 +104,16 @@ class STScan(predictor.Predictor):
     @property
     def settings_string(self):
         out = ""
-        if self.time_window_choice == self.TimeWindowChoice.window:
+        if self._time_window_choice == self.TimeWindowChoice.window:
             days = int(self.time_window_length / datetime.timedelta(days=1))
-            out += "<={} ".format(days)
-        if (self.quantisation_choice == self.QuantiseDataChoice.space or
-            self.quantisation_choice == self.QuantiseDataChoice.both):
+            out += "<={}days ".format(days)
+        if (self.quantisation_choice == self.QuantiseDataChoice.space.value or
+            self.quantisation_choice == self.QuantiseDataChoice.both.value):
             out += "grid "
-        elif (self.quantisation_choice == self.QuantiseDataChoice.time or
-            self.quantisation_choice == self.QuantiseDataChoice.both):
+        if (self.quantisation_choice == self.QuantiseDataChoice.time.value or
+            self.quantisation_choice == self.QuantiseDataChoice.both.value):
             hours = int(self.time_bin_length / datetime.timedelta(hours=1))
-            out += "bins({}hours)".format(hours)
+            out += "bins({}hours) ".format(hours)
         out += "geo({}%/{}m) ".format(int(self.geographic_population_limit),
             self.geographic_radius_limit)
         days = int(self.time_max_interval / datetime.timedelta(days=1))
@@ -225,31 +225,66 @@ class STScan(predictor.Predictor):
 
     class Task(predictor.GridPredictorTask):
         def __init__(self, model):
+            super().__init__()
             self._geo_pop_limit_perc = model.geographic_population_limit
             self._time_pop_limit_perc = model.time_population_limit
             self._geo_radius = model.geographic_radius_limit
             self._time_max = model.time_max_interval
+            self._start_time_option = model.time_window_choice
+            self._start_time_window = model.time_window_length
+            self._quant_choice = model.quantisation_choice
+            self._quant_bin_length = model.time_bin_length
+
+        def _points_to_centre_grid(self, timed_points, grid):
+            return open_cp.stscan.grid_timed_points(timed_points,
+                grid.region(), grid.xsize)
 
         def __call__(self, analysis_model, grid_task, project_task):
             timed_points = self.projected_data(analysis_model, project_task)
             if timed_points.number_data_points == 0:
                 raise predictor.PredictionError(_text["no_data"])
             grid = grid_task(timed_points)
-            return STScan.SubTask(timed_points, grid, self)
+            if self._start_time_option == 1:
+                start = analysis_model.time_range[0]
+                timed_points = timed_points[timed_points.timestamps >= start]
+                time_window = None
+            elif self._start_time_option == 2:
+                time_window = self._start_time_window
+            else:
+                raise ValueError()
+            if timed_points.number_data_points == 0:
+                raise predictor.PredictionError(_text["no_data"])
+            if self._quant_choice == 2 or self._quant_choice == 4:
+                timed_points = self._points_to_centre_grid(timed_points, grid)
+            bin_length = None
+            if self._quant_choice == 3 or self._quant_choice == 4:
+                bin_length = self._quant_bin_length
+            return STScan.SubTask(timed_points, grid, self, time_window, bin_length)
 
     class SubTask(predictor.SingleGridPredictor):
-        def __init__(self, timed_points, grid, task):
+        def __init__(self, timed_points, grid, task, time_window, time_bin_length):
+            # Very memory consuming, so don't allow off thread
+            super().__init__(False)
             self.grid_size = grid.xsize
             self.predictor = open_cp.stscan.STSTrainer()
-            self.predictor.data = timed_points
             self.predictor.region = grid.region()
             self.predictor.geographic_population_limit = task._geo_pop_limit_perc / 100
             self.predictor.geographic_radius_limit = task._geo_radius
-            self.time_population_limit = task._time_pop_limit_perc / 100
-            self.time_max_interval = np.timedelta64(task._time_max)
+            self.predictor.time_population_limit = task._time_pop_limit_perc / 100
+            self.predictor.time_max_interval = np.timedelta64(task._time_max)
+            self._time_window = time_window
+            self._timed_points = timed_points
+            self._bin_length = time_bin_length
 
         def __call__(self, predict_time, length=None):
+            self.predictor.data = self._timed_points
+            if self._time_window is not None:
+                mask = self._timed_points.timestamps >= predict_time - self._time_window
+                self.predictor.data = self._timed_points[mask]
             predict_time = np.datetime64(predict_time)
+            if self._bin_length is not None:
+                self.predictor.data = open_cp.stscan.bin_timestamps(self.predictor.data,
+                    predict_time, self._bin_length)
             result = self.predictor.predict(time = predict_time)
             return result.grid_prediction(self.grid_size)
 

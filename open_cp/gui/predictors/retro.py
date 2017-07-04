@@ -136,6 +136,7 @@ class RetroHotspot(predictor.Predictor):
     
     class Task(predictor.GridPredictorTask):
         def __init__(self, window, weight):
+            super().__init__()
             self.window = np.timedelta64(1, "D") * window
             self.weight = weight
         
@@ -148,6 +149,7 @@ class RetroHotspot(predictor.Predictor):
 
     class SubTask(predictor.SingleGridPredictor):
         def __init__(self, timed_points, grid, window, weight):
+            super().__init__()
             self._predictor = open_cp.retrohotspot.RetroHotSpotGrid(grid=grid)
             self._predictor.weight = weight
             self._predictor.data = timed_points

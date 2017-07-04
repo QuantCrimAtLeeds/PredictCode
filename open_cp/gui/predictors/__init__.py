@@ -14,6 +14,7 @@ from . import lonlat
 from . import retro
 from . import prohotspot
 from . import prohotspotcts
+from . import stscan
 
 # End #######################################################################
 

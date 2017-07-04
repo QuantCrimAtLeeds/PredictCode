@@ -50,6 +50,13 @@ def print_log(queue):
             record = queue.get()
             print(formatter.format(record))
 
+def get_thread(locator_mock):
+    pool = locator_mock.get("pool")
+    assert len(pool.method_calls) == 1
+    name, args, kwargs = pool.method_calls[0]
+    assert name == "submit"
+    off_thread = args[0]
+    return off_thread
 
 def test_controller_runs(runAnalysis, log_queue, locator_mock):
     runAnalysis.run()
@@ -76,15 +83,6 @@ def test_model(runAnalysis):
     import open_cp.gui.predictors.naive
     assert isinstance(model.grid_prediction_tasks['Counting Grid naive predictor'][0],
         open_cp.gui.predictors.naive.CountingGrid.Task)
-
-
-def get_thread(locator_mock):
-    pool = locator_mock.get("pool")
-    assert len(pool.method_calls) == 1
-    name, args, kwargs = pool.method_calls[0]
-    assert name == "submit"
-    off_thread = args[0]
-    return off_thread
 
 @pytest.fixture
 def pool():
