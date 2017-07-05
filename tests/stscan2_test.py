@@ -173,6 +173,7 @@ def test_STScanNumpy_time_ranges():
 def test_STScanNumpy_find_discs():
     coords = np.array([[0,0], [0,0], [1,0], [1,1]]).T
     times = np.random.random(coords.shape[1])
+    times.sort()
     s = stscan.STScanNumpy(coords, times)
     
     masks, counts, rds = s.find_discs([0,0])

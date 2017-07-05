@@ -277,6 +277,9 @@ class STScanNumpy():
         self.timestamps = _np.asarray(timestamps)
         if len(self.timestamps) != self.coords.shape[1]:
             raise ValueError("Timestamps and Coordinates must be of same length.")
+        indicies = _np.argsort(self.timestamps)
+        self.timestamps = self.timestamps[indicies]
+        self.coords = self.coords[:,indicies]
         self.geographic_radius_limit = 100
         self.geographic_population_limit = 0.5
         self.time_max_interval = 28
@@ -322,36 +325,6 @@ class STScanNumpy():
         
         return mask[:,m], space_counts[m], unique_dists[m]
 
-    def faster_score_all_new(self):
-        """Cuts down on redundancy by, for each centre and disk radius, only
-        returning the highest statistic time range.  This is sufficient, as we
-        calculate possible secondary clusters using the "geographic distinct"
-        method, so the 2nd best (etc.) statistic for a given disk will never be
-        considered."""
-        time_masks, time_counts, times = self.make_time_ranges()
-        N = self.timestamps.shape[0]
-        for centre in self.coords.T:
-            space_masks, space_counts, dists = self.find_discs(centre)
-
-            used_dists, used_times, stats = [], [], []
-            for i in range(space_masks.shape[1]):
-                mask = time_masks & space_masks[:,i][:,None]
-                actual = _np.sum(mask, axis=0)
-                expected = space_counts[i] * time_counts / N
-                _mask = (actual > 1) & (actual > expected)
-                actual = actual[_mask]
-                expected = expected[_mask]
-                if actual.shape[0] == 0:
-                    continue
-                statistics = AbstractSTScan._statistic(actual, expected, N)
-                best_index = _np.argmax(statistics)
-                used_dists.append(dists[i])
-                used_times.append(times[_mask][best_index])
-                stats.append(statistics[best_index])
-
-            if len(stats) > 0:
-                yield centre, used_dists, used_times, stats
-
     @staticmethod
     def _calc_actual(space_masks, time_masks, time_counts):
         # Does this, but >9 times quicker:
@@ -359,7 +332,7 @@ class STScanNumpy():
         # actual = _np.sum(uber_mask, axis=0)
         x = _np.empty((space_masks.shape[1], time_masks.shape[1]))
         for i, c in enumerate(time_counts):
-            x[:,i] = _np.sum(space_masks[-c:,:], axis=0)
+            x[:,i] = _np.sum(space_masks[:c,:], axis=0)
         return x
 
     def faster_score_all(self):
@@ -371,6 +344,12 @@ class STScanNumpy():
             space_masks, space_counts, dists = self.find_discs(centre)
 
             actual = self._calc_actual(space_masks, time_masks, time_counts)
+            
+            # TODO: Remove this...
+            #uber_mask = space_masks[:,:,None] & time_masks[:,None,:]
+            #actual1 = _np.sum(uber_mask, axis=0)
+            #_np.testing.assert_allclose(actual, actual1)
+            
             expected = space_counts[:,None] * time_counts[None,:] / N
             _mask = (actual > 1) & (actual > expected)
             actual = _np.ma.array(actual, mask=~_mask)
@@ -443,7 +422,6 @@ class STScanNumpy():
             scores.extend(zip(_itertools.repeat(centre[0]),
                             _itertools.repeat(centre[1]), dists, times, stats))
             count += 1
-            print(count, len(scores))
         if len(scores) == 0:
             return
         scores = _np.asarray(scores)
