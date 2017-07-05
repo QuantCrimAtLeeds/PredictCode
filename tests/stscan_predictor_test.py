@@ -139,7 +139,7 @@ def test_STSTrainer_grid_coords():
     assert(new.data.ycoords[1] == pytest.approx(199.5))
     assert(new.data.ycoords[2] == pytest.approx(197.5))
     
-def test__possible_start_times():
+def test_possible_start_times():
     timestamps = np.datetime64("2017-04-20") + np.array([
             i * np.timedelta64(1,"h") for i in range(10)])
     times = testmod._possible_start_times(timestamps, np.timedelta64(5,"h"),
@@ -178,7 +178,7 @@ def resulting_sets(points, discs):
         out.append(frozenset(i for i in range(len(mask)) if mask[i]))
     return out
     
-def test__possible_space_clusters():
+def test_possible_space_clusters():
     points = np.array([[0,0],[1,0],[2,0]]).T
     discs = testmod._possible_space_clusters(points)
     sets = resulting_sets(points, discs)
@@ -187,7 +187,7 @@ def test__possible_space_clusters():
     assert(len(sets) == len(expected))
     assert(set(sets) == expected)
 
-def test__possible_space_clusters2():
+def test_possible_space_clusters2():
     points = np.array([[0,0],[1,0],[2,0],[1,2]]).T
     discs = testmod._possible_space_clusters(points)
     sets = resulting_sets(points, discs)
@@ -197,7 +197,7 @@ def test__possible_space_clusters2():
     assert(len(sets) == len(expected))
     assert(set(sets) == expected)
 
-def test__possible_space_clusters2_with_max_raidus():
+def test_possible_space_clusters2_with_max_raidus():
     points = np.array([[0,0],[1,0],[2,0],[1,2]]).T
     discs = testmod._possible_space_clusters(points, 1)
     sets = resulting_sets(points, discs)
@@ -229,3 +229,14 @@ def test_predict():
     trainer = testmod.STSTrainer()
     trainer.data = open_cp.TimedPoints.from_coords(timestamps, xcoords, ycoords)
     trainer.predict() # Test is just that it runs...
+
+@pytest.fixture
+def result():
+    return an_STSResult()
+
+def test_grid_prediction(result):
+    pred = result.grid_prediction(10)
+    assert pred.region() == result.region
+    assert pred.intensity_matrix.shape == (5,10)
+    # clusters = [testmod.Cluster([10,60],10), testmod.Cluster([50,50], 20)]
+    # ALREADY done this...

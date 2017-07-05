@@ -586,7 +586,7 @@ class STSResult():
         for i, (x,y,d) in enumerate(cells):
             risk_matrix[y][x] = base_risk + (i+1) / len(cells)
     
-    def grid_prediction(self, grid_size):
+    def grid_prediction(self, grid_size, use_maximal_clusters=False):
         """Using the grid size, construct a grid from the region and 
         produce an instance of :class:`predictors.GridPredictionArray` which
         contains the relative "risk".
@@ -594,12 +594,20 @@ class STSResult():
         We treat each cluster in order, so that the primary cluster has higher
         risk than the secondary cluster, and so on.  Within each cluster,
         cells near the centre have a higher risk than cells near the boundary.
+        A grid cell is considered to be "in" the cluster is the centre of the
+        grid is inside the cluster.
         
         :param grid_size: The size of resulting grid.
+        :param use_maximal_clusters: If `True` then use the largest possible
+          radii for each cluster.
         """
         xs, ys = self.region.grid_size(grid_size)
         risk_matrix = _np.zeros((ys, xs))
-        for n, cluster in enumerate(self.clusters):
+        if use_maximal_clusters:
+            clusters = self.clusters
+        else:
+            clusters = self.max_clusters
+        for n, cluster in enumerate(clusters):
             self._add_cluster(cluster, risk_matrix, grid_size,
                               len(self.clusters) - n - 1)
         return predictors.GridPredictionArray(grid_size, grid_size, risk_matrix,
@@ -616,3 +624,8 @@ class STSResult():
         """
         clusters = self.max_clusters if use_maximal_clusters else self.clusters
         return STSContinuousPrediction(clusters)
+
+
+#class GriddingProvider():
+#    """Base class for converting a cluster into a grid."""
+#    def add_cluster(self, cluster, )

@@ -24,6 +24,7 @@ import open_cp.gui.tk.tooltips as tooltips
 import numpy as np
 import datetime
 import enum
+import logging
 import open_cp.gui.tk.mtp as mtp
 
 _text = {
@@ -275,6 +276,7 @@ class STScan(predictor.Predictor):
             self._time_window = time_window
             self._timed_points = timed_points
             self._bin_length = time_bin_length
+            self._logger = logging.getLogger(predictor.PREDICTOR_LOGGER_NAME)
 
         def __call__(self, predict_time, length=None):
             self.predictor.data = self._timed_points
@@ -285,6 +287,8 @@ class STScan(predictor.Predictor):
             if self._bin_length is not None:
                 self.predictor.data = open_cp.stscan.bin_timestamps(self.predictor.data,
                     predict_time, self._bin_length)
+            self._logger.debug("Running task to make prediction for %s from %s points",
+                predict_time, self.predictor.data.events_before(predict_time).number_data_points)
             result = self.predictor.predict(time = predict_time)
             return result.grid_prediction(self.grid_size)
 

@@ -217,15 +217,19 @@ class AbstractSTScan():
         :param offset: The "end time" in generic units, from which the
           `timestamps` are subtracted.
         """
-        unique_coords = list(set( (x,y) for x,y in self.coords.T ))
+        self.write_to_satscan(filename, offset, self.coords, self.timestamps)
+
+    @staticmethod
+    def write_to_satscan(filename, offset, coords, timestamps):
+        unique_coords = list(set( (x,y) for x,y in coords.T ))
         with open(filename + ".geo", "w") as geofile:
             for i, (x,y) in enumerate(unique_coords):
                 print("{}\t{}\t{}".format(i+1, x, y), file=geofile)
 
-        unique_times = list(set( t for t in self.timestamps ))
+        unique_times = list(set( t for t in timestamps ))
         with open(filename + ".cas", "w") as casefile:
             for i, (t) in enumerate(unique_times):
-                pts = self.coords.T[self.timestamps == t]
+                pts = coords.T[timestamps == t]
                 pts = [ (x,y) for x,y in pts ]
                 import collections
                 c = collections.Counter(pts)
@@ -277,14 +281,18 @@ class STScanNumpy():
         self.timestamps = _np.asarray(timestamps)
         if len(self.timestamps) != self.coords.shape[1]:
             raise ValueError("Timestamps and Coordinates must be of same length.")
-        indicies = _np.argsort(self.timestamps)
-        self.timestamps = self.timestamps[indicies]
-        self.coords = self.coords[:,indicies]
+        self._sort_times_increasing()
         self.geographic_radius_limit = 100
         self.geographic_population_limit = 0.5
         self.time_max_interval = 28
         self.time_population_limit = 0.5
+        self._cache_N = 0
         
+    def _sort_times_increasing(self):
+        arg_sort = _np.argsort(self.timestamps)
+        self.timestamps = self.timestamps[arg_sort]
+        self.coords = self.coords[:,arg_sort]
+
     def make_time_ranges(self):
         """Compute the posssible time intervals.
         
@@ -331,11 +339,19 @@ class STScanNumpy():
         # uber_mask = space_masks[:,:,None] & time_masks[:,None,:]
         # actual = _np.sum(uber_mask, axis=0)
         x = _np.empty((space_masks.shape[1], time_masks.shape[1]))
+        # This is better, but still >20 times slower...
+        #for i, c in enumerate(time_counts):
+        #    x[:,i] = _np.sum(space_masks[:c,:], axis=0)
+        current_sum = _np.zeros(space_masks.shape[1])
+        current_column = 0
         for i, c in enumerate(time_counts):
-            x[:,i] = _np.sum(space_masks[:c,:], axis=0)
+            while current_column < c:
+                current_sum += space_masks[current_column,:]
+                current_column += 1
+            x[:,i] = current_sum
         return x
 
-    def faster_score_all(self):
+    def faster_score_all_new(self):
         """As :method:`score_all` but yields tuples (centre, distance_array,
         time_array, statistic_array)."""
         time_masks, time_counts, times = self.make_time_ranges()
@@ -344,12 +360,6 @@ class STScanNumpy():
             space_masks, space_counts, dists = self.find_discs(centre)
 
             actual = self._calc_actual(space_masks, time_masks, time_counts)
-            
-            # TODO: Remove this...
-            #uber_mask = space_masks[:,:,None] & time_masks[:,None,:]
-            #actual1 = _np.sum(uber_mask, axis=0)
-            #_np.testing.assert_allclose(actual, actual1)
-            
             expected = space_counts[:,None] * time_counts[None,:] / N
             _mask = (actual > 1) & (actual > expected)
             actual = _np.ma.array(actual, mask=~_mask)
@@ -372,6 +382,54 @@ class STScanNumpy():
         stat = actual * (_np.ma.log(actual) - _np.ma.log(expected))
         stat += (total - actual) * (_np.ma.log(total - actual) - _np.ma.log(total - expected))
         return stat
+
+    @staticmethod
+    def _calc_actual1(space_masks, time_masks, time_counts):
+        x = _np.empty((space_masks.shape[1], time_masks.shape[1]), dtype=_np.int)
+        current_sum = _np.zeros(space_masks.shape[1], dtype=_np.int)
+        current_column = 0
+        for i, c in enumerate(time_counts):
+            while current_column < c:
+                current_sum += space_masks[current_column,:]
+                current_column += 1
+            x[:,i] = current_sum
+        return x
+
+    def faster_score_all(self):
+        """As :method:`score_all` but yields tuples (centre, distance_array,
+        time_array, statistic_array)."""
+        time_masks, time_counts, times = self.make_time_ranges()
+        N = self.timestamps.shape[0]
+        for centre in self.coords.T:
+            space_masks, space_counts, dists = self.find_discs(centre)
+
+            actual = self._calc_actual1(space_masks, time_masks, time_counts)
+            
+            stcounts = space_counts[:,None] * time_counts[None,:]
+            _mask = (actual > 1) & (N * actual > stcounts)
+            stats = self._ma_statistics_lookup(space_counts, time_counts, stcounts, actual, _mask, N)
+            _mask1 = _np.any(_mask, axis=1)
+            if not _np.any(_mask1):
+                continue
+            m = _np.ma.argmax(stats, axis=1)[_mask1]
+            stats = stats[_mask1,:]
+            stats = stats[range(stats.shape[0]),m].data
+            used_dists = dists[_mask1]
+            used_times = times[m]
+
+            yield centre, used_dists, used_times, stats
+
+    def _ma_statistics_lookup(self, space_counts, time_counts, stcounts, actual, _mask, N):
+        # Faster version which uses lookup tables
+        if self._cache_N != N:
+            self._cache_N = N
+            self._log_lookup = _np.log(_np.array([1] + list(range(1,N+1))))
+            self._log_lookup2 = _np.log(_np.array([1] + list(range(1,N*N+1))))
+        sl = self._log_lookup[space_counts]
+        tl = self._log_lookup[time_counts]
+        y = actual * (self._log_lookup[actual] - sl[:,None] - tl[None,:])
+        yy = (N-actual) * (self._log_lookup[N-actual] - self._log_lookup2[N*N-stcounts])
+        return _np.ma.array(y + yy + N*_np.log(N), mask=~_mask)
 
     def faster_score_all_old(self):
         """As :method:`score_all` but yields tuples (centre, distance_array,
