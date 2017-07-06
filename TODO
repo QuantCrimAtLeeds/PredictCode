@@ -7,17 +7,19 @@
 
 # GUI
 
+- Finish testing hit_rate.py
+
+- Integrate into and test with the comparison
+
+- Add new "browse view" for results of the comparison
+
+- In the prediction browse view add ability to use a geometry clipper...
+
 - Predictors:
   - Do other predictors
   - Tests for the predictors (just test that the settings we _think_ we are applying get passed to the main `open_cp` code correctly.)
-
-- geo_clip:
-  - Use in the run_analysis code (see below...)
-
-- Add a new run stage after running the predictions to run comparisons.
-  - The geometry clip should be the first stage of this.
-  - Add a simple "hit rate" comparator as a "test" of this.
-- Add a new "view comparison" view (to parallel the "Run @ ..." button) to view this output
+  - Should we adjust the "samples" value when converting from a continuous to grid based prediction, based on the grid size,
+    to keep the total number of samples (per unit area) constant?
 
 - Session saving/loading
   - New dialog to select a recent session

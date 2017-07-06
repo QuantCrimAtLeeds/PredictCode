@@ -14,22 +14,40 @@ COMPARATOR_LOGGER_NAME = "__interactive_warning_logger__"
 # `run()` method returns list `(start_date, score_duration)`
 TYPE_TOP_LEVEL = 0
 
-
 # Adjust the prediction in some way
 # `make_tasks()` method returns :class:`AdjustTask` object(s)
 TYPE_ADJUST = 50
 
+# Compares the prediction to actual events
+# `make_tasks()` method returns :class:`AdjustTask` object(s)
+TYPE_COMPARE_TO_REAL = 100
+
+class CompareRealTask():
+    """Compares predictions against actual events."""
+
+    def __call__(self, grid_prediction, timed_points, predict_date, predict_length):
+        """Compare the prediction to what actually happened.
+
+        :param grid_prediction: The predicted "risk"
+        :param timed_points: The actual data
+        :param predict_date: The date the prediction is for
+        :param predict_length: The length of time the prediction is meant to be valid for
+        """
+        raise NotImplementedError()
+        
 
 class AdjustTask():
     """An `adjust` type of comparator should return one or more of these tasks."""
     
     def __call__(self, projector, grid_prediction):
-        """Process the grid based prediction is some way.
+        """Process the grid based prediction is some way.  For efficiency,
+        should also allow passing of a list of predictions.
         
         :param projector: The projector task used in to make this prediction.
           May be `None`.  Parameter can be ignored if it is not relevant to
           this task.
-        :param grid_prediction: The prediction to base the new prediction on.
+        :param grid_prediction: The prediction to base the new prediction on
+          (or an iterable).
         
         :return: A _new instance_ of a prediction, suitably modified.
         """

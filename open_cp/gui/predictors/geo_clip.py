@@ -149,20 +149,42 @@ class CropToGeometry(comparitor.Comparitor):
         def __init__(self, parent):
             self._parent = parent
         
+        @staticmethod
+        def assemble_sizes(grids):
+            out = dict()
+            for grid in grids:
+                key = (grid.xsize, grid.ysize, grid.xoffset % grid.xsize,
+                    grid.yoffset % grid.ysize)
+                if key not in out:
+                    out[key] = list()
+                out[key].append(grid)
+            return out
+
+        @staticmethod
+        def to_list(grids):
+            try:
+                return list(iter(grids))
+            except:
+                return [grids]
+
         def __call__(self, projector, grid_prediction):
+            grid_prediction = self.to_list(grid_prediction)
             geo = self._parent.run(projector)
             if geo is None:
                 return grid_prediction
-            grid = open_cp.data.Grid(grid_prediction.xsize, grid_prediction.ysize,
-                grid_prediction.xoffset, grid_prediction.yoffset)
-            masked_grid = open_cp.geometry.mask_grid_by_intersection(geo, grid)
-            new_pred = grid_prediction.new_extent(
-                xoffset=masked_grid.xoffset, yoffset=masked_grid.yoffset,
-                xextent=masked_grid.xextent, yextent=masked_grid.yextent)
-            print(new_pred.intensity_matrix)
-            new_pred.mask_with(masked_grid)
-            print(new_pred.intensity_matrix)
-            return new_pred
+            out = []
+            for ((xsize, ysize, xoffset, yoffset), preds) in self.assemble_sizes(grid_prediction).items():
+                grid = open_cp.data.Grid(xsize, ysize, xoffset, yoffset)
+                masked_grid = open_cp.geometry.mask_grid_by_intersection(geo, grid)
+                for pred in preds:
+                    new_pred = pred.new_extent(
+                        xoffset=masked_grid.xoffset, yoffset=masked_grid.yoffset,
+                        xextent=masked_grid.xextent, yextent=masked_grid.yextent)
+                    new_pred.mask_with(masked_grid)
+                    out.append(new_pred)
+            if len(grid_prediction) == 1:
+                return out[0]
+            return out
 
     def _proj_geo(self, proj):
         if self._frame is not None:

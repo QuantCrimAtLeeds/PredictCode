@@ -34,11 +34,11 @@ _text = {
     "log11" : "Unexpected error while running analysis: {}",
     "log12" : "Internal error, got: '{}'",
     "log13" : "All tasks collected, now running...",
+    "log14" : "Adjusting predictions for %s with projection %s...",
     "warning" : "Failed to complete analysis run",
     "warning1" : "Analysis run stopped early due to: {}",
     "cancel" : "Cancel tasks",
-    "cancel1" : "Do you want to cancel the runnnig tasks?",
-    
+    "cancel1" : "Do you want to cancel the running tasks?",
 }
 
 class RunAnalysisView(util.ModalWindow):

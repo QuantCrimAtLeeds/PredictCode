@@ -111,7 +111,8 @@ _text = {
     "r_load1" : "Please select a file to load old analysis run from",
     "r_load_fail" : "Failed to load old analysis file because: {}",
     "r_remove_tt" : "Forget about this run.  If this run has been saved, it will *not* be deleted from disk.",
-    
+    "comptt" : "Run the current 'comparison' methods on this prediction run",
+
 }
 
 class AnalysisView(tk.Frame):
@@ -368,9 +369,16 @@ class AnalysisView(tk.Frame):
             else:
                 save_button["image"] = self._save_icon
                 tooltips.ToolTipYellow(save_button, _text["r_runatsave_tt"])
+            comp_button = ttk.Button(frame, image = self._scale_icon,
+                command = lambda r=row : self._comparison(r))
+            comp_button.grid(row=0, column=3, padx=1, pady=1, sticky=tk.NSEW)
+            tooltips.ToolTipYellow(comp_button, _text["comptt"])
         ttk.Button(self._result_frame, text=_text["r_load"],
             command=self._load_saved_run).grid(
             row=row + 1, column=0, padx=1, pady=1, sticky=tk.NSEW)
+
+    def _comparison(self, run):
+        self._controller.run_comparison_for(run)
 
     def _remove_run(self, run):
         self._controller.remove_past_run(run)
@@ -435,6 +443,7 @@ class AnalysisView(tk.Frame):
         self._success_icon = ImageTk.PhotoImage(resources.success_icon)
         self._saved_icon = ImageTk.PhotoImage(PIL.Image.alpha_composite(
                 resources.save_icon, resources.success_icon))
+        self._scale_icon = ImageTk.PhotoImage(resources.justice_scale)
 
     def add_widgets(self):
         self._load_resources()

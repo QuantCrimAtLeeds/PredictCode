@@ -45,13 +45,13 @@ class RunComparison():
 
     def run(self):
         try:
-            self._model = RunComparisonModel(self, self.view, self.main_model)
+            self._model = RunComparisonModel(self, self.main_model)
             self._stage1()
-            self.view.wait_window(self.view)
         except:
-            # TODO: Does this actually work???
             self._msg_logger.exception(run_analysis_view._text["genfail1"])
+            self._logger.exception(run_analysis_view._text["genfail1"])
             self.view.done()
+        self.view.wait_window(self.view)
 
     @staticmethod
     def _chain_dict(dictionary):
@@ -61,14 +61,42 @@ class RunComparison():
 
     def _stage1(self):
         """Run any "adjustments" necessary."""
-        tasks = []
-        for adjust_name, adjust in self._chain_dict(self._model.adjust_tasks):
-            # TODO: Build _AdjustTask and add to `tasks`
-            pass
-        self._msg_logger.info(run_analysis_view._text["log7"], len(tasks))
-        self._off_thread = _RunnerThreadOne(tasks, self)
-        # TODO: Should eventually be `_stage2` I guess
-        locator.get("pool").submit(self._off_thread, self._finished)
+        tasks = list(self._chain_dict(self._model.adjust_tasks))
+        task = lambda : self._run_adjust_tasks(tasks)
+        locator.get("pool").submit(task, self._finished)
+
+    def to_msg_logger(self, msg, *args, level=logging.DEBUG):
+        locator.get("pool").submit_gui_task(lambda : 
+            self._msg_logger.log(level, msg, *args))
+
+
+    def _run_adjust_tasks(self, tasks):
+        projection_keys = set(pred.key.projection for pred in self.result.results)
+        projection_lookup = {key : self._model.get_projector(key)
+            for key in projection_keys}
+        for key, proj in projection_lookup.items():
+            if proj is None:
+                self.to_msg_logger("Failed to find current coordinate projector for '%s'",
+                    key, level=logging.WARNING)
+
+        preds_by_projection = dict()
+        for pred in self.result.results:
+            if pred.key.projection not in preds_by_projection:
+                preds_by_projection[key] = list()
+            preds_by_projection[key].append(pred)
+
+        out = []
+        for adjust_name, task in tasks:
+            for key, proj in projection_lookup.items():
+                self.to_msg_logger(run_analysis_view._text["log14"], adjust_name,
+                    key, level=logging.INFO)
+                preds = preds_by_projection[key]
+                new_preds = task(proj, [p.prediction for p in preds])
+                for p, new_pred in zip(preds, new_preds):
+                    result = run_analysis.PredictionResult(p, new_pred)
+                    out.append((adjust_name, result))
+        self.to_msg_logger("Done...")
+        return out
 
     def _finished(self, out=None):
         self.view.done()
@@ -91,31 +119,22 @@ class RunComparisonModel():
     :param view: :class:`RunAnalysisView` instance
     :param main_model: :class:`analysis.Model` instance
     """
-    def __init__(self, controller, view, main_model):
+    def __init__(self, controller, main_model):
         self.controller = controller
-        self.view = view
         self.main_model = main_model
         self._msg_logger = predictors.get_logger()
 
+        self._run_analysis_model = run_analysis.RunAnalysisModel(self, main_model)
         self._build_adjusts()
+
+    def notify_model_message(*args, **kwargs):
+        # Ignore as don't want to log from analysis model
+        pass
 
     def _build_adjusts(self):
         self._adjust_tasks = dict()
         for adjust in self.comparators.comparators_of_type(predictors.comparitor.TYPE_ADJUST):
             self._adjust_tasks[adjust.pprint()] = adjust.make_tasks()
-
-    def _build_projectors(self):
-        if self.main_model.coord_type == CoordType.XY:
-            projector = predictors.lonlat.PassThrough(self.main_model)
-            projectors = [projector]
-        else:
-            projectors = list(self.predictors.predictors_of_type(
-                predictors.predictor._TYPE_COORD_PROJ))
-        
-        self._projector_tasks = dict()
-        for projector in projectors:
-            tasks = projector.make_tasks()
-            self._projector_tasks[projector.pprint()] = tasks
 
     def get_projector(self, key_string):
         """Try to find a projector task given the "name" string.
@@ -123,10 +142,8 @@ class RunComparisonModel():
         :return: `None` is not found, or a callable object which performs the
           projection.
         """
-        if not hasattr(self, "_projector_tasks"):
-            self._build_projectors()
-        if key_string in self._projector_tasks:
-            return self._projector_tasks[key_string][0]
+        if key_string in self._run_analysis_model.projectors:
+            return self._run_analysis_model.projectors[key_string][0]
         return None
 
     @property

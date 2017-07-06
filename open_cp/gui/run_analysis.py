@@ -38,7 +38,7 @@ class RunAnalysis():
 
     def run(self):
         try:
-            self._model = RunAnalysisModel(self, self.view, self.main_model)
+            self._model = RunAnalysisModel(self, self.main_model)
             self._run_tasks()
             self.view.wait_window(self.view)
         except:
@@ -91,6 +91,9 @@ class RunAnalysis():
 
     def end_progress(self):
         locator.get("pool").submit_gui_task(lambda : self.view.stop_progress_bar())
+
+    def notify_model_message(self, msg, *args, level=logging.DEBUG):
+        self.to_msg_logger(msg, args, level=level)
 
     def _finished(self, out=None):
         self.view.done()
@@ -164,11 +167,12 @@ class TaskKey():
     :param pred_type: The prediction algorithm (etc.) used.
     :param pred_date: The prediction date.
     """
-    def __init__(self, projection, grid, pred_type, pred_date):
+    def __init__(self, projection, grid, pred_type, pred_date, pred_length):
         self._projection = projection
         self._grid = grid
         self._pred_type = pred_type
         self._pred_date = pred_date
+        self._pred_length = pred_length
 
     @property
     def projection(self):
@@ -186,9 +190,14 @@ class TaskKey():
     def prediction_date(self):
         return self._pred_date
 
+    @property
+    def prediction_length(self):
+        return self._pred_length
+
     def __repr__(self):
-        return "projection: {}, grid: {}, prediction_type: {}, prediction_date: {}".format(
-            self.projection, self.grid, self.prediction_type, self.prediction_date)
+        return "projection: {}, grid: {}, prediction_type: {}, prediction_date: {}, prediction_length: {}".format(
+            self.projection, self.grid, self.prediction_type, self.prediction_date,
+            self.prediction_length)
 
 
 class RunAnalysisModel():
@@ -202,11 +211,9 @@ class RunAnalysisModel():
     :param view: :class:`RunAnalysisView` instance
     :param main_model: :class:`analysis.Model` instance
     """
-    def __init__(self, controller, view, main_model):
+    def __init__(self, controller, main_model):
         self.controller = controller
-        self.view = view
         self.main_model = main_model
-        self._msg_logger = predictors.get_logger()
 
         self._build_projectors()
         self._build_grids()
@@ -217,27 +224,36 @@ class RunAnalysisModel():
         self._grid_pred_tasks = dict()
         for pred in self.predictors.predictors_of_type(predictors.predictor._TYPE_GRID_PREDICTOR):
             self._grid_pred_tasks[pred.pprint()] = pred.make_tasks()
-        self._msg_logger.info(run_analysis_view._text["log1"],
-            sum( len(li) for li in self._grid_pred_tasks.values() ) )
+        self.controller.notify_model_message(run_analysis_view._text["log1"],
+            sum( len(li) for li in self._grid_pred_tasks.values() ),
+            level=logging.INFO)
 
     def _build_date_ranges(self):
-        self.predict_tasks = []
+        self._predict_tasks = []
         for top in self.comparators.comparators_of_type(predictors.comparitor.TYPE_TOP_LEVEL):
-            self.predict_tasks.extend(top.run())
-        self._msg_logger.info(run_analysis_view._text["log2"], len(self.predict_tasks))
+            self._predict_tasks.extend(top.run())
+        self.controller.notify_model_message(run_analysis_view._text["log2"],
+            len(self.predict_tasks), level=logging.INFO)
         if len(self.predict_tasks) > 0:
-            self._msg_logger.debug(run_analysis_view._text["log3"],
-                self.predict_tasks[0][0].strftime(run_analysis_view._text["dtfmt"]))
-            self._msg_logger.debug(run_analysis_view._text["log4"],
-                self.predict_tasks[-1][0].strftime(run_analysis_view._text["dtfmt"]))
+            self.controller.notify_model_message(run_analysis_view._text["log3"],
+                self.predict_tasks[0][0].strftime(run_analysis_view._text["dtfmt"]),
+                level=logging.INFO)
+            self.controller.notify_model_message(run_analysis_view._text["log4"],
+                self.predict_tasks[-1][0].strftime(run_analysis_view._text["dtfmt"]),
+                level=logging.INFO)
+
+    @property
+    def predict_tasks(self):
+        """List of pairs `(start_date, length)`"""
+        return self._predict_tasks
 
     def _build_grids(self):
         self._grid_tasks = dict()
         for grid in self.predictors.predictors_of_type(predictors.predictor._TYPE_GRID):
             tasks = grid.make_tasks()
             self._grid_tasks[grid.pprint()] = tasks
-        self._msg_logger.info(run_analysis_view._text["log5"],
-            sum( len(li) for li in self._grid_tasks.values() ) )
+        self.controller.notify_model_message(run_analysis_view._text["log5"],
+            sum( len(li) for li in self._grid_tasks.values() ), level=logging.INFO )
 
     def _build_projectors(self):
         if self.main_model.coord_type == CoordType.XY:
@@ -253,7 +269,8 @@ class RunAnalysisModel():
             tasks = projector.make_tasks()
             self._projector_tasks[projector.pprint()] = tasks
             count += len(tasks)
-        self._msg_logger.info(run_analysis_view._text["log6"], count)
+        self.controller.notify_model_message(run_analysis_view._text["log6"],
+            count, level=logging.INFO)
 
     @property
     def grid_prediction_tasks(self):
@@ -398,7 +415,7 @@ class _RunnerThread(BaseRunner):
         for dr in self._date_ranges:
             new_task = self.StartLengthTask(task=task, start=dr[0], length=dr[1])
             k = TaskKey(projection=key.projection, grid=key.grid,
-                    pred_type=key.type, pred_date=dr[0] )
+                    pred_type=key.type, pred_date=dr[0], pred_length=dr[1] )
             yield self.RunPredTask(k, new_task)
 
     class StartLengthTask():

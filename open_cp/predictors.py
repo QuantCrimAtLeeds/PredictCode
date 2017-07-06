@@ -123,18 +123,12 @@ class GridPredictionArray(GridPrediction):
             raise ValueError("Must change y offset by multiple of y size")
         xmove = (xoffset - self.xoffset) // self.xsize
         ymove = (yoffset - self.yoffset) // self.ysize
-        new_matrix = _np.empty((yextent, xextent))
-        for y in range(yextent):
-            for x in range(xextent):
-                xx = x + xmove
-                yy = y + ymove
-                if xx < 0 or xx >= self.xextent:
-                    v = 0
-                elif yy < 0 or yy >= self.yextent:
-                    v = 0
-                else:
-                    v = self.intensity_matrix[yy,xx]
-                new_matrix[y,x] = v
+        xlookup = _np.arange(xextent) + xmove
+        xlookup = _np.broadcast_to(xlookup[None,:], (yextent, xextent))
+        ylookup = _np.arange(yextent) + ymove
+        ylookup = _np.broadcast_to(ylookup[:,None], (yextent, xextent))
+        mask = ~((xlookup < 0) | (xlookup >= self.xextent) | (ylookup < 0) | (ylookup >= self.yextent))
+        new_matrix = self.intensity_matrix[ylookup * mask, xlookup * mask] * mask
         return GridPredictionArray(xsize=self.xsize, ysize=self.ysize,
             xoffset=xoffset, yoffset=yoffset, matrix=new_matrix)
 

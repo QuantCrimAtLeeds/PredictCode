@@ -9,7 +9,7 @@ import geopandas as gpd
 import numpy as np
 
 import open_cp.gui.predictors.geo_clip as geo_clip
-#import open_cp.gui.common as common
+from . import helper
 import open_cp.predictors
 
 @pytest.fixture
@@ -57,6 +57,9 @@ def test_build_CropToGeometry(comp):
     data = comp.to_dict()
     comp.from_dict(data)
     assert comp.settings_string == old
+
+def test_serialise(comp):
+    helper.serialise(comp)
 
 def test_run_no_settings(comp):
     assert comp.run(None) is None
@@ -150,7 +153,7 @@ def test_make_tasks(comp, geojson_filename, grid_prediction):
     assert (new_pred.xoffset, new_pred.yoffset) == (-9, -3)
     assert (new_pred.xextent, new_pred.yextent) == (2, 1)
     np.testing.assert_allclose(new_pred.intensity_matrix.data, [[0,0]])
-    np.testing.assert_allclose(new_pred.intensity_matrix.mask, [[False,True]])
+    np.testing.assert_allclose(new_pred.intensity_matrix.mask, [[False,False]])
 
     assert grid_prediction.xsize == 10
     assert grid_prediction.ysize == 5
@@ -172,5 +175,4 @@ def test_make_tasks2(comp, geojson_filename, grid_prediction):
     assert (new_pred.xextent, new_pred.yextent) == (1, 1)
     np.testing.assert_allclose(new_pred.intensity_matrix.data, [[1]])
     np.testing.assert_allclose(new_pred.intensity_matrix.mask, [[False]])
-    
     

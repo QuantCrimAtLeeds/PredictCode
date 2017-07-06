@@ -64,7 +64,7 @@ def test_controller_runs(runAnalysis, log_queue, locator_mock):
     print_log(log_queue)
 
 def test_model(runAnalysis):
-    model = run_analysis.RunAnalysisModel(runAnalysis, None, runAnalysis.main_model)
+    model = run_analysis.RunAnalysisModel(runAnalysis, runAnalysis.main_model)
 
     assert len(model.projectors) == 1
     assert len(model.projectors['Coordinates already projected']) == 1
@@ -94,7 +94,7 @@ def test_controller_tasks(runAnalysis, log_queue, locator_mock):
     off_thread = get_thread(locator_mock)
     off_thread()
 
-    assert str(off_thread.results[0].key) == "projection: Coordinates already projected, grid: Grid 100x100m @ (0m, 0m), prediction_type: Counting Grid naive predictor, prediction_date: 2017-05-10 00:00:00"
+    assert str(off_thread.results[0].key) == "projection: Coordinates already projected, grid: Grid 100x100m @ (0m, 0m), prediction_type: Counting Grid naive predictor, prediction_date: 2017-05-10 00:00:00, prediction_length: 1 day, 0:00:00"
     assert isinstance(off_thread.results[0].prediction, open_cp.predictors.GridPredictionArray)
 
 def test_controller_type_of_tasks(runAnalysis, log_queue, locator_mock, pool):

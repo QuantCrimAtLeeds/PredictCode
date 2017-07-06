@@ -107,18 +107,19 @@ def mask_grid_by_intersection(geometry, grid):
     width = xend - xstart + 1
     height = yend - ystart + 1
 
-    mask = _np.zeros((height, width), dtype=_np.bool)
+    mask = _np.empty((height, width), dtype=_np.bool)
     xo = grid.xoffset + xstart * grid.xsize
     yo = grid.yoffset + ystart * grid.ysize
+    import shapely.prepared
+    geo = shapely.prepared.prep(geometry)
     for y in range(height):
         yy = yo + y * grid.ysize
-        for x in range(width):
-            xx = xo + x * grid.xsize
-            poly = _geometry.Polygon([[xx, yy], [xx + grid.xsize, yy],
-                    [xx + grid.xsize, yy + grid.ysize], [xx, yy + grid.ysize]])
-            poly = poly.intersection(geometry)
-            if poly.is_empty or poly.area == 0:
-                mask[y][x] = True
+        polys = [_geometry.Polygon([[xo + x * grid.xsize, yy],
+                    [xo + x * grid.xsize + grid.xsize, yy],
+                    [xo + x * grid.xsize + grid.xsize, yy + grid.ysize],
+                    [xo + x * grid.xsize, yy + grid.ysize]])
+                for x in range(width)]
+        mask[y] = _np.asarray([not geo.intersects(poly) for poly in polys])
     
     return _data.MaskedGrid(grid.xsize, grid.ysize, xo, yo, mask)
 

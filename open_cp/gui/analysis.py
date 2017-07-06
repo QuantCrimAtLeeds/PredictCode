@@ -19,6 +19,7 @@ import open_cp.gui.predictors as predictors
 import open_cp.gui.tk.analysis_view as analysis_view
 from open_cp.gui.import_file_model import CoordType
 import open_cp.gui.run_analysis as run_analysis
+import open_cp.gui.run_comparison as run_comparison
 import open_cp.gui.browse_analysis as browse_analysis
 import open_cp.gui.locator as locator
 
@@ -166,6 +167,10 @@ class Analysis():
         result = self.model.analysis_runs[run]
         browse_analysis.BrowseAnalysis(self._root, result).run()
         
+    def run_comparison_for(self, run):
+        result = self.model.analysis_runs[run]
+        run_comparison.RunComparison(self.view, self, result).run()
+
     def remove_past_run(self, run):
         self.model.remove_analysis_run(run)
         self.view.update_run_analysis_results()
