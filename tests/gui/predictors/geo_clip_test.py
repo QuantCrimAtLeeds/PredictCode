@@ -9,7 +9,8 @@ import geopandas as gpd
 import numpy as np
 
 import open_cp.gui.predictors.geo_clip as geo_clip
-import open_cp.gui.common as common
+#import open_cp.gui.common as common
+import open_cp.predictors
 
 @pytest.fixture
 def geojson_filename():
@@ -121,3 +122,55 @@ def test_epsg_and_projector(comp, geojson_filename, model):
     geo = comp.projected_geometry()
     np.testing.assert_allclose(np.asarray(geo.exterior.coords),
         [[0,0], [0,1], [1,1], [0,0]])
+
+@pytest.fixture
+def grid_prediction():
+    matrix = [[1,2,3,4,5], [6,7,8,9,10], [11,12,13,14,15]]
+    matrix = np.array(matrix)
+    return open_cp.predictors.GridPredictionArray(10, 5, matrix, 1, 2)
+
+def test_make_tasks(comp, geojson_filename, grid_prediction):
+    comp.load(geojson_filename)
+
+    def proj(x,y):
+        return x, y
+    
+    tasks = comp.make_tasks()
+    assert len(tasks) == 1
+    
+    assert grid_prediction.xsize == 10
+    assert grid_prediction.ysize == 5
+    assert grid_prediction.xoffset == 1
+    assert grid_prediction.yoffset == 2
+    assert grid_prediction.xextent == 5
+    assert grid_prediction.yextent == 3
+    
+    new_pred = tasks[0](proj, grid_prediction)
+    assert (new_pred.xsize, new_pred.ysize) == (10, 5)
+    assert (new_pred.xoffset, new_pred.yoffset) == (-9, -3)
+    assert (new_pred.xextent, new_pred.yextent) == (2, 1)
+    np.testing.assert_allclose(new_pred.intensity_matrix.data, [[0,0]])
+    np.testing.assert_allclose(new_pred.intensity_matrix.mask, [[False,True]])
+
+    assert grid_prediction.xsize == 10
+    assert grid_prediction.ysize == 5
+    assert grid_prediction.xoffset == 1
+    assert grid_prediction.yoffset == 2
+    assert grid_prediction.xextent == 5
+    assert grid_prediction.yextent == 3
+    
+def test_make_tasks2(comp, geojson_filename, grid_prediction):
+    comp.load(geojson_filename)
+
+    def proj(x,y):
+        return x+5, y+3
+    
+    tasks = comp.make_tasks()
+    new_pred = tasks[0](proj, grid_prediction)
+    assert (new_pred.xsize, new_pred.ysize) == (10, 5)
+    assert (new_pred.xoffset, new_pred.yoffset) == (1, 2)
+    assert (new_pred.xextent, new_pred.yextent) == (1, 1)
+    np.testing.assert_allclose(new_pred.intensity_matrix.data, [[1]])
+    np.testing.assert_allclose(new_pred.intensity_matrix.mask, [[False]])
+    
+    

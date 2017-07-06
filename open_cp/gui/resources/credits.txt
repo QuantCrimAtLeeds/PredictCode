@@ -4,5 +4,6 @@ Image credits:
 - edit.png : Ditto
 - save.png : Ditto
 - success.png : Ditto
+- justice-scale.png : Ditto
 
 - app_icon : Output of open_cp itself

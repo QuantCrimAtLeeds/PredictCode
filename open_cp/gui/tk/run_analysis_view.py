@@ -1,6 +1,8 @@
 """
 run_analysis_view
 ~~~~~~~~~~~~~~~~~
+
+View for both `run_analysis` and `run_comparison`.
 """
 
 import tkinter as tk
@@ -9,15 +11,16 @@ import tkinter.messagebox as messagebox
 import open_cp.gui.tk.util as util
 import open_cp.gui.tk.richtext as richtext
 import open_cp.gui.predictors as predictors
-import open_cp.gui.locator as locator
 import queue, logging
 
 _text = {
     "title" : "Running analysis",
+    "title2" : "Running comparisons",
     "okay" : "Okay",
     "cancel" : "Cancel",
     "dtfmt" : "%a %d %b %Y",
     "genfail" : "Failed to build RunAnlaysisModel",
+    "genfail1" : "Failed to build RunComparisonModel",
     "log1" : "Constructed %s prediction task(s)",
     "log2" : "Number of days to predict for and score: %s",
     "log3" : "Starting from %s",
@@ -39,12 +42,11 @@ _text = {
 }
 
 class RunAnalysisView(util.ModalWindow):
-    def __init__(self, parent, controller):
+    def __init__(self, parent, controller, title=_text["title"]):
         self._controller = controller
-        super().__init__(parent, _text["title"], resize="wh")
+        super().__init__(parent, title, resize="wh")
         self.set_size_percentage(70, 50)
         self._formatter = logging.Formatter("{asctime} {levelname} : {message}", style="{")
-        self._poll_task()
         self.protocol("WM_DELETE_WINDOW", self._close)
         
     def add_widgets(self):
@@ -63,6 +65,7 @@ class RunAnalysisView(util.ModalWindow):
         self._cancel_button = ttk.Button(self._bottom_frame, text=_text["cancel"], command=self._cancel)
         self._cancel_button.grid(row=0, column=1, padx=5, pady=3, ipadx=20)
         self._done = False
+        self._poll_task()
 
     def done(self):
         """Set the okay button as pressable."""

@@ -29,7 +29,8 @@ import open_cp.gui.tk.tooltips as tooltips
 import open_cp.gui.tk.richtext as richtext
 import open_cp.gui.funcs as funcs
 import open_cp.gui.tk.mtp as mtp
-import functools
+import open_cp.geometry
+import open_cp.data
 
 _logger = logging.getLogger(__name__)
 
@@ -140,6 +141,28 @@ class CropToGeometry(comparitor.Comparitor):
         if projector is not None:
             return self._proj_geo(projector)
         return self.geometry()
+
+    def make_tasks(self):
+        return [self.Task(self)]
+        
+    class Task(comparitor.AdjustTask):
+        def __init__(self, parent):
+            self._parent = parent
+        
+        def __call__(self, projector, grid_prediction):
+            geo = self._parent.run(projector)
+            if geo is None:
+                return grid_prediction
+            grid = open_cp.data.Grid(grid_prediction.xsize, grid_prediction.ysize,
+                grid_prediction.xoffset, grid_prediction.yoffset)
+            masked_grid = open_cp.geometry.mask_grid_by_intersection(geo, grid)
+            new_pred = grid_prediction.new_extent(
+                xoffset=masked_grid.xoffset, yoffset=masked_grid.yoffset,
+                xextent=masked_grid.xextent, yextent=masked_grid.yextent)
+            print(new_pred.intensity_matrix)
+            new_pred.mask_with(masked_grid)
+            print(new_pred.intensity_matrix)
+            return new_pred
 
     def _proj_geo(self, proj):
         if self._frame is not None:

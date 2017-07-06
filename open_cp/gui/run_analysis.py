@@ -192,7 +192,7 @@ class TaskKey():
 
 
 class RunAnalysisModel():
-    """The model for running an analysis.  Constructs lists:
+    """The model for running an analysis.  Constructs lists/dicts:
       - :attr:`projector_tasks` Tasks to project coordinates
       - :attr:`grid_tasks` Tasks to lay a grid over the data
       - :attr:`predict_tasks` Pairs `(start_date, score_length)`
@@ -206,7 +206,7 @@ class RunAnalysisModel():
         self.controller = controller
         self.view = view
         self.main_model = main_model
-        self._logger = predictors.get_logger()
+        self._msg_logger = predictors.get_logger()
 
         self._build_projectors()
         self._build_grids()
@@ -217,18 +217,18 @@ class RunAnalysisModel():
         self._grid_pred_tasks = dict()
         for pred in self.predictors.predictors_of_type(predictors.predictor._TYPE_GRID_PREDICTOR):
             self._grid_pred_tasks[pred.pprint()] = pred.make_tasks()
-        self._logger.info(run_analysis_view._text["log1"],
+        self._msg_logger.info(run_analysis_view._text["log1"],
             sum( len(li) for li in self._grid_pred_tasks.values() ) )
 
     def _build_date_ranges(self):
         self.predict_tasks = []
         for top in self.comparators.comparators_of_type(predictors.comparitor.TYPE_TOP_LEVEL):
             self.predict_tasks.extend(top.run())
-        self._logger.info(run_analysis_view._text["log2"], len(self.predict_tasks))
+        self._msg_logger.info(run_analysis_view._text["log2"], len(self.predict_tasks))
         if len(self.predict_tasks) > 0:
-            self._logger.debug(run_analysis_view._text["log3"],
+            self._msg_logger.debug(run_analysis_view._text["log3"],
                 self.predict_tasks[0][0].strftime(run_analysis_view._text["dtfmt"]))
-            self._logger.debug(run_analysis_view._text["log4"],
+            self._msg_logger.debug(run_analysis_view._text["log4"],
                 self.predict_tasks[-1][0].strftime(run_analysis_view._text["dtfmt"]))
 
     def _build_grids(self):
@@ -236,7 +236,7 @@ class RunAnalysisModel():
         for grid in self.predictors.predictors_of_type(predictors.predictor._TYPE_GRID):
             tasks = grid.make_tasks()
             self._grid_tasks[grid.pprint()] = tasks
-        self._logger.info(run_analysis_view._text["log5"],
+        self._msg_logger.info(run_analysis_view._text["log5"],
             sum( len(li) for li in self._grid_tasks.values() ) )
 
     def _build_projectors(self):
@@ -253,7 +253,7 @@ class RunAnalysisModel():
             tasks = projector.make_tasks()
             self._projector_tasks[projector.pprint()] = tasks
             count += len(tasks)
-        self._logger.info(run_analysis_view._text["log6"], count)
+        self._msg_logger.info(run_analysis_view._text["log6"], count)
 
     @property
     def grid_prediction_tasks(self):
@@ -279,27 +279,24 @@ class RunAnalysisModel():
         return self.main_model.comparison_model
 
 
-class _RunnerThread():
+class BaseRunner():
+    """Abstract base class which runs "tasks" and communicates with a
+    "controller" to show progress.
+    
     """
-    :param grid_prediction_tasks: Iterable giving callables which when run
-        return instances of :class:`SingleGridPredictor`.
-    :param predict_tasks: Iterable of pairs `(start_time, score_length)`
-    """
-    def __init__(self, grid_prediction_tasks, predict_tasks, controller):
-        self._tasks = list(grid_prediction_tasks)
-        self._date_ranges = list(predict_tasks)
+    def __init__(self, controller):
         self._executor = pool.PoolExecutor()
         self._results = []
         self._controller = controller
         self._cancel_queue = queue.Queue()
 
     def __call__(self):
-        """To be run off-thread"""
+        """To be run off the main GUI thread"""
         self._controller.start_progress()
         self._controller.to_msg_logger(run_analysis_view._text["log9"])
         self._executor.start()
         try:
-            tasks = self._make_tasks()
+            tasks = self.make_tasks()
             self._controller.to_msg_logger(run_analysis_view._text["log13"])
             futures = [ self._executor.submit(t) for t in tasks if t.off_process ]
             on_thread_tasks = [t for t in tasks if not t.off_process]
@@ -343,11 +340,46 @@ class _RunnerThread():
 
     @property
     def results(self):
-        """Array of :class:`PredictionResult` instances which will be populated
-        once the task has been run."""
         return self._results
 
-    def _make_tasks(self):
+    def make_tasks(self):
+        """To be over-riden in a sub-class.  Should return a list of
+        :class:`RunPredTask` instances."""
+        raise NotImplementedError()
+    
+    class RunPredTask(pool.Task):
+        """Wraps a `key` and `task`.  The task should have an attribute
+        :attr:`off_process` which is `True` if and only if we should run in
+        another process.
+        """
+        def __init__(self, key, task):
+            super().__init__(key)
+            self._task = task
+
+        @property
+        def off_process(self):
+            return self._task.off_process
+
+        def __call__(self):
+            return self._task()
+
+class _RunnerThread(BaseRunner):
+    """Constructs the tasks to run.  Essentially forms the cartesian product
+    of the prediction tasks with the date ranges.
+    
+    The `result` will be :class:`PredictionResult` instances.
+    
+    :param grid_prediction_tasks: Iterable giving callables which when run
+        return instances of :class:`SingleGridPredictor`.
+    :param predict_tasks: Iterable of pairs `(start_time, score_length)`
+    :param controller: The :class:`RunAnalysis` instance
+    """
+    def __init__(self, grid_prediction_tasks, predict_tasks, controller):
+        super().__init__(controller)
+        self._tasks = list(grid_prediction_tasks)
+        self._date_ranges = list(predict_tasks)
+
+    def make_tasks(self):
         tasks = []
         futures = []
         for task in self._tasks:
@@ -382,14 +414,3 @@ class _RunnerThread():
         def off_process(self):
             return self.task.off_process
 
-    class RunPredTask(pool.Task):
-        def __init__(self, key, task):
-            super().__init__(key)
-            self._task = task
-
-        @property
-        def off_process(self):
-            return self._task.off_process
-
-        def __call__(self):
-            return self._task()

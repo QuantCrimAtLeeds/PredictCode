@@ -36,7 +36,7 @@ def test_STScan_subtask(model, project_task, analysis_model, grid_task):
     pred_mock.predict.assert_called_with(time=predict_date)
     
     result = pred_mock.predict.return_value
-    result.grid_prediction.assert_called_with(50)
+    result.grid_prediction.assert_called_with(50, use_maximal_clusters=False)
     assert prediction is result.grid_prediction.return_value
 
 @mock.patch("open_cp.stscan.STSTrainer")
@@ -155,3 +155,20 @@ def test_STScan_quant_both(model, project_task, analysis_model, grid_task):
         np.datetime64("2017-05-21T13:00"), np.datetime64("2017-05-21T13:00")])
     np.testing.assert_array_equal(pred_mock.data.xcoords, [0,0,0])
     np.testing.assert_array_equal(pred_mock.data.ycoords, [10,10,10])
+
+@mock.patch("open_cp.stscan.STSTrainer")
+def test_STScan_max_clusters(model, project_task, analysis_model, grid_task):
+    provider = stscan.STScan(model)
+    provider.cluster_option = 2
+
+    assert provider.settings_string == "geo(50%/3000m) time(50%/60days) max"
+    data = provider.to_dict()
+    json_str = json.dumps(data)
+    provider.from_dict(json.loads(json_str))
+    assert provider.settings_string == "geo(50%/3000m) time(50%/60days) max"
+
+    subtask = standard_calls(provider, project_task, analysis_model, grid_task)
+    subtask(datetime.datetime(2017,5,21,13,0))
+    pred_mock = open_cp.stscan.STSTrainer.return_value
+    result = pred_mock.predict.return_value
+    result.grid_prediction.assert_called_with(50, use_maximal_clusters=True)

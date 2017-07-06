@@ -15,7 +15,6 @@ _logger = _logging.getLogger(__name__)
 try:
     import shapely.geometry as _geometry
 except Exception:
-    import logging
     _logger.error("Failed to import `shapely`.")
     _geometry = None
 

@@ -87,6 +87,52 @@ def test_GridPredictionArray_mesh_data():
     np.testing.assert_allclose( xcs, [0, 10, 20, 30] )
     np.testing.assert_allclose( ycs, [0, 10, 20] )
 
+def test_GridPredictionArray_clone():
+    matrix = np.array([[1,2,3], [4,5,6]])
+    gpa = testmod.GridPredictionArray(5, 10, matrix, 1, 2)
+    cl = gpa.clone()
+    assert (gpa.xoffset, gpa.yoffset) == (cl.xoffset, cl.yoffset)
+    assert (gpa.xextent, gpa.yextent) == (cl.xextent, cl.yextent)
+    assert (gpa.xsize, gpa.ysize) == (cl.xsize, cl.ysize)
+    np.testing.assert_allclose(gpa.intensity_matrix, cl.intensity_matrix)
+    cl.intensity_matrix[0] = [7,8,9]
+    np.testing.assert_allclose(gpa.intensity_matrix, [[1,2,3],[4,5,6]])
+    np.testing.assert_allclose(cl.intensity_matrix, [[7,8,9],[4,5,6]])
+
+def test_GridPredictionArray_masked_clone():
+    mask = np.array([[True, True, False], [False, False, True]])
+    matrix = np.ma.masked_array([[1,2,3], [4,5,6]], mask=mask)
+    gpa = testmod.GridPredictionArray(5, 10, matrix, 1, 2)
+    cl = gpa.clone()
+    assert (gpa.xoffset, gpa.yoffset) == (cl.xoffset, cl.yoffset)
+    assert (gpa.xextent, gpa.yextent) == (cl.xextent, cl.yextent)
+    assert (gpa.xsize, gpa.ysize) == (cl.xsize, cl.ysize)
+    np.testing.assert_allclose(gpa.intensity_matrix, cl.intensity_matrix)
+    cl.intensity_matrix[0] = [7,8,9]
+    cl.intensity_matrix.mask[0] = [True, True, False]
+    cl.intensity_matrix.mask[1,1] = True
+    np.testing.assert_allclose(gpa.intensity_matrix, [[1,2,3],[4,5,6]])
+    np.testing.assert_allclose(cl.intensity_matrix, [[7,8,9],[4,5,6]])
+    np.testing.assert_equal(gpa.intensity_matrix.mask, [[True, True, False], [False, False, True]])
+    np.testing.assert_equal(cl.intensity_matrix.mask, [[True, True, False], [False, True, True]])
+
+def test_GridPredictionArray_new_extent():
+    matrix = np.array([[1,2,3], [4,5,6]])
+    gpa = testmod.GridPredictionArray(5, 10, matrix, 1, 2)
+
+    cl = gpa.new_extent(6, 12, 3, 4)    
+    assert (gpa.xsize, gpa.ysize) == (cl.xsize, cl.ysize)
+    assert (cl.xoffset, cl.yoffset) == (6, 12)
+    assert (cl.xextent, cl.yextent) == (3, 4)
+    np.testing.assert_allclose(cl.intensity_matrix, [
+        [5, 6, 0], [0,0,0], [0,0,0], [0,0,0] ])
+    np.testing.assert_allclose(gpa.intensity_matrix, [[1,2,3], [4,5,6]])
+
+    with pytest.raises(ValueError):
+        gpa.new_extent(5, 12, 3, 4)
+    with pytest.raises(ValueError):
+        gpa.new_extent(6, 11, 3, 4)
+
 def test_GridPredictionArray_percentiles():
     matrix = np.array([[4,6,6], [1,4,4]])
     gpa = testmod.GridPredictionArray(10, 10, matrix)
@@ -95,8 +141,6 @@ def test_GridPredictionArray_percentiles():
     p = 1/6
     np.testing.assert_allclose( pm[0], [4*p,1,1] )
     np.testing.assert_allclose( pm[1], [p,4*p,4*p] )
-
-# TODO: Test creation from ContinuousPrediction instance
 
 @patch("numpy.random.random")
 def test_ContinuousPrediction_samples_to_grid(random_mock):

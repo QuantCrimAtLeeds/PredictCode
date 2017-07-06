@@ -106,10 +106,37 @@ class GridPredictionArray(GridPrediction):
 
     def clone(self):
         """Return a new instance with the same data."""
-        matrix = _np.ma.masked_array(self._matrix)
+        matrix = _np.ma.masked_array(self._matrix, copy=True)
         copy = GridPredictionArray(xsize=self.xsize, ysize=self.ysize, xoffset=self.xoffset,
             yoffset=self.yoffset, matrix=matrix)
         return copy
+    
+    def new_extent(self, xoffset, yoffset, xextent, yextent):
+        """Return a new instance with a different offset and x/y extent.  The
+        intensity matrix is clipped appropriated, and new cells will have
+        intensity zero.  You may change the x and y offsets, but only by
+        multiples of the grid size.  Does _not_ preserve any mask.
+        """
+        if (xoffset - self.xoffset) % self.xsize != 0:
+            raise ValueError("Must change x offset by multiple of x size")
+        if (yoffset - self.yoffset) % self.ysize != 0:
+            raise ValueError("Must change y offset by multiple of y size")
+        xmove = (xoffset - self.xoffset) // self.xsize
+        ymove = (yoffset - self.yoffset) // self.ysize
+        new_matrix = _np.empty((yextent, xextent))
+        for y in range(yextent):
+            for x in range(xextent):
+                xx = x + xmove
+                yy = y + ymove
+                if xx < 0 or xx >= self.xextent:
+                    v = 0
+                elif yy < 0 or yy >= self.yextent:
+                    v = 0
+                else:
+                    v = self.intensity_matrix[yy,xx]
+                new_matrix[y,x] = v
+        return GridPredictionArray(xsize=self.xsize, ysize=self.ysize,
+            xoffset=xoffset, yoffset=yoffset, matrix=new_matrix)
 
     def grid_risk(self, gx, gy):
         """Find the risk in a grid cell.

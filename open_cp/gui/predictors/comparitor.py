@@ -8,14 +8,33 @@ e.g. make a new prediction for every day and score it on that day's actual
 crime events).
 """
 
-import open_cp.data
-
 COMPARATOR_LOGGER_NAME = "__interactive_warning_logger__"
 
 # Provides actual tasks
+# `run()` method returns list `(start_date, score_duration)`
 TYPE_TOP_LEVEL = 0
+
+
 # Adjust the prediction in some way
+# `make_tasks()` method returns :class:`AdjustTask` object(s)
 TYPE_ADJUST = 50
+
+
+class AdjustTask():
+    """An `adjust` type of comparator should return one or more of these tasks."""
+    
+    def __call__(self, projector, grid_prediction):
+        """Process the grid based prediction is some way.
+        
+        :param projector: The projector task used in to make this prediction.
+          May be `None`.  Parameter can be ignored if it is not relevant to
+          this task.
+        :param grid_prediction: The prediction to base the new prediction on.
+        
+        :return: A _new instance_ of a prediction, suitably modified.
+        """
+        raise NotImplementedError()
+
 
 class Comparitor():
     """Still a work in progress as I think about what we need to support:
@@ -66,6 +85,12 @@ class Comparitor():
         """Human readable giving further settings.  May be `None`."""
         raise NotImplementedError()
 
+    def pprint(self):
+        settings = self.settings_string
+        if settings is not None:
+            return self.name + " : " + settings
+        return self.name
+
     def to_dict(self):
         """Write state out to a dictionary for serialisation."""
         raise NotImplementedError()
@@ -73,4 +98,4 @@ class Comparitor():
     def from_dict(self, data):
         """Restore state from a dictionary."""
         raise NotImplementedError()
-
+        
