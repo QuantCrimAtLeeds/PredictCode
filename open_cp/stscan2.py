@@ -419,16 +419,30 @@ class STScanNumpy():
 
             yield centre, used_dists, used_times, stats
 
+    @staticmethod
+    def _build_log_lookup(N):
+        lookup = _np.empty(N+1, dtype=_np.float64)
+        lookup[0] = 1
+        for i in range(1, N+1):
+            lookup[i] = i
+        return _np.log(lookup)
+
     def _ma_statistics_lookup(self, space_counts, time_counts, stcounts, actual, _mask, N):
         # Faster version which uses lookup tables
         if self._cache_N != N:
             self._cache_N = N
-            self._log_lookup = _np.log(_np.array([1] + list(range(1,N+1))))
-            self._log_lookup2 = _np.log(_np.array([1] + list(range(1,N*N+1))))
+            self._log_lookup = self._build_log_lookup(N)
+            if N > 2000:
+                self._log_lookup2 = None
+            else:
+                self._log_lookup2 = self._build_log_lookup(N*N)
         sl = self._log_lookup[space_counts]
         tl = self._log_lookup[time_counts]
         y = actual * (self._log_lookup[actual] - sl[:,None] - tl[None,:])
-        yy = (N-actual) * (self._log_lookup[N-actual] - self._log_lookup2[N*N-stcounts])
+        if self._log_lookup2 is None:
+            yy = (N-actual) * (self._log_lookup[N-actual] - _np.log(N*N-stcounts))
+        else:
+            yy = (N-actual) * (self._log_lookup[N-actual] - self._log_lookup2[N*N-stcounts])
         return _np.ma.array(y + yy + N*_np.log(N), mask=~_mask)
 
     def faster_score_all_old(self):

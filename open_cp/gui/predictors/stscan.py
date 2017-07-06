@@ -293,8 +293,9 @@ class STScan(predictor.Predictor):
     class SubTask(predictor.SingleGridPredictor):
         def __init__(self, timed_points, grid, task, time_window,
                      time_bin_length, max_clusters):
-            # Very memory consuming, so don't allow off thread
-            super().__init__(False)
+            # Is memory intensive, but should be okay except for huge datasets
+            # (which are prohibitively slow anyway....)
+            super().__init__(True)
             self.grid_size = grid.xsize
             self.predictor = open_cp.stscan.STSTrainer()
             self.predictor.region = grid.region()
@@ -305,7 +306,6 @@ class STScan(predictor.Predictor):
             self._time_window = time_window
             self._timed_points = timed_points
             self._bin_length = time_bin_length
-            self._logger = logging.getLogger(predictor.PREDICTOR_LOGGER_NAME)
             self._max_clusters = max_clusters
 
         def __call__(self, predict_time, length=None):
@@ -317,8 +317,6 @@ class STScan(predictor.Predictor):
             if self._bin_length is not None:
                 self.predictor.data = open_cp.stscan.bin_timestamps(self.predictor.data,
                     predict_time, self._bin_length)
-            self._logger.debug("Running task to make prediction for %s from %s points",
-                predict_time, self.predictor.data.events_before(predict_time).number_data_points)
             result = self.predictor.predict(time = predict_time)
             return result.grid_prediction(self.grid_size,
                     use_maximal_clusters=self._max_clusters)

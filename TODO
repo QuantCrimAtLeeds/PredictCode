@@ -9,8 +9,6 @@
 
 - Predictors:
   - Do other predictors
-  - STScan:
-    - Can we allow it to run off thread?
   - Tests for the predictors (just test that the settings we _think_ we are applying get passed to the main `open_cp` code correctly.)
 
 - geo_clip:
