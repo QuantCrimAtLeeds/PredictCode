@@ -22,6 +22,7 @@ from . import stscan
 
 from . import pred_type
 from . import geo_clip
+from . import hit_rate
 
 # End #######################################################################
 

@@ -9,7 +9,6 @@ than running a load of tests.
 """
 
 from . import comparitor
-import logging
 import tkinter as tk
 import tkinter.ttk as ttk
 import open_cp.gui.tk.util as util
@@ -81,7 +80,8 @@ class HitRate(comparitor.Comparitor):
             mask = ( (timed_points.timestamps >= start) & (timed_points.timestamps < end) )
             rates = open_cp.evaluation.hit_rates(grid_prediction,
                 timed_points[mask], [self._coverage])
-            return rates[0]
+            # Return is a _dictionary!_
+            return rates[self._coverage]
 
     @property
     def coverage(self):
@@ -103,6 +103,7 @@ class HitRateView(tk.Frame):
         self._text.add_text(_text["main"])
 
         subframe = ttk.LabelFrame(self, text=_text["coverage"])
+        subframe.grid(row=1, column=0, sticky=tk.W)
         self._coverage_choice = tk.IntVar()
         self._add_rb(subframe, "top1", 1).grid(row=0, column=0, padx=2, sticky=tk.W)
         self._add_rb(subframe, "top5", 2).grid(row=1, column=0, padx=2, sticky=tk.W)
@@ -110,16 +111,17 @@ class HitRateView(tk.Frame):
         frame = ttk.Frame(subframe)
         self._add_rb(frame, "topcus", 4).grid(row=0, column=0, padx=2, sticky=tk.W)
         self._risk_level = tk.StringVar()
+        self._risk_level.set(20)
         self._risk_level_entry = ttk.Entry(frame, textvariable=self._risk_level)
         self._risk_level_entry.grid(row=0, column=1, padx=2, sticky=tk.W)
         self._risk_level_entry["state"] = tk.DISABLED
-        frame.grid(row=3, column=0, padx=2, sticky=tk.W)
+        frame.grid(row=3, column=0, sticky=tk.W)
         util.PercentageValidator(self._risk_level_entry, self._risk_level,
             callback=self._coverage_choice_change)
 
         self._update()
 
-    def _add_rb(self, frame, text_name, value, row):
+    def _add_rb(self, frame, text_name, value):
         rb = ttk.Radiobutton(frame, text=_text[text_name], value=value,
             variable=self._coverage_choice, command=self._coverage_choice_change)
         tooltips.ToolTipYellow(rb, _text[text_name + "_tt"])
@@ -128,17 +130,17 @@ class HitRateView(tk.Frame):
     def _update(self):
         if self._model.coverage == 1:
             self._coverage_choice.set(1)
-            self._risk_level_entry["state"] = tk.ACTIVE
+            self._risk_level_entry["state"] = tk.DISABLED
         elif self._model.coverage == 5:
             self._coverage_choice.set(2)
-            self._risk_level_entry["state"] = tk.ACTIVE
+            self._risk_level_entry["state"] = tk.DISABLED
         elif self._model.coverage == 10:
             self._coverage_choice.set(3)
-            self._risk_level_entry["state"] = tk.ACTIVE
+            self._risk_level_entry["state"] = tk.DISABLED
         else:
             self._coverage_choice.set(4)
             self._risk_level.set(self._model.coverage)
-            self._risk_level_entry["state"] = tk.DISABLED
+            self._risk_level_entry["state"] = tk.ACTIVE
 
     def _coverage_choice_change(self):
         choice = int(self._coverage_choice.get())
@@ -150,7 +152,8 @@ class HitRateView(tk.Frame):
             self._model.coverage = 10
         else:
             self._model.coverage = self._risk_level.get()
-
+        self._update()
+        
 
 def test(root):
     from . import predictor

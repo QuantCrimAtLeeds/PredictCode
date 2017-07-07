@@ -62,7 +62,6 @@ def top_slice(risk, fraction):
     mask = _top_slice_one_dim(risk.ravel(), fraction)
     return _np.reshape(mask, risk.shape)
 
-
 def hit_rates(grid_pred, timed_points, percentage_coverage):
     """Computes the "hit rate" for the given prediction for the passed
     collection of events.  For each percent, we top slice that percentage of
@@ -81,11 +80,13 @@ def hit_rates(grid_pred, timed_points, percentage_coverage):
     out = dict()
     for coverage in percentage_coverage:
         covered = top_slice(risk, coverage / 100)
-        count = 0
-        for x, y in timed_points.coords.T:
-            gx, gy = grid_pred.grid_coord(x, y)
-            if covered[gy][gx]:
-                count += 1
+        
+        gx, gy = grid_pred.grid_coord(timed_points.xcoords, timed_points.ycoords)
+        gx, gy = gx.astype(_np.int), gy.astype(_np.int)
+        mask = (gx < 0) | (gx >= covered.shape[1]) | (gy < 0) | (gy >= covered.shape[0])
+        gx, gy = gx[~mask], gy[~mask]
+        count = _np.sum(covered[(gy,gx)])
+
         out[coverage] = count / timed_points.coords.shape[1]
     return out
 

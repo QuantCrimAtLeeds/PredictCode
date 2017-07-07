@@ -1,6 +1,8 @@
 import pytest
 
 import open_cp.evaluation as evaluation
+import open_cp.predictors
+import open_cp.data
 import numpy as np
 
 def test_top_slice():
@@ -79,3 +81,31 @@ def test_top_slice_masked():
 
     s = evaluation.top_slice(data, 0.4)
     np.testing.assert_array_equal([False, False, False, False, False, True], s)
+    
+@pytest.fixture
+def prediction():
+    matrix = np.array([[1,2,3,4], [5,6,7,8]])
+    return open_cp.predictors.GridPredictionArray(10, 20, matrix, 2, 3)
+
+def test_hit_rate(prediction):
+    t = [np.datetime64("2017-01-01")] * 8
+    x = 2 + 5 + 10 * np.array([0,1,2,3,0,1,2,3])
+    y = 3 + 10 + 20 * np.array([0,0,0,0,1,1,1,1])
+    tp = open_cp.data.TimedPoints.from_coords(t,x,y)
+    out = evaluation.hit_rates(prediction, tp, {1,2,5})
+    assert set(out.keys()) == {1,2,5}
+    assert set(out.values()) == {0}
+
+    out = evaluation.hit_rates(prediction, tp, {49, 50, 100})
+    assert out[100] == pytest.approx(1.0)
+    assert out[50] == pytest.approx(0.5)
+    assert out[49] == pytest.approx(3/8)
+    
+def test_hit_rate_out_of_range(prediction):
+    t = [np.datetime64("2017-01-01")] * 8
+    x = 100 + 10 * np.array([0,1,2,3,0,1,2,3])
+    y = 3 + 10 + 20 * np.array([0,0,0,0,1,1,1,1])
+    tp = open_cp.data.TimedPoints.from_coords(t,x,y)
+    out = evaluation.hit_rates(prediction, tp, {1, 5, 100})
+    assert set(out.values()) == {0}
+    

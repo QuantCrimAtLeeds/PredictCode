@@ -146,10 +146,6 @@ class Grid():
         self._xsize = xsize
         self._ysize = ysize
 
-    @staticmethod
-    def _floor(x):
-        return int(_np.floor(x))
-
     @property
     def xsize(self):
         """The width of each cell"""
@@ -185,7 +181,7 @@ class Grid():
         """
         xx = x - self.xoffset
         yy = y - self.yoffset
-        return (self._floor(xx / self.xsize), self._floor(yy / self.ysize))
+        return (_np.floor(xx / self.xsize), _np.floor(yy / self.ysize))
 
     def bounding_box_of_cell(self, gx, gy):
         """Return the bounding box of the cell.

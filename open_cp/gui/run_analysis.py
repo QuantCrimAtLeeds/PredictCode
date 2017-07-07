@@ -40,10 +40,10 @@ class RunAnalysis():
         try:
             self._model = RunAnalysisModel(self, self.main_model)
             self._run_tasks()
-            self.view.wait_window(self.view)
         except:
             self._msg_logger.exception(run_analysis_view._text["genfail"])
             self.view.done()
+        self.view.wait_window(self.view)
 
     def cancel(self):
         """Called when we wish to cancel the running tasks"""
@@ -166,6 +166,7 @@ class TaskKey():
     :param grid: The grid used.
     :param pred_type: The prediction algorithm (etc.) used.
     :param pred_date: The prediction date.
+    :param pred_length: The length of the prediction.
     """
     def __init__(self, projection, grid, pred_type, pred_date, pred_length):
         self._projection = projection

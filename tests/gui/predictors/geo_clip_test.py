@@ -60,6 +60,9 @@ def test_build_CropToGeometry(comp):
 
 def test_serialise(comp):
     helper.serialise(comp)
+    
+    comp.epsg = 1234
+    helper.serialise(comp)
 
 def test_run_no_settings(comp):
     assert comp.run(None) is None

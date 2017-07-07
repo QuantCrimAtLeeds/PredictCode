@@ -124,7 +124,7 @@ class CropToGeometry(comparitor.Comparitor):
         if filename is not None:
             self.load(filename)
             if data["epsg"] is not None:
-                self._espg = int(data["epsg"])
+                self._epsg = int(data["epsg"])
             else:
                 self._epsg = None
 

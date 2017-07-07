@@ -15,8 +15,10 @@ Currently this is multi-stage:
 from . import run_analysis
 import open_cp.gui.tk.run_analysis_view as run_analysis_view
 import open_cp.gui.predictors as predictors
+import open_cp.gui.predictors.predictor as predictor
 from open_cp.gui.common import CoordType
 import open_cp.gui.locator as locator
+import open_cp.data
 import collections
 import logging
 
@@ -46,6 +48,7 @@ class RunComparison():
     def run(self):
         try:
             self._model = RunComparisonModel(self, self.main_model)
+            self._projection_tasks = self.construct_projection_tasks()
             self._stage1()
         except:
             self._msg_logger.exception(run_analysis_view._text["genfail1"])
@@ -63,43 +66,96 @@ class RunComparison():
         """Run any "adjustments" necessary."""
         tasks = list(self._chain_dict(self._model.adjust_tasks))
         task = lambda : self._run_adjust_tasks(tasks)
-        locator.get("pool").submit(task, self._finished)
+        locator.get("pool").submit(task, self._stage2)
+        
+    def _stage2(self, input):
+        """Run compare tasks.  This will be running on the GUI thread...
+        
+        :param input: A list of pairs `(adjust_name, resslt)` where `result`
+          is an instance of :class:`PredictionResult`
+        """
+        try:
+            if isinstance(input, Exception):
+                raise input
+            tasks = list(self._chain_dict(self._model.compare_tasks))
+            task = lambda : self._run_compare_tasks(input, tasks)
+            locator.get("pool").submit(task, self._finished)
+        except:
+            self._msg_logger.exception(run_analysis_view._text["genfail1"])
+            self._logger.exception(run_analysis_view._text["genfail1"])
+            self.view.done()
+        
+    def _run_compare_tasks(self, input, tasks):
+        """Run compare tasks.
+        
+        :param input: A list of pairs `(adjust_name, resslt)` where `result`
+          is an instance of :class:`PredictionResult`
+        :param tasks: List of pairs `(name, compare_task)`
+        """
+        timed_points_lookup = self._build_projected_timed_points()
+        for com_name, com_task in tasks:
+            for adjust_name, result in input:
+                tp = timed_points_lookup[result.key.projection]
+                score = com_task(result.prediction, tp,
+                    result.key.prediction_date, result.key.prediction_length)
+                self.to_msg_logger("%s / %s  / %s -> %s", result.key, adjust_name, com_name, score)
+
+    def _build_projected_timed_points(self):
+        times, xcoords, ycoords = self.main_model.selected_by_crime_type_data()
+        out = dict()
+        for key, task in self._projection_tasks.items():
+            if task is None:
+                xcs, ycs = xcoords, ycoords
+            else:
+                xcs, ycs = task(xcoords, ycoords)
+            out[key] = open_cp.data.TimedPoints.from_coords(times, xcs, ycs)
+        return out
+
+    def construct_projection_tasks(self):
+        out = dict()
+        for pred in self.result.results:
+            if pred.key.projection not in out:
+                proj = self._model.get_projector(pred.key.projection)
+                out[pred.key.projection] = proj
+                if proj is None:
+                    self._msg_logger.warning(run_analysis_view._text["log15"], pred.key.projection)
+        return out
 
     def to_msg_logger(self, msg, *args, level=logging.DEBUG):
         locator.get("pool").submit_gui_task(lambda : 
             self._msg_logger.log(level, msg, *args))
 
-
     def _run_adjust_tasks(self, tasks):
-        projection_keys = set(pred.key.projection for pred in self.result.results)
-        projection_lookup = {key : self._model.get_projector(key)
-            for key in projection_keys}
-        for key, proj in projection_lookup.items():
-            if proj is None:
-                self.to_msg_logger("Failed to find current coordinate projector for '%s'",
-                    key, level=logging.WARNING)
-
         preds_by_projection = dict()
         for pred in self.result.results:
-            if pred.key.projection not in preds_by_projection:
+            key = pred.key.projection
+            if key not in preds_by_projection:
                 preds_by_projection[key] = list()
             preds_by_projection[key].append(pred)
 
         out = []
         for adjust_name, task in tasks:
-            for key, proj in projection_lookup.items():
+            for key, proj in self._projection_tasks.items():
                 self.to_msg_logger(run_analysis_view._text["log14"], adjust_name,
                     key, level=logging.INFO)
                 preds = preds_by_projection[key]
                 new_preds = task(proj, [p.prediction for p in preds])
                 for p, new_pred in zip(preds, new_preds):
-                    result = run_analysis.PredictionResult(p, new_pred)
+                    result = run_analysis.PredictionResult(p.key, new_pred)
                     out.append((adjust_name, result))
-        self.to_msg_logger("Done...")
         return out
 
     def _finished(self, out=None):
         self.view.done()
+        if out is not None:
+            if isinstance(out, predictor.PredictionError):
+                self.view.alert(str(out))
+                self._msg_logger.error(run_analysis_view._text["warning1"].format(out))
+            elif isinstance(out, Exception):
+                self._msg_logger.error(run_analysis_view._text["log11"].format(out))
+            else:
+                self._msg_logger.error(run_analysis_view._text["log12"].format(out))
+            return
         # TODO...
 
     def cancel(self):
@@ -126,6 +182,7 @@ class RunComparisonModel():
 
         self._run_analysis_model = run_analysis.RunAnalysisModel(self, main_model)
         self._build_adjusts()
+        self._build_compares()
 
     def notify_model_message(*args, **kwargs):
         # Ignore as don't want to log from analysis model
@@ -135,6 +192,11 @@ class RunComparisonModel():
         self._adjust_tasks = dict()
         for adjust in self.comparators.comparators_of_type(predictors.comparitor.TYPE_ADJUST):
             self._adjust_tasks[adjust.pprint()] = adjust.make_tasks()
+
+    def _build_compares(self):
+        self._compare_tasks = dict()
+        for com in self.comparators.comparators_of_type(predictors.comparitor.TYPE_COMPARE_TO_REAL):
+            self._compare_tasks[com.pprint()] = com.make_tasks()
 
     def get_projector(self, key_string):
         """Try to find a projector task given the "name" string.
@@ -159,7 +221,16 @@ class RunComparisonModel():
         """A dictionary from `name` to list of :class:`comparitor.AdjustTask`
         instances."""
         return self._adjust_tasks
+    
+    @property
+    def compare_tasks(self):
+        """A dictionary from `name` to list of
+        :class:`comparitor.CompareRealTask` instances."""
+        return self._compare_tasks
 
+
+
+## CURRENTLY UNUSED... ##
 
 class TaskKey():
     """Describes the comparison task which was run.  We don't make any

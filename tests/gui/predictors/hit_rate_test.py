@@ -1,7 +1,8 @@
 import pytest
 import unittest.mock as mock
 
-#import numpy as np
+import numpy as np
+import datetime
 
 import open_cp.gui.predictors.hit_rate as hit_rate
 from . import helper
@@ -36,12 +37,40 @@ def test_serialisation(hrm):
 
 @pytest.fixture
 def prediction():
-    # TODO: Should be a masked matrix...
-    matrix = None
-    return open_cp.predictors.GridPredictionArray(10, 10, matrix, 2, 4)
+    matrix = np.array([[1,2,3,4],[5,6,7,8]])
+    mask = np.array([[True,False,False,True],[False,True,False,False]])
+    matrix = np.ma.array(matrix, mask=mask)
+    return open_cp.predictors.GridPredictionArray(10, 10, matrix, 0, 0)
 
-def test_make_tasks(hrm):
+@pytest.fixture
+def timed_points():
+    timestamps = [np.datetime64("2017-04-01") + np.timedelta64(1, "D") * i for i in range(8)]
+    xcoords = 5 + 10 * np.array([0,1,2,3,0,1,2,3])
+    ycoords = 5 + 10 * np.array([0,0,0,0,1,1,1,1])
+    return open_cp.data.TimedPoints(timestamps, [xcoords, ycoords])
+
+def test_make_tasks(hrm, prediction, timed_points):
     tasks = hrm.make_tasks()
     assert len(tasks) == 1
     task = tasks[0]
+    
+    # Should be 5% coverage
+    assert task(prediction, timed_points, datetime.datetime(2017,4,1),
+                datetime.timedelta(days=8)) == 0
+    
+    
+    hrm.coverage = 59
+    task = hrm.make_tasks()[0]
+    assert task(prediction, timed_points, datetime.datetime(2017,4,1),
+                datetime.timedelta(days=8)) == pytest.approx(2/8)
+    
+    hrm.coverage = 60
+    task = hrm.make_tasks()[0]
+    assert task(prediction, timed_points, datetime.datetime(2017,4,1),
+                datetime.timedelta(days=8)) == pytest.approx(3/8)
+    
 
+    hrm.coverage = 60
+    task = hrm.make_tasks()[0]
+    assert task(prediction, timed_points, datetime.datetime(2017,4,2),
+                datetime.timedelta(days=7)) == pytest.approx(3/7)

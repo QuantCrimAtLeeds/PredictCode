@@ -1,6 +1,6 @@
 """
 comparitor
-~~~~~~~~~
+~~~~~~~~~~
 
 Base classes and utility methods for the GUI side of describing algorithms
 which compare predictors (or describe the high-level tasks to make predictors:
@@ -19,7 +19,7 @@ TYPE_TOP_LEVEL = 0
 TYPE_ADJUST = 50
 
 # Compares the prediction to actual events
-# `make_tasks()` method returns :class:`AdjustTask` object(s)
+# `make_tasks()` method returns :class:`CompareRealTask` object(s)
 TYPE_COMPARE_TO_REAL = 100
 
 class CompareRealTask():
