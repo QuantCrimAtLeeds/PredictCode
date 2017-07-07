@@ -42,7 +42,7 @@ class MainWindow():
         if filename is None:
             return
         self.view.destroy()
-        import_file.ImportFile(filename).run()
+        import_file.ImportFile(self._root, filename).run()
         self.init()
 
     class CancelException(Exception):

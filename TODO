@@ -7,19 +7,14 @@
 
 # GUI
 
-- Integrate into and test with the comparison
-
-- Add new "browse view" for results of the comparison
-
-- In the prediction browse view add ability to use a geometry clipper...
-
 - Predictors:
   - Do other predictors
-  - Tests for the predictors (just test that the settings we _think_ we are applying get passed to the main `open_cp` code correctly.)
+    - Think all but SEPP, which don't 100% work, are now done.
   - Should we adjust the "samples" value when converting from a continuous to grid based prediction, based on the grid size,
     to keep the total number of samples (per unit area) constant?
 
 - Session saving/loading
+  - Display the name of the current session file...
   - New dialog to select a recent session
 
 - UI issues:

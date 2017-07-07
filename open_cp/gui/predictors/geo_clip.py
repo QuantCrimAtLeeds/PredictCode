@@ -168,10 +168,10 @@ class CropToGeometry(comparitor.Comparitor):
                 return [grids]
 
         def __call__(self, projector, grid_prediction):
-            grid_prediction = self.to_list(grid_prediction)
             geo = self._parent.run(projector)
             if geo is None:
                 return grid_prediction
+            grid_prediction = self.to_list(grid_prediction)
             out = []
             for ((xsize, ysize, xoffset, yoffset), preds) in self.assemble_sizes(grid_prediction).items():
                 grid = open_cp.data.Grid(xsize, ysize, xoffset, yoffset)

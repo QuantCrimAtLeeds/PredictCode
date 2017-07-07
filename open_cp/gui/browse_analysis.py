@@ -6,6 +6,7 @@ View the results of a previous analysis run.
 """
 
 import open_cp.gui.tk.browse_analysis_view as browse_analysis_view
+import open_cp.gui.run_comparison as run_comparison
 import logging
 
 class BrowseAnalysis():
@@ -13,10 +14,12 @@ class BrowseAnalysis():
 
     :param parent: The `tk` parent widget
     :param result: Instance of :class:`run_analysis.RunAnalysisResult`
+    :param main_model: :class:`analysis.Model` instance
     """
-    def __init__(self, parent, result):
+    def __init__(self, parent, result, main_model):
         self._logger = logging.getLogger(__name__)
-        self.model = BrowseAnalysisModel(result)
+        self.model = BrowseAnalysisModel(result, main_model)
+        self._current_adjust_task = None
         self.view = browse_analysis_view.BrowseAnalysisView(parent, self)
         self.view.update_projections()
 
@@ -47,6 +50,9 @@ class BrowseAnalysis():
             index = 0
         self.view.update_dates(options, index)
 
+    def _update_plot(self):
+        self.notify_date_choice(None)
+
     def notify_date_choice(self, choice):
         _, proj_str = self.view.projection_choice
         _, grid_str = self.view.grid_choice
@@ -57,29 +63,55 @@ class BrowseAnalysis():
             self._logger.warning("Unexpectedly obtained %s predictions for the key %s",
                 len(predictions), (proj_str, grid_str, pred_str, date_str))
         self.model.current_prediction = predictions[0]
-        self.view.update_prediction(level=self.model.plot_risk_level)
-        self._logger.debug("Ploting %s -> %s / %s", (proj_str, grid_str, pred_str, date_str), self.model.current_prediction, id(self.model.current_prediction.prediction))
+        self.view.update_prediction(level=self.model.plot_risk_level, adjust_task=self._current_adjust_task)
+        self._logger.debug("Ploting %s -> %s", (proj_str, grid_str, pred_str, date_str), self.model.current_prediction)
+
+    def notify_adjust_choice(self, choice):
+        _, task = self.model.adjust_tasks[choice]
+        _, proj_str = self.view.projection_choice
+        proj = self.model.get_projector(proj_str)
+        self._current_adjust_task = lambda pred, proj=proj : task(proj, pred)
+        self._update_plot()
 
     def notify_plot_type_risk(self):
         self.model.plot_risk_level = -1
-        self.notify_date_choice(None)
+        self._update_plot()
 
     def notify_plot_type_risk_level(self, level):
         self.model.plot_risk_level = level
-        self.notify_date_choice(None)
+        self._update_plot()
 
 
 class BrowseAnalysisModel():
     """Model of browsing results of an analysis.
 
     :param result: Instance of :class:`run_analysis.RunAnalysisResult`
+    :param main_model: :class:`analysis.Model` instance
     """
-    def __init__(self, result):
+    def __init__(self, result, main_model):
         self._result = result
         self._projections = list(set(key.projection for key in self._result_keys))
         self._grids = list(set(key.grid for key in self._result_keys))
         self._current_prediction = None
         self._plot_risk_level = -1
+        self._run_comparison_model = run_comparison.RunComparisonModel(main_model)
+        self._adjust_tasks = self._build_adjust_tasks()
+
+    def _build_adjust_tasks(self):
+        out = [(browse_analysis_view._text["none"], self._null_adjust_task)]
+        for key, tasks in self._run_comparison_model.adjust_tasks.items():
+            tasks = list(tasks)
+            if len(tasks) > 1:
+                for i, t in enumerate(tasks):
+                    out.append((key+" : {}".format(i), t))
+            else:
+                out.append((key, tasks[0]))
+        return out
+            
+    def _null_adjust_task(self, projector, grid_prediction):
+        """Conforms to the interface of :class:`comparitor.AdjustTask` but does
+        nothing."""
+        return grid_prediction
 
     @property
     def result(self):
@@ -89,6 +121,19 @@ class BrowseAnalysisModel():
     def _result_keys(self):
         for r in self._result.results:
             yield r.key
+            
+    @property
+    def adjust_tasks(self):
+        """List of pairs `(name_string, adjust_task)`"""
+        return self._adjust_tasks
+
+    def get_projector(self, key_string):
+        """Try to find a projector task given the "name" string.
+        
+        :return: `None` is not found, or a callable object which performs the
+          projection.
+        """
+        return self._run_comparison_model.get_projector(key_string)
 
     @property
     def projections(self):

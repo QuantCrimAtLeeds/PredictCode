@@ -21,8 +21,8 @@ import open_cp.gui.locator as locator
 import open_cp.data
 import collections
 import logging
-
-
+import datetime
+import csv
 
 class RunComparison():
     """Controller for performing the computational tasks of actually comparing
@@ -47,7 +47,7 @@ class RunComparison():
 
     def run(self):
         try:
-            self._model = RunComparisonModel(self, self.main_model)
+            self._model = RunComparisonModel(self.main_model)
             self._projection_tasks = self.construct_projection_tasks()
             self._stage1()
         except:
@@ -64,9 +64,13 @@ class RunComparison():
 
     def _stage1(self):
         """Run any "adjustments" necessary."""
+        self.start_progress()
         tasks = list(self._chain_dict(self._model.adjust_tasks))
-        task = lambda : self._run_adjust_tasks(tasks)
-        locator.get("pool").submit(task, self._stage2)
+        if len(tasks) == 0:
+            self._stage2(self._no_adjustments_case())
+        else:
+            task = lambda : self._run_adjust_tasks(tasks)
+            locator.get("pool").submit(task, self._stage2)
         
     def _stage2(self, input):
         """Run compare tasks.  This will be running on the GUI thread...
@@ -79,27 +83,42 @@ class RunComparison():
                 raise input
             tasks = list(self._chain_dict(self._model.compare_tasks))
             task = lambda : self._run_compare_tasks(input, tasks)
-            locator.get("pool").submit(task, self._finished)
+            locator.get("pool").submit(task, self._stage3)
         except:
             self._msg_logger.exception(run_analysis_view._text["genfail1"])
             self._logger.exception(run_analysis_view._text["genfail1"])
             self.view.done()
         
     def _run_compare_tasks(self, input, tasks):
-        """Run compare tasks.
+        """Run compare tasks.  We will bundle up tasks and assign out to
+        processes to run.
         
         :param input: A list of pairs `(adjust_name, resslt)` where `result`
           is an instance of :class:`PredictionResult`
         :param tasks: List of pairs `(name, compare_task)`
         """
         timed_points_lookup = self._build_projected_timed_points()
+        out = []
+        total = len(tasks) * len(input)
+        count = 0
         for com_name, com_task in tasks:
             for adjust_name, result in input:
                 tp = timed_points_lookup[result.key.projection]
-                score = com_task(result.prediction, tp,
-                    result.key.prediction_date, result.key.prediction_length)
-                self.to_msg_logger("%s / %s  / %s -> %s", result.key, adjust_name, com_name, score)
-
+                args = (com_task, result, tp, adjust_name, com_name)
+                out.append(args)
+        return out
+    
+    def _stage3(self, input):
+        try:
+            if isinstance(input, Exception):
+                raise input
+            self._off_thread = _RunnerThreadOne(input, self)
+            locator.get("pool").submit(self._off_thread, self._finished)
+        except:
+            self._msg_logger.exception(run_analysis_view._text["genfail1"])
+            self._logger.exception(run_analysis_view._text["genfail1"])
+            self.view.done()
+        
     def _build_projected_timed_points(self):
         times, xcoords, ycoords = self.main_model.selected_by_crime_type_data()
         out = dict()
@@ -145,18 +164,36 @@ class RunComparison():
                     out.append((adjust_name, result))
         return out
 
+    def _no_adjustments_case(self):
+        return [ (None, result) for result in self.result.results]
+
     def _finished(self, out=None):
+        self.end_progress()
         self.view.done()
-        if out is not None:
-            if isinstance(out, predictor.PredictionError):
-                self.view.alert(str(out))
-                self._msg_logger.error(run_analysis_view._text["warning1"].format(out))
-            elif isinstance(out, Exception):
-                self._msg_logger.error(run_analysis_view._text["log11"].format(out))
-            else:
-                self._msg_logger.error(run_analysis_view._text["log12"].format(out))
+        if isinstance(out, Exception):
+            self._msg_logger.error(run_analysis_view._text["log11"].format(out))
             return
-        # TODO...
+
+        if self._off_thread.cancelled:
+            self.view.cancel()
+            return
+
+        chunks = self._off_thread.results
+        chunks.sort(key = lambda pair : pair[0])
+        all_results = []
+        for _, result in chunks:
+            all_results.extend(result)
+        result = RunComparisonResult(all_results)
+        self.controller.new_run_comparison_result(result)
+
+    def start_progress(self):
+        locator.get("pool").submit_gui_task(lambda : self.view.start_progress_bar())
+
+    def set_progress(self, done, out_of):
+        locator.get("pool").submit_gui_task(lambda : self.view.set_progress(done, out_of))
+
+    def end_progress(self):
+        locator.get("pool").submit_gui_task(lambda : self.view.stop_progress_bar())
 
     def cancel(self):
         """Called when we wish to cancel the running tasks"""
@@ -170,13 +207,12 @@ class RunComparisonModel():
     """The model for running an analysis.  Constructs dicts:
       - :attr:`adjust_tasks` Tasks which "adjust" predictions in some way (e.g.
         restrict to some geometry).
+      - :attr:`compare_tasks` Tasks which run some sort of comparison against
+        "reality".
     
-    :param controller: :class:`RunComparison` instance
-    :param view: :class:`RunAnalysisView` instance
     :param main_model: :class:`analysis.Model` instance
     """
-    def __init__(self, controller, main_model):
-        self.controller = controller
+    def __init__(self, main_model):
         self.main_model = main_model
         self._msg_logger = predictors.get_logger()
 
@@ -229,9 +265,6 @@ class RunComparisonModel():
         return self._compare_tasks
 
 
-
-## CURRENTLY UNUSED... ##
-
 class TaskKey():
     """Describes the comparison task which was run.  We don't make any
     assumptions about the components of the key (they are currently strings,
@@ -239,9 +272,11 @@ class TaskKey():
     or equality.
     
     :param adjust: The "adjustment" which was made.
+    :param comparison: The "comparsion" which was made.
     """
-    def __init__(self, adjust):
+    def __init__(self, adjust, comparison):
         self._adjust = adjust
+        self._comparison = comparison
         
     @property
     def adjust(self):
@@ -249,28 +284,91 @@ class TaskKey():
         if self._adjust is None:
             return ""
         return self._adjust
+
+    @property
+    def comparison(self):
+        """The comparison which was run."""
+        return self._comparison
+    
+    @staticmethod
+    def header():
+        """Column representation for CSV file"""
+        return ["adjustment type", "comparison method"]
+    
+    def __iter__(self):
+        return iter((self.adjust, self.comparison))
     
     def __repr__(self):
-        return "adjust: {}".format(self.adjust)
+        return "adjust: {}, comparison: {}".format(self.adjust, self.comparison)
 
 
-class _AdjustTask():
-    def __init__(self):
-        pass
+class ComparisonResult():
+    def __init__(self, prediction_key, comparison_key, score):
+        self.prediction_key = prediction_key
+        self.comparison_key = comparison_key
+        self.score = score
+
+
+class RunComparisonResult():
+    """Stores the result of running a comparison.
     
-    @property
-    def off_thread(self):
-        return True
-    
-    @property
-    def key(self):
-        pass
-        
+    :param results: List of :class:`ComparisonResult` objects.
+    """
+    def __init__(self, results):
+        self.results = results
+        self.run_time = datetime.datetime.now()
+
+    def save_to_csv(self, filename):
+        header = run_analysis.TaskKey.header() + TaskKey.header() + ["Score"]
+        rows = [list(result.prediction_key) + list(result.comparison_key)
+            + [result.score]
+            for result in self.results]
+        with open(filename, "wt") as file:
+            writer = csv.writer(file)
+            writer.writerow(header)
+            writer.writerows(rows)
+
+
+### Not used ####
 
 class _RunnerThreadOne(run_analysis.BaseRunner):
     def __init__(self, tasks, controller):
         super().__init__(controller)
-        self._tasks = list(tasks)
-
+        self._tasks = tasks
+        
+    def _split_tasks_to_size(self, size=10):
+        index = 0
+        while True:
+            out = []
+            while index < len(self._tasks) and len(out) < size:
+                out.append(self._tasks[index])
+                index += 1
+            yield out
+            if index == len(self._tasks):
+                return
+        
     def make_tasks(self):
-        return [self.RunPredTask(t.key, t) for t in self._tasks]
+        for i, package in enumerate(self._split_tasks_to_size()):
+            yield self.RunPredTask(i, ComparisonTaskWrapper(package))
+
+
+class ComparisonTaskWrapper():
+        """
+        :param tasks: List of tuples `(com_task, result, timed_points,
+          adjust_name, com_name)`
+        """
+        def __init__(self, tasks):
+            self._tasks = tasks
+            
+        def __call__(self):
+            out = []
+            for com_task, result, timed_points, adjust_name, com_name in self._tasks:
+                score = com_task(result.prediction, timed_points,
+                    result.key.prediction_date, result.key.prediction_length)
+                com_key = TaskKey(adjust_name, com_name)
+                out.append(ComparisonResult(result.key, com_key, score))
+            return out
+        
+        @property
+        def off_process(self):
+            return True

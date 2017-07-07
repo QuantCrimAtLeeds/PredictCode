@@ -94,21 +94,5 @@ def test_controller_tasks(runAnalysis, log_queue, locator_mock):
     off_thread = get_thread(locator_mock)
     off_thread()
 
-    assert str(off_thread.results[0].key) == "projection: Coordinates already projected, grid: Grid 100x100m @ (0m, 0m), prediction_type: Counting Grid naive predictor, prediction_date: 2017-05-10 00:00:00, prediction_length: 1 day, 0:00:00"
-    assert isinstance(off_thread.results[0].prediction, open_cp.predictors.GridPredictionArray)
-
-def test_controller_type_of_tasks(runAnalysis, log_queue, locator_mock, pool):
-    runAnalysis.controller.model.analysis_tools_model.add(predictors.naive.ScipyKDE)
-    runAnalysis.run()
-    off_thread = get_thread(locator_mock)
-    
-    executor = pool.PoolExecutor.return_value
-    pool.check_finished.return_value = ([],[])
-    off_thread()
-
-    assert len(executor.submit.call_args_list) == 2
-    tasks = [executor.submit.call_args_list[x][0][0] for x in [0,1]]
-    task_types = [type(t._task.task) for t in tasks]
-    assert set(task_types) == {open_cp.gui.predictors.naive.CountingGrid.SubTask,
-              open_cp.gui.predictors.naive.ScipyKDE.SubTask}
-    
+    assert str(off_thread.results[0][0]) == "projection: Coordinates already projected, grid: Grid 100x100m @ (0m, 0m), prediction_type: Counting Grid naive predictor, prediction_date: 2017-05-10 00:00:00, prediction_length: 1 day, 0:00:00"
+    assert isinstance(off_thread.results[0][1], open_cp.predictors.GridPredictionArray)

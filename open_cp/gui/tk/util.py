@@ -298,7 +298,7 @@ class ModalWindow(tk.Toplevel):
             self._parent = parent
         else:
             self._parent = parent.master
-        self._parent = parent
+        #self._parent = parent
         self.title(title)
         self.minsize(50, 50)
         if resize is None:

@@ -78,8 +78,8 @@ class LoadFileProgress(tk.Frame):
 
 
 class ImportFileView(tk.Frame):
-    def __init__(self, model, controller):
-        super().__init__()
+    def __init__(self, parent, model, controller):
+        super().__init__(parent)
         self.model = model
         self.controller = controller
         util.centre_window_percentage(self.master, 80, 60)

@@ -15,20 +15,20 @@ import array
 
 
 class ImportFile():
-    def __init__(self, filename):
+    def __init__(self, root, filename):
         self._filename = filename
         self.parse_settings = import_file_model.ParseSettings()
         self._process_model = None
-        pass
+        self._root = root
     
     def run(self):
         self._load_file()
-        self.view = import_file_view.ImportFileView(self.model, self)
+        self.view = import_file_view.ImportFileView(self._root, self.model, self)
         self.view.wait_window(self.view)
         if self._process_model is not None:
             model = analysis.Model.init_from_process_file_model(self._filename,
                     self._process_model)
-            analysis.Analysis(model, None).run()
+            analysis.Analysis(model, self._root).run()
         else:
             # Return control to main window...
             pass

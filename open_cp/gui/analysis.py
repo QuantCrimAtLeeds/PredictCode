@@ -165,11 +165,24 @@ class Analysis():
 
     def view_past_run(self, run):
         result = self.model.analysis_runs[run]
-        browse_analysis.BrowseAnalysis(self._root, result).run()
+        browse_analysis.BrowseAnalysis(self._root, result, self.model).run()
         
     def run_comparison_for(self, run):
+        self._last_comprison_run_for = run
         result = self.model.analysis_runs[run]
         run_comparison.RunComparison(self.view, self, result).run()
+
+    def new_run_comparison_result(self, result):
+        self.model.new_comparison(self._last_comprison_run_for, result)
+        self.view.update_run_analysis_results()
+        
+    def remove_comparison_run(self, run_index, com_index):
+        self.model.remove_run_comparison(run_index, com_index)
+        self.view.update_run_analysis_results()
+
+    def save_comparison_run(self, run_index, comparison_index, filename):
+        result = self.model.analysis_run_comparisons(run_index)[comparison_index]
+        result.save_to_csv(filename)
 
     def remove_past_run(self, run):
         self.model.remove_analysis_run(run)
@@ -231,27 +244,64 @@ class Model():
         self._analysis_runs = []
         self._loaded_from_dict = None
 
+    class AnalysisRunHolder():
+        def __init__(self, result, filename=None):
+            self._result = result
+            self._filename = filename
+            self._coms = []
+            
+        @property
+        def result(self):
+            return self._result
+        
+        @property
+        def filename(self):
+            return self._filename
+        
+        @filename.setter
+        def filename(self, value):
+            self._filename = value
+            
+        def add_comparison(self, result):
+            self._coms.append(result)
+
+        @property
+        def comparisons(self):
+            return list(self._coms)
+        
+        def remove_comparison(self, index):
+            del self._coms[index]
+
     @property
     def analysis_runs(self):
         """List of results of previous runs."""
-        return [x[0] for x in self._analysis_runs]
+        return [x.result for x in self._analysis_runs]
 
     def new_analysis_run(self, result, filename=None):
         """Add a new analysis run with optional saved file name."""
-        self._analysis_runs.append( (result, filename) )
+        self._analysis_runs.append( self.AnalysisRunHolder(result, filename) )
+
+    def new_comparison(self, analysis_run_index, result):
+        self._analysis_runs[analysis_run_index].add_comparison(result)
 
     def analysis_run_filename(self, run_index):
         """`None` indicates not saved."""
-        return self._analysis_runs[run_index][1]
+        return self._analysis_runs[run_index].filename
+    
+    def analysis_run_comparisons(self, run_index):
+        """List of comparison runs for this run"""
+        return self._analysis_runs[run_index].comparisons
+
+    def remove_run_comparison(self, run_index, comparison_index):
+        self._analysis_runs[run_index].remove_comparison(comparison_index)
 
     def remove_analysis_run(self, run_index):
         del self._analysis_runs[run_index]
 
     def save_analysis_run(self, run_index, filename):
-        old = self._analysis_runs[run_index]
         with lzma.open(filename, "wb") as file:
-            pickle.dump(old[0], file)
-        self._analysis_runs[run_index] = (old[0], filename)
+            pickle.dump(self._analysis_runs[run_index].result, file)
+        self._analysis_runs[run_index].filename = filename
 
     def load_analysis_run(self, filename):
         with lzma.open(filename, "rb") as file:
@@ -277,7 +327,7 @@ class Model():
                 "comparison_tools" : self.comparison_model.to_dict(),
             }
         data["selected_crime_types"] = [ self.unique_crime_types[index] for index in self.selected_crime_types]
-        data["saved_analysis_runs"] = [ pair[1] for pair in self._analysis_runs if pair[1] is not None ]
+        data["saved_analysis_runs"] = [ res.filename for res in self._analysis_runs if res.filename is not None ]
         return data
 
     def session_changed(self):

@@ -29,7 +29,9 @@ _text = {
     "top10_tt" : "Show just the top 10% of grid cells by risk",
     "topcus" : "Top",
     "topcus_tt" : "Show just the top % of grid cells by risk",
-
+    "adj" : "Adjusters",
+    "none" : "None",
+    
 }
 
 class BrowseAnalysisView(util.ModalWindow):
@@ -40,13 +42,15 @@ class BrowseAnalysisView(util.ModalWindow):
         self.set_size_percentage(50, 60)
 
     def add_widgets(self):
-        ttk.Label(self, text=_text["cp"]).grid(row=0, column=0, padx=2, sticky=tk.E)
-        ttk.Label(self, text=_text["grid"]).grid(row=1, column=0, padx=2, sticky=tk.E)
-        ttk.Label(self, text=_text["pred"]).grid(row=2, column=0, padx=2, sticky=tk.E)
-        ttk.Label(self, text=_text["date"]).grid(row=3, column=0, padx=2, sticky=tk.E)
+        self._selection_frame = ttk.Frame(self)
+        self._selection_frame.grid(row=0, column=0)
+        ttk.Label(self._selection_frame, text=_text["cp"]).grid(row=0, column=0, padx=2, sticky=tk.E)
+        ttk.Label(self._selection_frame, text=_text["grid"]).grid(row=1, column=0, padx=2, sticky=tk.E)
+        ttk.Label(self._selection_frame, text=_text["pred"]).grid(row=2, column=0, padx=2, sticky=tk.E)
+        ttk.Label(self._selection_frame, text=_text["date"]).grid(row=3, column=0, padx=2, sticky=tk.E)
         
         frame = ttk.LabelFrame(self, text=_text["risktype"])
-        frame.grid(row=0, column=2, rowspan=5)
+        frame.grid(row=0, column=1)
         self._risk_choice = tk.IntVar()
         rb = ttk.Radiobutton(frame, text=_text["rrisk"], value=0, variable=self._risk_choice, command=self._risk_choice_change)
         rb.grid(row=0, column=0, padx=2, sticky=tk.W)
@@ -72,6 +76,15 @@ class BrowseAnalysisView(util.ModalWindow):
         self._risk_level_entry["state"] = tk.DISABLED
         util.PercentageValidator(self._risk_level_entry, self._risk_level, callback=self._risk_choice_change)
 
+        self._adjust_frame = ttk.LabelFrame(self, text=_text["adj"])
+        self._adjust_frame.grid(row=1, column=0, columnspan=2)
+        choices = [key for (key,_) in self.controller.model.adjust_tasks]
+        self._adjust_choice = self._cbox(self._adjust_frame, choices, self._adjust_changed)
+        self._adjust_choice.grid(padx=2, pady=2)
+
+    def _adjust_changed(self, event):
+        self.controller.notify_adjust_choice(event.widget.current())
+
     def _risk_choice_change(self):
         if self._risk_choice.get() < 4:
             self._risk_level_entry["state"] = tk.DISABLED
@@ -90,7 +103,15 @@ class BrowseAnalysisView(util.ModalWindow):
         else:
             raise ValueError()
 
-    def _cbox_or_label(self, choices, command=None):
+    def _cbox(self, parent, choices, command=None):
+        cbox = ttk.Combobox(parent, height=5, state="readonly")
+        cbox["values"] = choices
+        cbox.bind("<<ComboboxSelected>>", command)
+        cbox.current(0)
+        cbox["width"] = max(len(str(t)) for t in choices)
+        return cbox
+
+    def _cbox_or_label(self, parent, choices, command=None):
         """Produces a :class:`ttk.Combobox` unless `choices` is of length 1,
         in which case just produces a label.
 
@@ -99,18 +120,13 @@ class BrowseAnalysisView(util.ModalWindow):
         """
         if len(choices) == 1:
             p = choices[0]
-            label = ttk.Label(self, text=str(p))
+            label = ttk.Label(parent, text=str(p))
             return label, False
         else:
-            cbox = ttk.Combobox(self, height=5, state="readonly")
-            cbox["values"] = choices
-            cbox.bind("<<ComboboxSelected>>", command)
-            cbox.current(0)
-            cbox["width"] = max(len(str(t)) for t in choices)
-            return cbox, True
+            return self._cbox(parent, choices, command), True
 
     def update_projections(self):
-        w, flag = self._cbox_or_label(self.controller.model.projections, command=self._proj_chosen)
+        w, flag = self._cbox_or_label(self._selection_frame, self.controller.model.projections, command=self._proj_chosen)
         w.grid(row=0, column=1, padx=2, pady=2, sticky=tk.W)
         if flag:
             self._proj_cbox = w
@@ -132,7 +148,7 @@ class BrowseAnalysisView(util.ModalWindow):
 
     def update_grids(self, choices):
         self._grid_choices = list(choices)
-        w, flag = self._cbox_or_label(self._grid_choices, command=self._grid_chosen)
+        w, flag = self._cbox_or_label(self._selection_frame, self._grid_choices, command=self._grid_chosen)
         w.grid(row=1, column=1, padx=2, pady=2, sticky=tk.W)
         if flag:
             self._grid_cbox = w
@@ -154,7 +170,7 @@ class BrowseAnalysisView(util.ModalWindow):
         
     def update_predictions(self, choices):
         self._pred_choices = list(choices)
-        w, flag = self._cbox_or_label(self._pred_choices, command=self._pred_chosen)
+        w, flag = self._cbox_or_label(self._selection_frame, self._pred_choices, command=self._pred_chosen)
         w.grid(row=2, column=1, padx=2, pady=2, sticky=tk.W)
         if flag:
             self._pred_cbox = w
@@ -176,7 +192,7 @@ class BrowseAnalysisView(util.ModalWindow):
 
     def update_dates(self, choices, choice_index=0):
         self._date_choices = list(choices)
-        w, flag = self._cbox_or_label(self._date_choices, command=self._date_chosen)
+        w, flag = self._cbox_or_label(self._selection_frame, self._date_choices, command=self._date_chosen)
         w.grid(row=3, column=1, padx=2, pady=2, sticky=tk.W)
         if flag:
             self._date_cbox = w
@@ -203,7 +219,7 @@ class BrowseAnalysisView(util.ModalWindow):
     def model(self):
         return self.controller.model
 
-    def update_prediction(self, level=-1):
+    def update_prediction(self, level=-1, adjust_task=None):
         """Change the plotted prediction.
 
         :param level: The % of "coverage" to display, or -1 to mean plot all the
@@ -214,9 +230,9 @@ class BrowseAnalysisView(util.ModalWindow):
             ax = fig.add_subplot(1,1,1)
             prediction = self.model.current_prediction.prediction
             if level == -1:
-                plot_risk(prediction, ax)
+                plot_risk(prediction, ax, adjust_task)
             else:
-                plot_coverage(prediction, level, ax)
+                plot_coverage(prediction, level, ax, adjust_task)
             ax.set_aspect(1)
             fig.set_tight_layout(True)
             return fig
@@ -247,15 +263,17 @@ yellow_to_red = matplotlib.colors.LinearSegmentedColormap("yellow_to_red",
               (1.0,  0.2, 0.2)]}
     )
 
-def plot_risk(prediction, axis):
+def plot_risk(prediction, axis, adjust_task=None):
     """Plot the risk defined by the grid prediction to the axis.
 
     :param prediction: Instance of :class:`GridPrediction`
     :param axis: `matplotlib` axis object.
     """
-    axis.pcolormesh(*prediction.mesh_data(), prediction.intensity_matrix, cmap="Blues")#yellow_to_red)
+    if adjust_task is not None:
+        prediction = adjust_task(prediction)
+    axis.pcolormesh(*prediction.mesh_data(), prediction.intensity_matrix, cmap="Blues")
 
-def plot_coverage(prediction, level, axis):
+def plot_coverage(prediction, level, axis, adjust_task=None):
     """Plot the risk defined by the grid prediction to the axis, constraining
     to a set % level of coverage.
 
@@ -263,6 +281,8 @@ def plot_coverage(prediction, level, axis):
     :param level: The level of coverage to plot.
     :param axis: `matplotlib` axis object.
     """
+    if adjust_task is not None:
+        prediction = adjust_task(prediction)
     current_mask = _np.ma.getmaskarray(prediction.intensity_matrix)
     in_coverage = open_cp.evaluation.top_slice(prediction.intensity_matrix, level / 100)
     current_mask = current_mask | (~in_coverage)

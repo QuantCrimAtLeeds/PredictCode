@@ -146,7 +146,9 @@ class ScipyKDE(predictor.Predictor):
 
     class SubTask(predictor.SingleGridPredictor):
         def __init__(self, timed_points, grid):
-            super().__init__()
+            # The Scipy library itself uses threads, so it's better to run
+            # one by one...
+            super().__init__(False)
             self._timed_points = timed_points
             self.predictor = open_cp.naive.ScipyKDE()
             self._grid = grid

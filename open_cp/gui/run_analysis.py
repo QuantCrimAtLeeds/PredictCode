@@ -93,7 +93,7 @@ class RunAnalysis():
         locator.get("pool").submit_gui_task(lambda : self.view.stop_progress_bar())
 
     def notify_model_message(self, msg, *args, level=logging.DEBUG):
-        self.to_msg_logger(msg, args, level=level)
+        self.to_msg_logger(msg, *args, level=level)
 
     def _finished(self, out=None):
         self.view.done()
@@ -109,7 +109,8 @@ class RunAnalysis():
         if self._off_thread.cancelled:
             self.view.cancel()
         else:
-            result = RunAnalysisResult(self._off_thread.results)
+            results = [PredictionResult(key, result) for (key, result) in self._off_thread.results]
+            result = RunAnalysisResult(results)
             self.controller.new_run_analysis_result(result)
 
 
@@ -194,6 +195,15 @@ class TaskKey():
     @property
     def prediction_length(self):
         return self._pred_length
+    
+    @staticmethod
+    def header():
+        """Column representation for CSV file"""
+        return ["projection type", "grid type", "prediction type", "prediction date", "scoring length"]
+    
+    def __iter__(self):
+        return iter((self.projection, self.grid, self.prediction_type,
+                self.prediction_date, self.prediction_length))
 
     def __repr__(self):
         return "projection: {}, grid: {}, prediction_type: {}, prediction_date: {}, prediction_length: {}".format(
@@ -314,7 +324,7 @@ class BaseRunner():
         self._controller.to_msg_logger(run_analysis_view._text["log9"])
         self._executor.start()
         try:
-            tasks = self.make_tasks()
+            tasks = list(self.make_tasks())
             self._controller.to_msg_logger(run_analysis_view._text["log13"])
             futures = [ self._executor.submit(t) for t in tasks if t.off_process ]
             on_thread_tasks = [t for t in tasks if not t.off_process]
@@ -346,7 +356,7 @@ class BaseRunner():
         return futures, done
 
     def _notify_result(self, key, result):
-        self._results.append( PredictionResult(key, result) )
+        self._results.append( (key, result) )
         self._controller.to_msg_logger(run_analysis_view._text["log8"], key)
 
     def cancel(self):
@@ -380,6 +390,7 @@ class BaseRunner():
 
         def __call__(self):
             return self._task()
+
 
 class _RunnerThread(BaseRunner):
     """Constructs the tasks to run.  Essentially forms the cartesian product

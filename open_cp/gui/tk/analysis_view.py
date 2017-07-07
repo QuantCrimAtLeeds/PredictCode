@@ -112,7 +112,13 @@ _text = {
     "r_load_fail" : "Failed to load old analysis file because: {}",
     "r_remove_tt" : "Forget about this run.  If this run has been saved, it will *not* be deleted from disk.",
     "comptt" : "Run the current 'comparison' methods on this prediction run",
-
+    "c_runat" : "Comparison @ {} {}",
+    "c_runat_tt" : "Click to view comparison results",
+    "c_remove_tt" : "Forget about this comparison run",
+    "c_save_tt" : "Save details of the comparison run in a CSV file",
+    "c_save" : "Please select a file to save comparison details to",
+    "c_save1" : "Saved Comparison File",
+    
 }
 
 class AnalysisView(tk.Frame):
@@ -373,9 +379,43 @@ class AnalysisView(tk.Frame):
                 command = lambda r=row : self._comparison(r))
             comp_button.grid(row=0, column=3, padx=1, pady=1, sticky=tk.NSEW)
             tooltips.ToolTipYellow(comp_button, _text["comptt"])
+            
+            for subrow, comparison in enumerate(self._model.analysis_run_comparisons(row)):
+                holder = tk.Frame(frame)
+                holder.grid(row=subrow+1, column=0, columnspan=2, sticky=tk.NSEW)
+                button = ttk.Button(holder,
+                    text = _text["c_runat"].format(
+                        comparison.run_time.strftime(_text["date_format"]),
+                        comparison.run_time.strftime(_text["time_format"]) ),
+                    command = lambda r=row, s=subrow : self._view_comparison(r,s) )
+                button.grid(row=0, column=1, padx=1, pady=1, sticky=tk.NSEW)
+                tooltips.ToolTipYellow(button, _text["c_runat_tt"])
+                filler = ttk.Frame(holder, width=15)
+                filler.grid_propagate(0)
+                filler.grid(row=0, column=0, sticky=tk.NSEW)
+                save_button = ttk.Button(frame, image=self._save_icon, command = lambda r=row, s=subrow : self._save_comparison_run(r, s) )
+                save_button.grid(row=subrow+1, column=2, padx=1, pady=1, sticky=tk.NSEW)
+                tooltips.ToolTipYellow(save_button, _text["c_save_tt"])
+                remove_button = ttk.Button(frame, image=self._close_icon, command = lambda r=row, s=subrow : self._remove_comparison_run(r, s) )
+                remove_button.grid(row=subrow+1, column=3, padx=1, pady=1, sticky=tk.NSEW)
+                tooltips.ToolTipYellow(remove_button, _text["c_remove_tt"])
+
         ttk.Button(self._result_frame, text=_text["r_load"],
             command=self._load_saved_run).grid(
             row=row + 1, column=0, padx=1, pady=1, sticky=tk.NSEW)
+
+    def _view_comparison(self, analysis_run_index, comparison_run_index):
+        pass
+    
+    def _save_comparison_run(self, analysis_run_index, comparison_run_index):
+        filename = util.ask_save_filename(filetypes = [(_text["c_save1"], "*.csv")],
+            title=_text["c_save"],
+            defaultextension=".csv")
+        if filename is not None:
+            self._controller.save_comparison_run(analysis_run_index, comparison_run_index, filename)
+
+    def _remove_comparison_run(self, analysis_run_index, comparison_run_index):
+        self._controller.remove_comparison_run(analysis_run_index, comparison_run_index)
 
     def _comparison(self, run):
         self._controller.run_comparison_for(run)

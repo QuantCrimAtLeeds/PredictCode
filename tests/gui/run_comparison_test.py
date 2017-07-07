@@ -175,14 +175,31 @@ def test_stage2(run_com, comparator_types, locator_mock, log_queue, compare_task
     print_log(log_queue)
     
     task, at_end = locator_mock.last_call()
-    task()
+    out = task()
     print_log(log_queue)
-    
-    call = compare_task.call_args
-    assert call[0][0] == new_prediction
+    assert len(out) == 1
+    assert out[0][0] is compare_task
+    assert out[0][1].prediction == new_prediction
     t, x, y = main_model.selected_by_crime_type_data()
-    assert np.all(call[0][1].timestamps == t)
-    np.testing.assert_allclose(call[0][1].xcoords, x)
-    np.testing.assert_allclose(call[0][1].ycoords, y)
-    assert call[0][2] == datetime.datetime(2017,5,1)
-    assert call[0][3] == datetime.timedelta(days=2)
+    assert np.all(out[0][2].timestamps == t)
+    np.testing.assert_allclose(out[0][2].xcoords, x)
+    np.testing.assert_allclose(out[0][2].ycoords, y)
+    assert out[0][3] == "adjuster_type"
+    assert out[0][4] == "comparer_type"
+    
+def test_ComparisonTaskWrapper():
+    com_task = mock.MagicMock()
+    result = mock.MagicMock()
+    timed_points = mock.MagicMock()
+    adjust_name = "akjdgjd"
+    com_name = "hglnh"
+    arg_list = [(com_task, result, timed_points, adjust_name, com_name)]
+    wrapper = run_comparison.ComparisonTaskWrapper(arg_list)
+    out = wrapper()
+    com_task.assert_called_with(result.prediction, timed_points,
+        result.key.prediction_date, result.key.prediction_length)
+    assert len(out) == 1
+    assert out[0].prediction_key == result.key
+    assert repr(out[0].comparison_key) == repr(run_comparison.TaskKey(adjust_name, com_name))
+    assert out[0].score == com_task.return_value
+    
