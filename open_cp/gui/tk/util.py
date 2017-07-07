@@ -292,13 +292,10 @@ class ModalWindow(tk.Toplevel):
     """
     def __init__(self, parent, title, no_border = False, resize=None):
         super().__init__(parent)
-        if no_border:
-            self.wm_overrideredirect(True)
         if parent.master is None:
             self._parent = parent
         else:
             self._parent = parent.master
-        #self._parent = parent
         self.title(title)
         self.minsize(50, 50)
         if resize is None:
@@ -315,6 +312,8 @@ class ModalWindow(tk.Toplevel):
         self.grab_set()
         self.focus_force()
         self.bind("<Unmap>", self._minim)
+        if no_border:
+            self.wm_overrideredirect(True)
 
     def _minim(self, event):
         # If we're being minimised then also minimise the parent!

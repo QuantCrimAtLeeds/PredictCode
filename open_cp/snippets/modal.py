@@ -9,6 +9,9 @@ import datetime
 import tkinter as tk
 import tkinter.ttk as ttk
 
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
 root = tk.Tk()
 
 class OurDialog(util.ModalWindow):
