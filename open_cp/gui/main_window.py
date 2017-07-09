@@ -64,6 +64,7 @@ class MainWindow():
             self.view.alert("Failed to read session.\nCause: {}/{}".format(type(e), e))
             return
         self.view.destroy()
+        model.session_filename = filename
         analysis.Analysis(model, self._root).run()
         self.init()
 

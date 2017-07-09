@@ -11,7 +11,6 @@ import json
 import logging
 import pickle
 import lzma
-
 import numpy as np
 
 import open_cp.gui.funcs as funcs
@@ -132,6 +131,8 @@ class Analysis():
             with open(filename, "wt") as f:
                 f.write(json_string)
             self.model.reset_settings_dict()
+            self.model.session_filename = filename
+            self.view.update_session_name()
         except Exception as e:
             self._logger.exception("Failed to save")
             self.view.alert(analysis_view._text["fail_save"].format(type(e), e))
@@ -166,14 +167,26 @@ class Analysis():
     def view_past_run(self, run):
         result = self.model.analysis_runs[run]
         browse_analysis.BrowseAnalysis(self._root, result, self.model).run()
+
+    def view_all_past_runs(self):
+        result = run_analysis.merge_all_results(self.model.analysis_runs)
+        browse_analysis.BrowseAnalysis(self._root, result, self.model).run()
         
     def run_comparison_for(self, run):
         self._last_comprison_run_for = run
         result = self.model.analysis_runs[run]
         run_comparison.RunComparison(self.view, self, result).run()
 
+    def run_comparison_for_all(self):
+        self._last_comprison_run_for = -1
+        result = run_analysis.merge_all_results(self.model.analysis_runs)
+        run_comparison.RunComparison(self.view, self, result).run()
+
     def new_run_comparison_result(self, result):
-        self.model.new_comparison(self._last_comprison_run_for, result)
+        if self._last_comprison_run_for == -1:
+            self.model.new_complete_comparison(result)
+        else:
+            self.model.new_comparison(self._last_comprison_run_for, result)
         self.view.update_run_analysis_results()
         
     def remove_comparison_run(self, run_index, com_index):
@@ -181,7 +194,10 @@ class Analysis():
         self.view.update_run_analysis_results()
 
     def save_comparison_run(self, run_index, comparison_index, filename):
-        result = self.model.analysis_run_comparisons(run_index)[comparison_index]
+        if run_index == -1:
+            result = self.model.complete_comparison
+        else:
+            result = self.model.analysis_run_comparisons(run_index)[comparison_index]
         result.save_to_csv(filename)
 
     def remove_past_run(self, run):
@@ -239,10 +255,12 @@ class Model():
         self.comparison_model = ComparisonModel(self)
         self._time_range = None
         self._selected_crime_types = set()
+        self._meta_comparison = None
         self._logger = logging.getLogger(__name__)
         self.reset_times()
         self._analysis_runs = []
         self._loaded_from_dict = None
+        self.session_filename = None
 
     class AnalysisRunHolder():
         def __init__(self, result, filename=None):
@@ -283,6 +301,7 @@ class Model():
 
     def new_comparison(self, analysis_run_index, result):
         self._analysis_runs[analysis_run_index].add_comparison(result)
+        self._meta_comparison = None
 
     def analysis_run_filename(self, run_index):
         """`None` indicates not saved."""
@@ -297,6 +316,14 @@ class Model():
 
     def remove_analysis_run(self, run_index):
         del self._analysis_runs[run_index]
+        self._meta_comparison = None
+
+    def new_complete_comparison(self, result):
+        self._meta_comparison = result
+
+    @property
+    def complete_comparison(self):
+        return self._meta_comparison
 
     def save_analysis_run(self, run_index, filename):
         with lzma.open(filename, "wb") as file:
@@ -329,6 +356,15 @@ class Model():
         data["selected_crime_types"] = [ self.unique_crime_types[index] for index in self.selected_crime_types]
         data["saved_analysis_runs"] = [ res.filename for res in self._analysis_runs if res.filename is not None ]
         return data
+
+    @property
+    def session_filename(self):
+        """Filename of the session, or `None` to indicate has never been saved."""
+        return self._session_filename
+
+    @session_filename.setter
+    def session_filename(self, value):
+        self._session_filename = value
 
     def session_changed(self):
         """Has the session changed since it was loaded?"""

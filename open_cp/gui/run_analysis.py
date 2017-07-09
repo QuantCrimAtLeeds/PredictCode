@@ -130,6 +130,15 @@ class RunAnalysisResult():
         return self._time
 
 
+def merge_all_results(results):
+    """Merge an iterable of :class:`RunAnalysisResult` instances into a single
+    :class:`RunAnalysisResult` object."""
+    all_results = []
+    for result in results:
+        all_results.extend(result.results)
+    return RunAnalysisResult(all_results)
+
+
 class PredictionResult():
     """The result of running the prediction, but not including any analysis
     results.
