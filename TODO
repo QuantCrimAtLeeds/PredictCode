@@ -21,6 +21,4 @@
   - Can re-create this consistently by running the `snippets\modal.py` script, clicking to open the date picker, then clicking
     on another window, and then clicking back.  After this, the date picker will fail to display again.
   - Fixed on Windows by moving the call to `self.wm_overrideredirect(True)` to the end.
-  - Need to check if this works on linux
-
-  - `scrollframe.py` doesn't work correctly if _both_ scrollbars get displayed
+  - Need to check if this works on linux (it didn't, have moved the offending line up before we add widgets).  Cannot re-create the main problem on linux.

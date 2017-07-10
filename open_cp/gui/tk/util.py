@@ -290,7 +290,7 @@ class ModalWindow(tk.Toplevel):
     :param resize: If `None` then don't allow resizing.  Otherwise a string
       containing `w` and/or `h` to allow resizing of width and/or height.
     """
-    def __init__(self, parent, title, no_border = False, resize=None):
+    def __init__(self, parent, title, no_border=False, resize=None):
         super().__init__(parent)
         if parent.master is None:
             self._parent = parent
@@ -302,9 +302,12 @@ class ModalWindow(tk.Toplevel):
             self.resizable(width=False, height=False)
         else:
             self.resizable(width=("w" in resize), height=("h" in resize))
-        self.add_widgets()
         self.protocol("WM_DELETE_WINDOW", self.cancel)
         self.bind("<Button-1>", self._flash)
+        # This cannot go later for it work on linux
+        if no_border:
+            self.wm_overrideredirect(True)
+        self.add_widgets()
         # Have had trouble with this, but the current placement seems to work
         # on Windows and X-Windows okay.
         self.transient(self._parent)
@@ -312,8 +315,6 @@ class ModalWindow(tk.Toplevel):
         self.grab_set()
         self.focus_force()
         self.bind("<Unmap>", self._minim)
-        if no_border:
-            self.wm_overrideredirect(True)
 
     def _minim(self, event):
         # If we're being minimised then also minimise the parent!
@@ -494,12 +495,13 @@ class ScrolledFrame(tk.Frame):
         else:
             self._yscroll = None
 
-        self._frame = tk.Frame(self)
+        # Must be child of canvas and not `self` to avoid visibility problems
+        self._frame = tk.Frame(self._canvas)
         self._frame.bind("<MouseWheel>", self._mouse_wheel)
         self._frame.bind("<Button>", self._mouse_button)
         self._canvas.create_window(0, 0, window=self._frame, anchor=tk.NW)
         self._frame.bind('<Configure>', self._conf)  
-        self.bind('<Configure>', self._conf1)
+        self._canvas.bind('<Configure>', self._conf1)
         if self._yscroll is not None:
             self._yscroll.bind("<MouseWheel>", self._mouse_wheel)
             self._yscroll.bind("<Button>", self._mouse_button)            
@@ -528,24 +530,25 @@ class ScrolledFrame(tk.Frame):
         # Listens to the outer frame being resized and adds or removes the
         # scrollbars as necessary.
         if self._xscroll is not None:
-            if int(self._canvas["width"]) <= self.winfo_width():
-                self._xscroll.grid_remove()
-            else:
+            if self._canvas.winfo_width() < self._canvas.winfo_reqwidth():
                 self._xscroll.grid()
-        if self._yscroll is not None:
-            if int(self._canvas["height"]) <= self.winfo_height():
-                self._yscroll.grid_remove()
             else:
+                self._xscroll.grid_remove()
+        if self._yscroll is not None:
+            if self._canvas.winfo_height() < self._canvas.winfo_reqheight():
                 self._yscroll.grid()
+            else:
+                self._yscroll.grid_remove()
         
     def _conf(self, e):
         # Listens to the inner frame and resizes the canvas to fit
-        if self._canvas["width"] != self.frame.winfo_reqwidth():
-            self._canvas["width"] = self.frame.winfo_reqwidth()
+        width = self.frame.winfo_reqwidth()
         height = self.frame.winfo_reqheight()
+        if self._canvas["width"] != width:
+            self._canvas["width"] = width
         if self._canvas["height"] != height:
             self._canvas["height"] = height
-        self._canvas["scrollregion"] = (0, 0, self._canvas["width"], height)
+        self._canvas["scrollregion"] = (0, 0, width, height)
         # Resize outer as well
         self._conf1(None)
         # Notify parent we changed, in case of manual position control
@@ -566,6 +569,7 @@ class HREF(ttk.Label):
         self.bind("<Button>", self.open)
 
     def open(self, event):
+        """Open the URL using a webbrower."""
         self._busy()
         _web.open(self._url)
 

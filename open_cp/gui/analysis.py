@@ -298,10 +298,10 @@ class Model():
     def new_analysis_run(self, result, filename=None):
         """Add a new analysis run with optional saved file name."""
         self._analysis_runs.append( self.AnalysisRunHolder(result, filename) )
+        self._meta_comparison = None
 
     def new_comparison(self, analysis_run_index, result):
         self._analysis_runs[analysis_run_index].add_comparison(result)
-        self._meta_comparison = None
 
     def analysis_run_filename(self, run_index):
         """`None` indicates not saved."""

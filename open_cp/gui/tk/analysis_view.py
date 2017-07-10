@@ -356,6 +356,8 @@ class AnalysisView(tk.Frame):
         return frame
 
     def _run_panel(self, parent):
+        """Add widgets to run the current analysis, and to show past prediction
+        and comparison results."""
         frame = ttk.Frame(parent)
         util.stretchy_rows(frame, [0])
         self._run_frame = ttk.LabelFrame(frame, text=_text["run"])
@@ -381,8 +383,7 @@ class AnalysisView(tk.Frame):
         for row, result in enumerate(self._model.analysis_runs):
             frame = ttk.Frame(self._result_frame)
             frame.grid(row=row, column=0, sticky=tk.NSEW)
-            self._add_analysis_run_row(frame, result, row,
-                self._model.analysis_run_filename(row))
+            self._add_analysis_run_row(frame, result, row, self._model.analysis_run_filename(row))
             self._add_comparison_run_widgets(frame, row)
 
         ttk.Button(self._result_frame, text=_text["r_load"],
@@ -393,6 +394,8 @@ class AnalysisView(tk.Frame):
             self._add_view_all_analysis_runs(row, self._model.complete_comparison)
 
     def _add_analysis_run_row(self, frame, result, row, filename):
+        frame = ttk.Frame(frame)
+        frame.grid(sticky=tk.NSEW)
         button = ttk.Button(frame,
             text = _text["r_runat"].format(
                 result.run_time.strftime(_text["date_format"]),
@@ -418,11 +421,11 @@ class AnalysisView(tk.Frame):
 
     def _add_comparison_run_widgets(self, frame, row):
         for subrow, comparison in enumerate(self._model.analysis_run_comparisons(row)):
-            self._add_comparison_row(comparison, row, subrow)
+            self._add_comparison_row(frame, comparison, row, subrow)
 
     def _add_comparison_row(self, frame, comparison, row, subrow):
         holder = tk.Frame(frame)
-        holder.grid(row=subrow+1, column=0, columnspan=2, sticky=tk.NSEW)
+        holder.grid(row=subrow+1, column=0, sticky=tk.NSEW)
         button = ttk.Button(holder,
             text = _text["c_runat"].format(
                 comparison.run_time.strftime(_text["date_format"]),
@@ -432,15 +435,15 @@ class AnalysisView(tk.Frame):
         filler = ttk.Frame(holder, width=15)
         filler.grid_propagate(0)
         filler.grid(row=0, column=0, sticky=tk.NSEW)
-        save_button = ttk.Button(frame, image=self._save_icon,
+        save_button = ttk.Button(holder, image=self._save_icon,
             command = lambda r=row, s=subrow : self._save_comparison_run(r, s) )
-        save_button.grid(row=subrow+1, column=2, padx=1, pady=1, sticky=tk.NSEW)
+        save_button.grid(row=0, column=2, padx=1, pady=1, sticky=tk.NSEW)
         tooltips.ToolTipYellow(save_button, _text["c_save_tt"])
         if row > -1:
             tooltips.ToolTipYellow(button, _text["c_runat_tt"])
-            remove_button = ttk.Button(frame, image=self._close_icon,
+            remove_button = ttk.Button(holder, image=self._close_icon,
                 command = lambda r=row, s=subrow : self._remove_comparison_run(r, s) )
-            remove_button.grid(row=subrow+1, column=3, padx=1, pady=1, sticky=tk.NSEW)
+            remove_button.grid(row=0, column=3, padx=1, pady=1, sticky=tk.NSEW)
             tooltips.ToolTipYellow(remove_button, _text["c_remove_tt"])
         else:
             tooltips.ToolTipYellow(button, _text["comallview"])
@@ -457,7 +460,7 @@ class AnalysisView(tk.Frame):
         button.grid(row=0, column=1, padx=1, pady=1, sticky=tk.NSEW)
         tooltips.ToolTipYellow(button, _text["comalltt"])
         if comparison is not None:
-            self._add_comparison_row(frame, comparison, -1, row+2)
+            self._add_comparison_row(self._result_frame, comparison, -1, row+2)
 
     def _view_all_analysis_runs(self):
         self._controller.view_all_past_runs()

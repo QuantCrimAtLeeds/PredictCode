@@ -29,6 +29,8 @@ class Task():
     @property
     def off_process(self):
         """Should we run as a separate process?"""
+        if not hasattr(self, "_off_process"):
+            print("WTF?  {} / {}".format(self, type(self)))
         return self._off_process
 
 
