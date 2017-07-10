@@ -304,17 +304,18 @@ class ModalWindow(tk.Toplevel):
             self.resizable(width=("w" in resize), height=("h" in resize))
         self.protocol("WM_DELETE_WINDOW", self.cancel)
         self.bind("<Button-1>", self._flash)
-        # This cannot go later for it work on linux
+        # This cannot go later for it work to on linux
+        import datetime
         if no_border:
             self.wm_overrideredirect(True)
         self.add_widgets()
         # Have had trouble with this, but the current placement seems to work
         # on Windows and X-Windows okay.
-        self.transient(self._parent)
         self.wait_visibility()
         self.grab_set()
         self.focus_force()
         self.bind("<Unmap>", self._minim)
+        self.transient(self._parent)
 
     def _minim(self, event):
         # If we're being minimised then also minimise the parent!

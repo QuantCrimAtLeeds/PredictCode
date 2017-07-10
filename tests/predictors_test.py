@@ -225,3 +225,14 @@ def test_from_continuous_prediction(random_mock):
     expected = (51 + 52) / 2
     assert(test.grid_risk(1,2) == pytest.approx(expected))
     assert(test.grid_risk(2,3) == 0)
+
+def test_continuous_prediction_samples():
+    cp = testmod.ContinuousPrediction(20, 30, 0, 0, samples = 123)
+    assert cp.samples == 123
+
+    cp = testmod.ContinuousPrediction(20, 30, 0, 0)
+    assert cp.samples == 3
+
+    cp = testmod.ContinuousPrediction(200, 100, 0, 0)
+    assert cp.samples == 100
+    

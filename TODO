@@ -22,3 +22,5 @@
     on another window, and then clicking back.  After this, the date picker will fail to display again.
   - Fixed on Windows by moving the call to `self.wm_overrideredirect(True)` to the end.
   - Need to check if this works on linux (it didn't, have moved the offending line up before we add widgets).  Cannot re-create the main problem on linux.
+  - Next attempt: Moved the `transient` command to the end, which again fixes it on Windows.
+  - Test again on X/Linux

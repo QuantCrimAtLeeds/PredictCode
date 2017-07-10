@@ -265,12 +265,15 @@ class ContinuousPrediction():
     :param samples: The number of samples to use when computing the risk in a
       grid cell.
     """
-    def __init__(self, cell_width=50, cell_height=50, xoffset=0, yoffset=0, samples=50):
-        self.samples = samples
+    def __init__(self, cell_width=50, cell_height=50, xoffset=0, yoffset=0, samples=None):
         self.cell_width = cell_width
         self.cell_height = cell_height
         self.xoffset = xoffset
         self.yoffset = yoffset
+        if samples is None:
+            # Use a fixed _density_
+            samples = cell_width * cell_height // 200
+        self.samples = samples
     
     def grid_risk(self, gx, gy):
         """Return an estimate of the average risk in the grid cell"""
