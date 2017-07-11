@@ -80,6 +80,9 @@ class _RescaleTask(_threads.OffThreadTask):
         if self.cancelled:
             return
         width, height = self._correct_aspect_ratio(*self._image.size)
+        # Rare race condition
+        if width <= 0 or height <= 0:
+            width, height = 10, 10
         image = self._image.resize((width, height), resample=PIL.Image.LANCZOS)
         return image
 
