@@ -4,6 +4,78 @@ import pytest
 import open_cp.kernels as testmod
 import unittest.mock as mock
 
+def slow_gaussian_kernel_new(pts, mean, var):
+    """Test case where `pts`, `mean`, `var` are all of shape 2."""
+    assert(len(pts.shape) == 2 and len(mean.shape) == 2 and len(var.shape) == 2)
+    space_dim = pts.shape[0]
+    num_pts = pts.shape[1]
+    num_samples = mean.shape[1]
+    assert(space_dim == mean.shape[0])
+    assert((space_dim, num_samples) == var.shape)
+
+    out = np.empty(num_pts)
+    for i in range(num_pts):
+        total = np.empty(num_samples)
+        for j in range(num_samples):
+            prod = np.empty(space_dim)
+            for k in range(space_dim):
+                v = var[k][j] * 2
+                prod[k] = np.exp(- (pts[k][i] - mean[k][j]) **
+                                 2 / v) / np.sqrt(np.pi * v)
+            total[j] = np.product(prod)
+        out[i] = np.mean(total)
+
+    return out
+
+def test_slow_gaussian_kernel_single_new():
+    pts = np.empty((1, 1))
+    pts[0][0] = 1
+    mean = np.empty((1, 1))
+    mean[0][0] = 0.5
+    var = np.empty((1, 1))
+    var[0][0] = 3
+
+    expected = np.exp(-0.25 / 6) / np.sqrt(6 * np.pi)
+    got = slow_gaussian_kernel_new(pts, mean, var)
+    np.testing.assert_allclose(expected, got)
+
+def test_compare_GaussianKernel():
+    for k in range(1, 6):
+        for M in range(1, 6):
+            mean = np.random.random(size=(k,M))
+            var = 0.0001 + np.random.random(size=(k,M))**2
+            kernel = testmod.GaussianKernel(mean, var)
+            for N in range(1, 6):
+                pts = np.random.random(size=(k,N))
+                want = slow_gaussian_kernel_new(pts, mean, var)
+                got = kernel(pts)
+                print(k,M,N)
+                np.testing.assert_allclose(got, want)
+            # Single point case
+            pts = np.random.random(size=k)
+            want = slow_gaussian_kernel_new(pts[:,None], mean, var)[0]
+            got = kernel(pts)
+            print("Single point case k={}, M={}".format(k,M))
+            assert want == pytest.approx(got)
+
+def test_compare_GaussianKernel_k1_case():
+    for M in range(1, 6):
+        mean = np.random.random(size=M)
+        var = 0.0001 + np.random.random(size=M)**2
+        kernel = testmod.GaussianKernel(mean, var)
+        for N in range(1, 6):
+            pts = np.random.random(size=N)
+            want = slow_gaussian_kernel_new(pts[None,:], mean[None,:], var[None,:])
+            got = kernel(pts)
+            print(M,N)
+            np.testing.assert_allclose(got, want)
+        # Single point case
+        print("Single point case, M={}".format(M))
+        pts = np.random.random()
+        want = slow_gaussian_kernel_new(np.asarray(pts)[None,None], mean[None,:], var[None,:])[0]
+        got = kernel(pts)
+        assert want == pytest.approx(got)
+        
 def test_1D_kth_distance():
     coords = [0,1,2,3,6,7,9,15]
     distances = testmod.compute_kth_distance(coords, k=3)
@@ -14,101 +86,12 @@ def test_2D_kth_distance():
     distances = testmod.compute_kth_distance(coords, k=2)
     np.testing.assert_allclose(distances, [1,np.sqrt(2),np.sqrt(2),2])
 
-def slow_gaussian_kernel(pts, mean, var):
-    assert(len(pts.shape) == 2 and len(mean.shape) == 2 and len(var.shape) == 2)
-    space_dim = pts.shape[1]
-    num_pts = pts.shape[0]
-    num_samples = mean.shape[0]
-    assert(space_dim == mean.shape[1])
-    assert((num_samples, space_dim) == var.shape)
-
-    out = np.empty(num_pts)
-    for i in range(num_pts):
-        total = np.empty(num_samples)
-        for j in range(num_samples):
-            prod = np.empty(space_dim)
-            for k in range(space_dim):
-                v = var[j][k] * 2
-                prod[k] = np.exp(- (pts[i][k] - mean[j][k]) **
-                                 2 / v) / np.sqrt(np.pi * v)
-            total[j] = np.product(prod)
-        out[i] = np.mean(total)
-
-    return out
-
-def test_slow_gaussian_kernel_single():
-    pts = np.empty((1, 1))
-    pts[0][0] = 1
-    mean = np.empty((1, 1))
-    mean[0][0] = 0.5
-    var = np.empty((1, 1))
-    var[0][0] = 3
-
-    expected = np.exp(-0.25 / 6) / np.sqrt(6 * np.pi)
-    got = slow_gaussian_kernel(pts, mean, var)
-    np.testing.assert_allclose(expected, got)
-
-def test_gaussian_kernel_single():
-    pts = np.empty((1, 1))
-    pts[0][0] = 1
-    mean = np.empty((1, 1))
-    mean[0][0] = 0.5
-    var = np.empty((1, 1))
-    var[0][0] = 3
-
-    expected = np.exp(-0.25 / 6) / np.sqrt(6 * np.pi)
-    np.testing.assert_allclose(
-        expected, testmod._gaussian_kernel(pts, mean, var))
-
-def test_gaussian_kernel_allows_simple_single():
-    pts = np.array([1])
-    mean = np.array([0.5])
-    var = np.array([3])
-
-    expected = np.array([np.exp(-0.25 / 6) / np.sqrt(6 * np.pi)])
-    np.testing.assert_allclose(
-        expected, testmod._gaussian_kernel(pts, mean, var))
-
-def test_gaussian_kernel_allows_scalar():
-    pts = np.array(1)
-    mean = np.array([0.5, 1])
-    var = np.array([3, 4])
-
-    expected = np.exp(-0.25 / 6) / np.sqrt(6 * np.pi)
-    expected += 1 / np.sqrt(8 * np.pi)
-    got = testmod._gaussian_kernel(pts, mean, var)
-    assert( not isinstance(got, np.ndarray) )
-    assert( got == pytest.approx(expected / 2) )
-
-def test_gaussian_kernel_1D_data():
-    mean = np.array([1,2,3])
-    var = np.array([4,5,6])
-    pts = np.array([10])
-    
-    expected = sum(
-        np.exp(-(10-m)**2/(2*v)) / np.sqrt(2*np.pi*v)
-        for m, v in zip(mean, var) )
-    np.testing.assert_allclose( np.array([expected / 3]),
-        testmod._gaussian_kernel(pts, mean, var) )
-
-def test_gaussian_kernel():
-    pts = np.random.rand(20, 2)
-    mean = np.random.rand(5, 2)
-    var = np.random.rand(5, 2)
-    got = testmod._gaussian_kernel(pts, mean, var)
-    expected = slow_gaussian_kernel(pts, mean, var)
-    assert(got.shape == (20,))
-    np.testing.assert_allclose(expected, got)
-
 def slow_kth_nearest(points, index):
     """(k, N) input.  Returns ordered list [0,...] of distance to kth nearest point from index"""
     if len(points.shape) == 1:
         points = points[None, :]
-    pt = points.T[index]
-    distances = np.empty(points.shape[1])
-    for i in range(points.shape[1]):
-        p = points.T[i]
-        distances[i] = np.sqrt(np.sum((p-pt)**2))
+    pt = points[:, index]
+    distances = np.sqrt(np.sum((points - pt[:,None])**2, axis=0))
     distances.sort()
     return distances
 

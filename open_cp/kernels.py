@@ -76,42 +76,6 @@ class KernelEstimator(metaclass=_abc.ABCMeta):
         pass
 
 
-# Todo: change the signature of mean and var so we don't need to call
-# transpose.  Wrap into the class GaussianKernel
-def _gaussian_kernel(points, mean, var):
-    """pts is array of shape (N,k) where k is the dimension of space.
-
-    mean is array of shape (M,k) and var an array of shape (M,k)
-
-    For each point in `pts`: for each of i=1...M and each coord j=1...k
-    we compute the Gaussian kernel centred on mean[i][j] with variance var[i][j],
-    and then product over the j, sum over the i, and finally divide by M.
-
-    Returns an array of shape (N) unless N=1 when returns a scalar.
-    """
-    if len(mean.shape) == 1:
-        # So k=1
-        mean = mean[:, None]
-        var = var[:, None]
-        if len(points.shape) == 0:
-            pts = _np.array([points])[:, None]
-        else:
-            pts = points[:, None]
-    else:
-        # k>1 so if points is 1D it's a single point
-        if len(points.shape) == 1:
-            pts = points[None, :]
-        else:
-            pts = points
-
-    # x[i][j] = (pts[i] - mean[j])**2   (as a vector)
-    x = (pts[:,None,:] - mean[None,:,:]) ** 2
-    var_broad = var[None,:,:] * 2.0
-    x = _np.exp( - x / var_broad ) / _np.sqrt((_np.pi * var_broad))
-    return_array = _np.mean(_np.product(x, axis=2), axis=1)
-    return return_array if pts.shape[0] > 1 else return_array[0]
-
-
 class GaussianKernel(Kernel):
     """A variable bandwidth gaussian kernel.  Each input Gaussian is an
     uncorrelated k-dimensional Gaussian.  These are summed to produce the
@@ -122,15 +86,44 @@ class GaussianKernel(Kernel):
     :param scale: The overall normalisation factor, defaults to 1.0.
     """
     def __init__(self, means, variances, scale=1.0):
-        self.means = means.T
         if _np.any(_np.abs(variances) < 1e-8):
             raise ValueError("Too small variance!")
-        self.variances = variances.T
+
+        if len(means.shape) == 1:
+            self.means = means[None, :]
+            self.variances = variances[None, :]
+        else:
+            self.means = means
+            self.variances = variances
         self.scale = scale
-    
+        
     def __call__(self, points):
-        return (_gaussian_kernel(_np.asarray(points).T, self.means, self.variances)
-                * self.scale)
+        """For each point in `pts`: for each of i=1...M and each coord j=1...k
+        we compute the Gaussian kernel centred on mean[i][j] with variance var[i][j],
+        and then product over the j, sum over the i, and finally divide by M.
+        """
+        points = _np.asarray(points)
+        if self.means.shape[0] == 1:
+            if len(points.shape) == 0:
+                # Scalar input
+                pts = points[None, None]
+            elif len(points.shape) == 1:
+                pts = points[None, :]
+            else:
+                pts = points
+        else:
+            # k>1 so if points is 1D it's a single point
+            if len(points.shape) == 1:
+                pts = points[:, None]
+            else:
+                pts = points
+
+        # x[:,i,j] = (pts[:,i] - mean[:,j])**2
+        x = (pts[:,:,None] - self.means[:,None,:]) ** 2
+        var_broad = self.variances[:,None,:] * 2.0
+        x = _np.exp( - x / var_broad ) / _np.sqrt((_np.pi * var_broad))
+        return_array = _np.mean(_np.product(x, axis=0), axis=1) * self.scale
+        return return_array if pts.shape[1] > 1 else return_array[0]
         
     def set_scale(self, scale):
         self.scale = scale
@@ -149,19 +142,19 @@ def compute_kth_distance(coords, k=15):
     points = _np.asarray(coords)
     k = min(k, points.shape[-1] - 1)
 
-    # scipy.spatial uses the other convention; wants shape (N,n)
+    out = _np.empty(points.shape[-1])
+    # This naive algorithm is actually faster than using a KDTree!
     if len(points.shape) == 1:
-        points = points[:, None]
+        for i, pt in enumerate(points.T):
+            dists_sq = (points - pt)**2
+            dists_sq.sort()
+            out[i] = dists_sq[k]
     else:
-        points = points.T
-
-    tree = _spatial.KDTree(points)
-    distance_to_k = _np.empty(points.shape[0])
-    for i, p in enumerate(points):
-        distances, _ = tree.query(p, k=k+1)
-        distance_to_k[i] = distances[-1]
-    
-    return distance_to_k
+        for i, pt in enumerate(points.T):
+            dists_sq = _np.sum((points - pt[:,None])**2, axis=0)
+            dists_sq.sort()
+            out[i] = dists_sq[k]
+    return _np.sqrt(out)
 
 def compute_normalised_kth_distance(coords, k=15):
     """Find the (Euclidean) distance to the `k` th nearest neighbour.
@@ -242,9 +235,7 @@ def marginal_knng(coords, coord_index=0, k=15):
     distances = compute_normalised_kth_distance(coords, k)
     data = coords[coord_index]
     var = (_np.std(data, ddof=1) * distances) ** 2
-    def kernel(x):
-        return _gaussian_kernel(_np.asarray(x).T, data, var)
-    return kernel
+    return GaussianKernel(data, var)
 
 
 class KthNearestNeighbourGaussianKDE(KernelEstimator):
