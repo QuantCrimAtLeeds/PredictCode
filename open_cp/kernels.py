@@ -388,6 +388,8 @@ class GaussianBase():
     
     The returned instance is a callable object which can be evaluated.
     
+    With default settings, acts like the `scipy` Gaussian kde method.
+    
     To change from the defaults, set one or more of the following attributes:
       
       - :attr:`covariance_matrix`
@@ -411,6 +413,7 @@ class GaussianBase():
         self.bandwidth = "scott"
         self.covariance_matrix = None
         self.weights = None
+        self.set_scale(1.0)
         
     def __call__(self, pts):
         pts = _np.asarray(pts)
@@ -429,7 +432,7 @@ class GaussianBase():
             x = x / self._bandwidth_to_dim[:,None]
         if self.weights is not None:
             x = x * self.weights[:,None]
-        return _np.sum(x, axis=0) / self._norm
+        return _np.sum(x, axis=0) / self._norm * self.scale
         
     def _update_norm(self):
         if self.weights is not None:
@@ -525,6 +528,9 @@ class GaussianBase():
         """The data, an array of shape `(n,N)` where `n == self.dimension` and
         `N == self.num_points."""
         return self._data
+    
+    def set_scale(self, scale=1.0):
+        self.scale = 1.0
     
     
 class GaussianNearestNeighbour(GaussianBase):
