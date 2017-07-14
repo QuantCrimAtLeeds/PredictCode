@@ -174,3 +174,197 @@ def test_ReflectedKernelEstimator():
     kernel = test([1,2,3,4])
     assert(kernel.reflected_axis == 2)
     
+    
+def test_GaussianBase_not_point():
+    with pytest.raises(ValueError):
+        testmod.GaussianBase(5.2)
+        
+def test_GaussianBase_set_covariance():
+    gb = testmod.GaussianBase([1,2,3,4])
+    with pytest.raises(ValueError):
+        gb.covariance_matrix = [[1,2,3], [2,3,4]]
+    with pytest.raises(ValueError):
+        gb.covariance_matrix = [[1,2], [3,4]]
+    gb.covariance_matrix = 1
+    
+    gb = testmod.GaussianBase([[1,2,3,4], [4,2,2,1]])
+    with pytest.raises(ValueError):
+        gb.covariance_matrix = [[1,2,3], [2,3,4]]
+    gb.covariance_matrix = [[1,2], [3,4]]
+    with pytest.raises(ValueError):
+        gb.covariance_matrix = 1
+    
+def test_GaussianBase_set_band():
+    gb = testmod.GaussianBase([1,2,3,4])
+    assert gb.bandwidth == pytest.approx(4 ** (-1/5))
+    gb.bandwidth = "scott"
+    assert gb.bandwidth == pytest.approx(4 ** (-1/5))
+    with pytest.raises(ValueError):
+        gb.bandwidth = "matt"
+    gb.bandwidth = "silverman"
+    assert gb.bandwidth == pytest.approx(3 ** (-1/5))
+
+    gb = testmod.GaussianBase([[1,2,3,4],[4,2,1,3]])
+    assert gb.bandwidth == pytest.approx(4 ** (-1/6))
+    gb.bandwidth = "scott"
+    assert gb.bandwidth == pytest.approx(4 ** (-1/6))
+    with pytest.raises(ValueError):
+        gb.bandwidth = "matt"
+    gb.bandwidth = "silverman"
+    assert gb.bandwidth == pytest.approx(4 ** (-1/6))
+
+def test_GaussianBase_set_weights():
+    gb = testmod.GaussianBase([1,2,3,4])
+    assert gb.weights is None
+    
+    gb.weights = [.2, 0, 5, 2]
+    
+    with pytest.raises(ValueError):
+        gb.weights = [.2, 0, 5]
+        
+    with pytest.raises(ValueError):
+        gb.weights = 2
+        
+    with pytest.raises(ValueError):
+        gb.weights = [[1,2,3],[4,5,6]]
+
+sqrt2pi = np.sqrt(2 * np.pi)
+
+def test_GaussianBase_eval():
+    gb = testmod.GaussianBase([1,2,3,4])
+    assert gb.covariance_matrix[0,0] == pytest.approx(20/12)
+    
+    gb.covariance_matrix = 1.0
+    gb.bandwidth = 1.0
+    x5 = np.sum(np.exp([-16/2, -9/2, -4/2, -1/2])) / 4 / sqrt2pi
+    assert gb(5) == pytest.approx(x5)
+    x2 = np.sum(np.exp([-1/2, 0, -1/2, -4/2])) / 4 / sqrt2pi
+    assert gb(2) == pytest.approx(x2)
+    x0 = np.sum(np.exp([-1/2, -4/2, -9/2, -16/2])) / 4 / sqrt2pi
+    assert gb(0) == pytest.approx(x0)
+    np.testing.assert_allclose(gb([0]), [x0])
+    np.testing.assert_allclose(gb([0,2,5,2,5,0]), [x0,x2,x5,x2,x5,x0])
+
+def test_GaussianBase_eval_with_bandwidth():
+    gb = testmod.GaussianBase([1,2,3,4])
+    assert gb.covariance_matrix[0,0] == pytest.approx(20/12)
+    
+    gb.covariance_matrix = 1.0
+    gb.bandwidth = 2.0
+    x5 = np.sum(np.exp([-16/8, -9/8, -4/8, -1/8])) / 8 / sqrt2pi
+    assert gb(5) == pytest.approx(x5)
+    x2 = np.sum(np.exp([-1/8, 0, -1/8, -4/8])) / 8 / sqrt2pi
+    assert gb(2) == pytest.approx(x2)
+    x0 = np.sum(np.exp([-1/8, -4/8, -9/8, -16/8])) / 8 / sqrt2pi
+    assert gb(0) == pytest.approx(x0)
+    np.testing.assert_allclose(gb([0]), [x0])
+    np.testing.assert_allclose(gb([0,2,5,2,5,0]), [x0,x2,x5,x2,x5,x0])
+    
+def test_GaussianBase_eval_with_cov():
+    gb = testmod.GaussianBase([1,2,3,4])
+    assert gb.covariance_matrix[0,0] == pytest.approx(20/12)
+    
+    gb.covariance_matrix = 0.5
+    gb.bandwidth = 1.0
+    x5 = np.sum(np.exp([-16, -9, -4, -1])) / 4 / np.sqrt(0.5) / sqrt2pi
+    assert gb(5) == pytest.approx(x5)
+    x2 = np.sum(np.exp([-1, 0, -1, -4])) / 4 / np.sqrt(0.5) / sqrt2pi
+    assert gb(2) == pytest.approx(x2)
+    x0 = np.sum(np.exp([-1, -4, -9, -16])) / 4 / np.sqrt(0.5) / sqrt2pi
+    assert gb(0) == pytest.approx(x0)
+    np.testing.assert_allclose(gb([0]), [x0])
+    np.testing.assert_allclose(gb([0,2,5,2,5,0]), [x0,x2,x5,x2,x5,x0])
+
+def test_GaussianBase_eval_with_weights():
+    gb = testmod.GaussianBase([1,2,3,4])
+    assert gb.covariance_matrix[0,0] == pytest.approx(20/12)
+    
+    gb.covariance_matrix = 1.0
+    gb.bandwidth = 1.0
+    gb.weights = [0,1,20,30]
+    x5 = np.sum(np.exp([-16/2, -9/2, -4/2, -1/2]) * [0,1,20,30]) / 51 / sqrt2pi
+    assert gb(5) == pytest.approx(x5)
+    x2 = np.sum(np.exp([-1/2, 0, -1/2, -4/2]) * [0,1,20,30]) / 51 / sqrt2pi
+    assert gb(2) == pytest.approx(x2)
+    x0 = np.sum(np.exp([-1/2, -4/2, -9/2, -16/2]) * [0,1,20,30]) / 51 / sqrt2pi
+    assert gb(0) == pytest.approx(x0)
+    np.testing.assert_allclose(gb([0]), [x0])
+    np.testing.assert_allclose(gb([0,2,5,2,5,0]), [x0,x2,x5,x2,x5,x0])
+
+def test_GaussianBase_eval_with_bandwidths():
+    gb = testmod.GaussianBase([1,2,3,4])
+    assert gb.covariance_matrix[0,0] == pytest.approx(20/12)
+    
+    gb.covariance_matrix = 1.0
+    gb.bandwidth = [0.5, 0.1, 0.7, 5]
+    x5 = np.sum(np.exp([-16/2/(0.5**2), -9/2/(0.1**2), -4/2/(0.7**2), -1/2/(5**2)])
+        / [0.5, 0.1, 0.7, 5] ) / 4 / sqrt2pi
+    assert gb(5) == pytest.approx(x5)
+    x3 = np.sum(np.exp([-4/2/(0.5**2), -1/2/(0.1**2), 0, -1/2/(5**2)])
+        / [0.5, 0.1, 0.7, 5] ) / 4 / sqrt2pi
+    assert gb(3) == pytest.approx(x3)
+    np.testing.assert_allclose(gb([3,5,3]), [x3,x5,x3])
+    
+    with pytest.raises(ValueError):
+        gb.bandwidth = [[0.5, 0.1], [0.7, 5]]
+
+def test_GaussianBase_eval_2d():
+    gb = testmod.GaussianBase([[1,2,3,4],[1,3,7,5]])
+    gb.covariance_matrix = [[1,0],[0,1]]
+    gb.bandwidth = 1.0
+    
+    with pytest.raises(ValueError):
+        gb(5)
+    with pytest.raises(ValueError):
+        gb([1,2,3])
+    
+    x0 = np.sum(np.exp([-1/2, -2/2, -29/2, -18/2])) / 4 / sqrt2pi / sqrt2pi
+    assert gb([1,2]) == pytest.approx(x0)
+    
+    gb.bandwidth = 2.0
+    x0 = np.sum(np.exp([-1/2/4, -2/2/4, -29/2/4, -18/2/4])) / 4 / 4 / sqrt2pi / sqrt2pi
+    assert gb([1,2]) == pytest.approx(x0)
+
+def test_GaussianBase_agrees_with_scipy():
+    data = np.random.random(size=100)
+    gb = testmod.GaussianBase(data)
+    kernel = stats.kde.gaussian_kde(data, bw_method="scott")
+    
+    pts = np.random.random(size=50)
+    np.testing.assert_allclose(gb(pts), kernel(pts))
+
+    gb = testmod.GaussianBase(data)
+    gb.bandwidth = "silverman"
+    kernel = stats.kde.gaussian_kde(data, bw_method="silverman")
+    np.testing.assert_allclose(gb(pts), kernel(pts))
+
+def test_GaussianBase_agrees_with_scipy_nd():
+    for n in range(2,5):
+        data = np.random.random(size=(n, 100))
+        gb = testmod.GaussianBase(data)
+        kernel = stats.kde.gaussian_kde(data, bw_method="scott")
+        
+        pts = np.random.random(size=(n, 50))
+        np.testing.assert_allclose(gb(pts), kernel(pts))
+    
+        gb = testmod.GaussianBase(data)
+        gb.bandwidth = "silverman"
+        kernel = stats.kde.gaussian_kde(data, bw_method="silverman")
+        np.testing.assert_allclose(gb(pts), kernel(pts))
+    
+def test_GaussianNearestNeighbour():
+    data = np.random.random(size=20)
+    gnn = testmod.GaussianNearestNeighbour(data)
+    kernel = testmod.kth_nearest_neighbour_gaussian_kde(data)
+    
+    pts = np.random.random(size=50)
+    np.testing.assert_allclose(gnn(pts), kernel(pts))
+
+    for n in range(1,7):
+        data = np.random.random(size=(n,100))
+        gnn = testmod.GaussianNearestNeighbour(data)
+        kernel = testmod.kth_nearest_neighbour_gaussian_kde(data)
+        
+        pts = np.random.random(size=(n,50))
+        np.testing.assert_allclose(gnn(pts), kernel(pts))
+    
