@@ -17,7 +17,9 @@ _text = {
     "exit" : "Exit",
     "ss" : "Load a saved session",
     "about" : "About",
-    "recent" : "Reload a recent session"
+    "recent" : "Reload a recent session",
+    "config" : "Configuration",
+
 }
 
 class TopWindow(tk.Tk):
@@ -33,6 +35,7 @@ class TopWindow(tk.Tk):
         self.rowconfigure(0, weight=1)
         self.title(_text["name"])
         self._window_icon()
+        self._theme = ttk.Style()
         
     def resize(self, width_per, height_per):
         util.centre_window_percentage(self, width_per, height_per)
@@ -40,6 +43,11 @@ class TopWindow(tk.Tk):
     def end(self):
         self.destroy()
         self.quit()
+
+    @property
+    def style(self):
+        """The TTK `style`"""
+        return self._theme
 
     def _window_icon(self):
         try:
@@ -75,8 +83,13 @@ class MainWindowView(tk.Frame):
         b.grid(sticky=util.NSEW, padx=10, pady=3, row=0, column=0, columnspan=3)
         b = ttk.Button(self, text=_text["ss"], command=self.controller.load_session)
         b.grid(sticky=util.NSEW, padx=10, pady=3, row=1, column=0, columnspan=2)
-        b = ttk.Button(self, text=_text["recent"], command=self.controller.recent)
-        b.grid(sticky=util.NSEW, padx=10, pady=3, row=1, column=2)
+        frame = ttk.Frame(self)
+        frame.grid(sticky=util.NSEW, padx=10, pady=3, row=1, column=2)
+        util.stretchy_rows_cols(frame, [0,1], [0])
+        b = ttk.Button(frame, text=_text["recent"], command=self.controller.recent)
+        b.grid(row=0, column=0, sticky=tk.NSEW)
+        b = ttk.Button(frame, text=_text["config"], command=self.controller.config)
+        b.grid(row=1, column=0, sticky=tk.NSEW)
         b = ttk.Button(self, text=_text["about"], command=self.controller.about)
         b.grid(sticky=util.NSEW, padx=10, pady=3, row=2, column=0, columnspan=3)
         b = ttk.Button(self, text=_text["exit"], command=self.end)

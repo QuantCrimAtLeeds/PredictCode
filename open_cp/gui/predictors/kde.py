@@ -3,14 +3,13 @@ kde
 ~~~
 
 A variety of "other" KDE methods, not drawn directly from the literature.
-
-TODO: The SciPY estimator needs replacing with our own to allow time decay.
 """
 
 from . import predictor
 import open_cp.predictors
 import tkinter as tk
 import tkinter.ttk as ttk
+import open_cp.kde
 import open_cp.gui.tk.util as util
 import open_cp.gui.tk.richtext as richtext
 import open_cp.gui.tk.tooltips as tooltips
@@ -54,6 +53,7 @@ _text = {
     "qu_scale_tt" : "The 'scale' of the decay.  The larger this value, the longer in time it takes for events to have less intensity.  See the graph for the effect.",
     "days" : "Days",
     "int" : "Relative weighting",
+    "kdeplot" : "Preview of the selected KDE method, as applied to the entire data-set, assuming a valid coordinate projector is selected.  No timestamp adjustment is made.",
 
 }
 
@@ -61,7 +61,7 @@ class KDE(predictor.Predictor):
     def __init__(self, model):
         super().__init__(model)
         self.space_kernel = 0
-        self._sk_model = [ScipyKDE(), NeatestKDE()]
+        self._sk_model = [ScipyKDE(self), NeatestKDE(self)]
         self.time_kernel = 0
         self._tk_model = [TrainOnly(), Window(), ExpDecay(), QuadDecay()]
     
@@ -79,12 +79,13 @@ class KDE(predictor.Predictor):
     @property
     def name(self):
         return "KDE predictor ({},{})".format(self.space_kernel.name,
-        self.time_kernel.name)
+            self.time_kernel.name)
         
     @property
     def settings_string(self):
-        # TODO
-        return None
+        out = [self.space_kernel_model.settings_string, self.time_kernel_model.settings_string]
+        out = [x for x in out if x != ""]
+        return ", ".join(out)
         
     def to_dict(self):
         data = {"space_kernel" : self.space_kernel.value}
@@ -104,30 +105,51 @@ class KDE(predictor.Predictor):
                     model.from_dict(d)
     
     def make_tasks(self):
-        return [self.Task()]
+        return [self.Task(self)]
         
     class Task(predictor.GridPredictorTask):
-        def __init__(self):
+        def __init__(self, parent):
             super().__init__()
+            self._kde = parent
 
         def __call__(self, analysis_model, grid_task, project_task):
             timed_points = self.projected_data(analysis_model, project_task)
-            # TODO: Adjust this...
-            training_start, _, _, _ = analysis_model.time_range
-            timed_points = timed_points[timed_points.timestamps >= training_start]
             if timed_points.number_data_points == 0:
                 raise predictor.PredictionError(_text["no_data"])
             grid = grid_task(timed_points)
-            # TODO: Return...?
+
+            train_start, train_end, _, _ = analysis_model.time_range
+            time_task = self._kde.time_kernel_model.select_data_task(train_start, train_end)
+            time_kernel = self._kde.time_kernel_model.make_kernel()
+            space_kernel_provider = self._kde.space_kernel_model.make_kernel()
+
+            return KDE.SubTask(timed_points, grid, time_task, time_kernel,
+                space_kernel_provider)
 
     class SubTask(predictor.SingleGridPredictor):
-        def __init__(self, timed_points, grid):
+        def __init__(self, timed_points, grid, time_task, time_kernel,
+                space_kernel_provider):
             super().__init__()
             self._timed_points = timed_points
-            # TODO
+            self._time_task = time_task
+            self._grid = grid
+            self._time_kernel = time_kernel
+            self._space_kernel_provider = space_kernel_provider
 
         def __call__(self, predict_time, length):
-            pass
+            start_time, end_time, time_unit = self._time_task(predict_time)
+            predictor = open_cp.kde.KDE(grid=self._grid)
+            predictor.data = self._timed_points
+            predictor.time_unit = time_unit
+            predictor.time_kernel = self._time_kernel
+            predictor.space_kernel = self._space_kernel_provider
+            return predictor.predict(start_time = start_time, end_time = end_time)
+
+    def config(self):
+        return {"resize": True}
+
+    def test_coords(self):
+        return self._projected_coords()
 
     class SpaceKernel(enum.Enum):
         scipy = 0
@@ -164,13 +186,47 @@ class KDE(predictor.Predictor):
         return self._tk_model[self.time_kernel.value]
 
 
+class BaseKDEView():
+    def find_min_max(self, coords):
+        xmin, xmax = np.min(coords), np.max(coords)
+        xd = xmax - xmin
+        return xmin - xd / 20, xmax + xd / 20
+
+    def sample_kernel(self, kernel_provider, data, ax):
+        data = np.asarray(data)
+        kernel = kernel_provider(data)
+        xmin, xmax = self.find_min_max(data[0])
+        xs = np.linspace(xmin, xmax, 100)
+        ymin, ymax = self.find_min_max(data[1])
+        ys = np.linspace(ymin, ymax, 100)
+        matrix = np.empty((100,100))
+        for yi, y in enumerate(ys):
+            matrix[yi,:] = kernel([xs, np.asarray([y] * len(xs))])
+        ax.pcolormesh(xs, ys, matrix)
+
+    def make_plot_task(self, kernel_provider, coords):
+        def task():
+            fig = mtp.new_figure((6,6))
+            ax = fig.add_subplot(1,1,1)
+            xcs, ycs = coords
+            self.sample_kernel(kernel_provider, [xcs, ycs], ax)
+            ax.set_aspect(1)
+            fig.set_tight_layout("tight")
+            return fig
+        return task
+
+
 class ScipyKDE():
-    def __init__(self):
-        pass
+    def __init__(self, main_model):
+        self.main_model = main_model
 
     @property
     def name(self):
         return "scipy"
+
+    @property
+    def settings_string(self):
+        return ""
 
     def to_dict(self):
         return {}
@@ -181,26 +237,44 @@ class ScipyKDE():
     def make_view(self, parent):
         return self.View(self, parent)
 
-    class View(ttk.Frame):
+    def make_kernel(self):
+        return open_cp.kde.GaussianBaseProvider()
+
+    class View(ttk.Frame, BaseKDEView):
         def __init__(self, model, parent):
             super().__init__(parent)
             self.model = model
-            util.stretchy_columns(self, [0])
+            util.stretchy_rows_cols(self, [2], [0])
             text = richtext.RichText(self, height=3, scroll="v")
             text.grid(row=0, column=0, sticky=tk.NSEW)
             text.add_text(_text["scipy_main"])
 
+            self._plot = mtp.CanvasFigure(self)
+            self._plot.grid(row=2, column=0, sticky=tk.NSEW)
+            tooltips.ToolTipYellow(self._plot, _text["kdeplot"])
+            coords = self.model.main_model.test_coords()
+            if coords is None:
+                return
+            kernel_provider = self.model.make_kernel()
+            task = self.make_plot_task(kernel_provider, coords)
+            self._plot.set_figure_task(task)
+
 
 class NeatestKDE():
-    def __init__(self):
+    def __init__(self, main_model):
+        self.main_model = main_model
         self._k = 15
 
     @property
     def name(self):
         return "nearest"
 
+    @property
+    def settings_string(self):
+        return str(self.k)
+
     def to_dict(self):
-        return {"k" : self._k}
+        return {"k" : self.k}
 
     def from_dict(self, data):
         self.k = data["k"]
@@ -216,11 +290,14 @@ class NeatestKDE():
     def make_view(self, parent):
         return self.View(self, parent)
 
-    class View(ttk.Frame):
+    def make_kernel(self):
+        return open_cp.kde.GaussianNearestNeighbourProvider(self.k)
+
+    class View(ttk.Frame, BaseKDEView):
         def __init__(self, model, parent):
             super().__init__(parent)
             self.model = model
-            util.stretchy_columns(self, [0])
+            util.stretchy_rows_cols(self, [2], [0])
             text = richtext.RichText(self, height=3, scroll="v")
             text.grid(row=0, column=0, sticky=tk.NSEW)
             text.add_text(_text["nkde_main"])
@@ -233,13 +310,23 @@ class NeatestKDE():
             entry = ttk.Entry(frame, textvariable=self._k_value)
             entry.grid(row=0, column=1, padx=2, pady=2)
             util.IntValidator(entry, self._k_value, callback=self._k_changed)
+            self._plot = mtp.CanvasFigure(self)
+            self._plot.grid(row=2, column=0, sticky=tk.NSEW)
+            tooltips.ToolTipYellow(self._plot, _text["kdeplot"])
             self.update()
 
         def update(self):
             self._k_value.set(self.model.k)
+            coords = self.model.main_model.test_coords()
+            if coords is None:
+                return
+            kernel_provider = self.model.make_kernel()
+            task = self.make_plot_task(kernel_provider, coords)
+            self._plot.set_figure_task(task)
 
         def _k_changed(self):
             self.model.k = self._k_value.get()
+            self.update()
 
 
 class TrainOnly():
@@ -250,6 +337,10 @@ class TrainOnly():
     def name(self):
         return "training dates only"
 
+    @property
+    def settings_string(self):
+        return ""
+
     def to_dict(self):
         return {}
 
@@ -258,6 +349,19 @@ class TrainOnly():
 
     def make_view(self, parent):
         return self.View(self, parent)
+
+    def make_kernel(self):
+        return open_cp.kde.ConstantTimeKernel()
+
+    def select_data_task(self, train_start, train_end):
+        return self.SelectDataTask(train_start, train_end)
+
+    class SelectDataTask():
+        def __init__(self, train_start, train_end):
+            self._times = train_start, train_end
+
+        def __call__(self, predict_time):
+            return self._times, np.timedelta64(1, "s")
 
     class View(ttk.Frame):
         def __init__(self, model, parent):
@@ -277,6 +381,10 @@ class Window():
     def name(self):
         return "time window"
 
+    @property
+    def settings_string(self):
+        return "{} days".format(self.days)
+
     def to_dict(self):
         return {"days" : self.days}
 
@@ -293,6 +401,22 @@ class Window():
 
     def make_view(self, parent):
         return self.View(self, parent)
+
+    def make_kernel(self):
+        return open_cp.kde.ConstantTimeKernel()
+
+    def select_data_task(self, train_start=None, train_end=None):
+        return self.SelectDataTask(self.days)
+
+    class SelectDataTask():
+        def __init__(self, days_back):
+            self._days = ( (np.timedelta64(1, "D")  / np.timedelta64(1, "s"))
+                * days_back * np.timedelta64(1, "s") )
+
+        def __call__(self, predict_time):
+            end_time = np.datetime64(predict_time)
+            start_time = end_time - self._days
+            return start_time, end_time, np.timedelta64(1, "s")
 
     class View(ttk.Frame):
         def __init__(self, model, parent):
@@ -342,6 +466,10 @@ class ExpDecay():
     def name(self):
         return "exponential decay"
 
+    @property
+    def settings_string(self):
+        return "{} days".format(self.scale)
+
     def to_dict(self):
         return {"scale" : self.scale}
 
@@ -358,6 +486,23 @@ class ExpDecay():
 
     def make_view(self, parent):
         return self.View(self, parent)
+
+    def make_kernel(self):
+        return open_cp.kde.ExponentialTimeKernel(self.scale)
+
+    def select_data_task(self, train_start=None, train_end=None):
+        return self.SelectDataTask(self.scale)
+
+    class SelectDataTask():
+        def __init__(self, scale):
+            # < 0.1 % of full intensity
+            self._days = ( (np.timedelta64(1, "D")  / np.timedelta64(1, "s"))
+                * scale * 7 * np.timedelta64(1, "s") )
+
+        def __call__(self, predict_time):
+            end_time = np.datetime64(predict_time)
+            start_time = end_time - self._days
+            return start_time, end_time, np.timedelta64(1, "s")
 
     class View(ttk.Frame):
         def __init__(self, model, parent):
@@ -387,10 +532,9 @@ class ExpDecay():
             def task():
                 fig = mtp.new_figure((6,4))
                 ax = fig.add_subplot(1,1,1)
-                # TODO: Refactor...
                 x = np.linspace(0, self.model.scale*5, 100)
-                y = np.exp(-x / self.model.scale)
-                ax.plot(x, y)
+                kernel = self.model.make_kernel()
+                ax.plot(x, kernel(x))
                 ax.set(xlabel=_text["days"], ylabel=_text["int"], xlim=[0, self.model.scale*5], ylim=[0,1])
                 fig.set_tight_layout("tight")
                 return fig
@@ -409,6 +553,10 @@ class QuadDecay():
     def name(self):
         return "quadratic decay"
 
+    @property
+    def settings_string(self):
+        return "{} days".format(self.scale)
+
     def to_dict(self):
         return {"scale" : self.scale}
 
@@ -425,6 +573,23 @@ class QuadDecay():
 
     def make_view(self, parent):
         return self.View(self, parent)
+
+    def make_kernel(self):
+        return open_cp.kde.QuadDecayTimeKernel(self.scale)
+
+    def select_data_task(self, train_start=None, train_end=None):
+        return self.SelectDataTask(self.scale)
+
+    class SelectDataTask():
+        def __init__(self, scale):
+            # < 0.1 % of full intensity
+            self._days = ( (np.timedelta64(1, "D")  / np.timedelta64(1, "s"))
+                * scale * 32 * np.timedelta64(1, "s") )
+
+        def __call__(self, predict_time):
+            end_time = np.datetime64(predict_time)
+            start_time = end_time - self._days
+            return start_time, end_time, np.timedelta64(1, "s")
 
     class View(ttk.Frame):
         def __init__(self, model, parent):
@@ -454,10 +619,9 @@ class QuadDecay():
             def task():
                 fig = mtp.new_figure((6,4))
                 ax = fig.add_subplot(1,1,1)
-                # TODO: Refactor...
                 x = np.linspace(0, self.model.scale*5, 100)
-                y = 1 / (1 + (x / self.model.scale)**2)
-                ax.plot(x, y)
+                kernel = self.model.make_kernel()
+                ax.plot(x, kernel(x))
                 ax.set(xlabel=_text["days"], ylabel=_text["int"], xlim=[0, self.model.scale*5], ylim=[0,1])
                 return fig
             self._plot.set_figure_task(task)

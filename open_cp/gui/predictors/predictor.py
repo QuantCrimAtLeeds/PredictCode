@@ -193,11 +193,17 @@ class Predictor():
 
 def test_model():
     import collections, datetime
-    Model = collections.namedtuple("Model", "times xcoords ycoords")
+    Model = collections.namedtuple("Model", "times xcoords ycoords analysis_tools_model")
     xcs = [0, 0.1, 0.2, 0.3, 0.4]
     ycs = [50, 50.1, 49.9, 50.3, 50.2]
     times = [datetime.datetime(2017,6,13,12,30) for _ in range(4)]
-    return Model(times, xcs, ycs)
+    class TestAnalysisToolsModel():
+        def __init__(self, xcs, ycs):
+            self.coords = xcs, ycs
+        def projected_coords(self):
+            return self.coords
+    analysis_tools_model = TestAnalysisToolsModel(xcs, ycs)
+    return Model(times, xcs, ycs, analysis_tools_model)
 
 def test_harness(pred, root=None):
     import tkinter as tk

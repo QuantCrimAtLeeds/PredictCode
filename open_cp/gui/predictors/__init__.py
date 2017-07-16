@@ -15,6 +15,7 @@ from . import retro
 from . import prohotspot
 from . import prohotspotcts
 from . import stscan
+from . import kde
 
 # End #######################################################################
 

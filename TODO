@@ -10,7 +10,9 @@
 - Predictors:
   - Do other predictors
     - Think all but SEPP, which don't 100% work, are now done.
-    - Doing this new "KDE" one...
+    - Doing this new "KDE" one.  TESTS!
 
 - Session saving/loading
   - New dialog to select a recent session (and mechanism to save these...)
+
+- Config...

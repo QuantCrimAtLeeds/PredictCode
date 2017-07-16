@@ -14,6 +14,7 @@ import open_cp.gui.import_file_model as import_file_model
 import open_cp.gui.process_file as process_file
 import open_cp.gui.analysis as analysis
 import open_cp.gui.about as about
+import open_cp.gui.config as config
 
 class MainWindow():
     def __init__(self, root):
@@ -83,6 +84,11 @@ class MainWindow():
 
     def recent(self):
         pass
+
+    def config(self):
+        self.view.destroy()
+        config.Config(self._root).run()
+        self.init()
 
     def about(self):
         about.About(self.view).run()
