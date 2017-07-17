@@ -21,6 +21,7 @@ import open_cp.gui.run_analysis as run_analysis
 import open_cp.gui.run_comparison as run_comparison
 import open_cp.gui.browse_analysis as browse_analysis
 import open_cp.gui.locator as locator
+import open_cp.gui.session as session
 
 class Analysis():
     def __init__(self, model, root):
@@ -365,6 +366,8 @@ class Model():
     @session_filename.setter
     def session_filename(self, value):
         self._session_filename = value
+        if value is not None and value != "":
+            session.Session().new_session(value)
 
     def session_changed(self):
         """Has the session changed since it was loaded?"""

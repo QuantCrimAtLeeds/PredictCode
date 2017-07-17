@@ -15,6 +15,7 @@ import open_cp.gui.process_file as process_file
 import open_cp.gui.analysis as analysis
 import open_cp.gui.about as about
 import open_cp.gui.config as config
+import open_cp.gui.session as session
 
 class MainWindow():
     def __init__(self, root):
@@ -83,7 +84,12 @@ class MainWindow():
         return model
 
     def recent(self):
-        pass
+        self.view.destroy()
+        filename = session.Session(self._root).run()
+        if filename is not None:
+            self.load_session(filename)
+        else:
+            self.init()
 
     def config(self):
         self.view.destroy()

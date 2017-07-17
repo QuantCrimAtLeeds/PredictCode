@@ -44,10 +44,8 @@ def run():
     from open_cp.gui import main_window
     from open_cp.gui.tk import main_window_view
     from open_cp.gui import locator
-    from open_cp.gui import config
     root = main_window_view.TopWindow()
     locator._make_pool(root)
-    config.Config(root)
 
     #import open_cp.gui.predictors.kde as pred
     #pred.test(root)
