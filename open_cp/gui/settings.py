@@ -35,13 +35,17 @@ class Settings(_collections.UserDict):
         try:
             with open(self._filename, "rt") as settings_file:
                 d = _json.load(settings_file)
-                print("Read in", d)
                 self.data = d
         except FileNotFoundError:
             _logger.info("No settings file found, using defaults.")
             pass
         except _json.JSONDecodeError as ex:
             _logger.error("Failed to load settings file as using defaults; caused by %s", ex)
+        
+    @property
+    def filename(self):
+        """The filename is use."""
+        return self._filename
         
     @staticmethod
     def _default_filename():
@@ -50,8 +54,10 @@ class Settings(_collections.UserDict):
         
     def save(self):
         """Save the current state to the settings file."""
+        json_string = _json.dumps(self.data, indent=2)
         with open(self._filename, "wt") as settings_file:
-            _json.dump(self.data, settings_file)
+            settings_file.write(json_string)
+        _logger.info("Wrote settings to %s", self.filename)
             
     def __enter__(self):
         return self

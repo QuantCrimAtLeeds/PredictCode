@@ -31,11 +31,14 @@ def configure_gdal():
 
     Appearing on stderr when you use e.g. geopandas.
     """
-    import os
+    import os, sys
     if "GDAL_DATA" in os.environ:
         _logger.debug("GDAL_DATA already set so nothing to do.")
         return
     _logger.info("GDAL_DATA not set, so searching...")
+    if sys.platform.startswith("linux"):
+        _logger.info("However, platform is linux, so assuming we'll be okay...")
+        return
     choices = _find_gdal_choices()
     if len(choices) == 1:
         _logger.info("Set GDAL_DATA = '%s'", choices[0])

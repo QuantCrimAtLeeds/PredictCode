@@ -8,7 +8,7 @@ import json, logging, io
 
 @pytest.fixture
 def setts():
-    return settings.Settings()
+    return settings.Settings("temp.json")
 
 def test_add_get(setts):
     setts["key"] = "value1"
@@ -32,12 +32,16 @@ def test_logging():
     assert log[0].startswith("Using filename '")
     assert log[0].endswith("open_cp_ui_settings.json'")
 
+def test_filename():
+    s = settings.Settings("bob.json")
+    assert s.filename == "bob.json"
+
 def test_save_settings():
     capture = helpers.StrIOWrapper()
     with patch("builtins.open", helpers.MockOpen(capture)) as open_mock:
         open_mock.filter = helpers.ExactlyTheseFilter([2])
         
-        sett = settings.Settings()
+        sett = settings.Settings("temp.json")
         sett["name"] = "matt"
         sett.save()
     
