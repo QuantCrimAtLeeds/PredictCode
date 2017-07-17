@@ -47,7 +47,7 @@ def run():
     root = main_window_view.TopWindow()
     locator._make_pool(root)
 
-    #import open_cp.gui.predictors.kde as pred
+    #import open_cp.gui.predictors.sepp2 as pred
     #pred.test(root)
     #return
 
