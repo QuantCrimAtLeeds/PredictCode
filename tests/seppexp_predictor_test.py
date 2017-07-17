@@ -93,7 +93,7 @@ def test_SEPP_Predictor_predict_wrong_region_size():
     with pytest.raises(ValueError):
         predictor.predict(np.datetime64("2018-01-01"))
 
-def test_SEPP_Predictor_predict_wrong_region_size():
+def test_SEPP_Predictor_predict_wrong_region_size2():
     mu, predictor = a_predictor()
     times = [np.datetime64("2017-12-31"), np.datetime64("2017-12-31T19:00"), np.datetime64("2017-12-31T19:30"), np.datetime64("2018-01-01")]
     xcoords = [10, 90, 92, 0]

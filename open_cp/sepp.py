@@ -161,6 +161,31 @@ def sample_offsets(points, p):
     triggered = points[:,~mask] - trigger
     return backgrounds, triggered, trigger
     
+
+class _MakeKernel():
+    """Helper class to allow pickling.  See :func:`make_kernel`."""
+    def __init__(self, data, background_kernel, trigger_kernel):
+        self.data_copy = _np.array(data)
+        self.background_kernel = background_kernel
+        self.trigger_kernel = trigger_kernel
+    
+    def one_dim_kernel(self, pt):
+        mask = self.data_copy[0] < pt[0]
+        bdata = self.data_copy[:,mask]
+        if bdata.shape[-1] == 0:
+            return self.background_kernel(pt)
+        return self.background_kernel(pt) + _np.sum(self.trigger_kernel(pt[:,None] - bdata))
+    
+    def __call__(self, points):
+            points = _np.asarray(points)
+            if len(points.shape) == 1:
+                return self.one_dim_kernel(points)
+            out = _np.empty(points.shape[-1])
+            for i, pt in enumerate(points.T):
+                out[i] = self.one_dim_kernel(pt)
+            return out
+
+
 def make_kernel(data, background_kernel, trigger_kernel):
     """Produce a kernel object which evaluates the background kernel, and
     the trigger kernel based on the space-time locations in the data.
@@ -174,22 +199,7 @@ def make_kernel(data, background_kernel, trigger_kernel):
     
     :return: A kernel object which can be called on arrays on points.
     """
-    data_copy = _np.array(data)
-    def one_dim_kernel(pt):
-        mask = data_copy[0] < pt[0]
-        bdata = data_copy[:,mask]
-        if bdata.shape[-1] == 0:
-            return background_kernel(pt)
-        return background_kernel(pt) + _np.sum(trigger_kernel(pt[:,None] - bdata))
-    def kernel(points):
-        points = _np.asarray(points)
-        if len(points.shape) == 1:
-            return one_dim_kernel(points)
-        out = _np.empty(points.shape[-1])
-        for i, pt in enumerate(points.T):
-            out[i] = one_dim_kernel(pt)
-        return out
-    return kernel
+    return _MakeKernel(data, background_kernel, trigger_kernel)
 
 
 class StocasticDecluster():
@@ -324,6 +334,42 @@ class OptimisationResult():
         self.space_cutoff = space_cutoff
 
 
+class SpaceKernel():
+    """A concrete helper class to allow pickling.  See
+    :func:`make_space_kernel`"""
+    def __init__(self, time, bg_kernel, t_kernel, data, space_cutoff):
+        self.time = time
+        self.background_kernel = bg_kernel
+        self.trigger_kernel = t_kernel
+        self.data = data
+        self.space_cutoff = space_cutoff
+    
+    def __call__(self, points):
+        x = _np.atleast_1d(_np.asarray(points[0]))
+        y = _np.atleast_1d(_np.asarray(points[1]))
+        t = _np.zeros_like(x) + self.time
+        back = _np.atleast_1d(self.background_kernel(_np.vstack((t,x,y))))
+        if self.data.shape[-1] > 0:
+            # In principle this is quicker, but we end up evaluating `trigger_kernel`
+            # on a large numpy array, and if `trigger_kernel` also manipulates large
+            # arrays (it does, in our case!) you end with a massive array and out of memory.
+            #t = _np.zeros_like(x) + time
+            #p = _np.vstack([t,x,y])
+            #combined = p[...,None] - now_data[:,None,:]
+            #out = trigger_kernel(combined.reshape(3, combined.shape[1] * combined.shape[2]))
+            #out = out.reshape((combined.shape[1], combined.shape[2]))
+            #back += _np.sum(out, axis=1)
+            for i,(xx,yy) in enumerate(zip(x,y)):
+                pts = _np.array([self.time,xx,yy])[:,None] - self.data
+                if self.space_cutoff is not None:
+                    mask = pts[1]**2 + pts[2]**2 < self.space_cutoff**2
+                    pts = pts[:, mask]
+                    if pts.shape[-1] == 0:
+                        continue
+                back[i] += _np.sum(self.trigger_kernel(pts))
+        return back
+
+
 def make_space_kernel(data, background_kernel, trigger_kernel, time,
         time_cutoff=None, space_cutoff=None):
     """Produce a kernel object which evaluates the background kernel, and
@@ -350,31 +396,7 @@ def make_space_kernel(data, background_kernel, trigger_kernel, time,
     if time_cutoff is not None:
         mask = mask & (data[0] > time - time_cutoff)
     data_copy = _np.array(data[:, mask])
-    def kernel(points):
-        x = _np.atleast_1d(_np.asarray(points[0]))
-        y = _np.atleast_1d(_np.asarray(points[1]))
-        t = _np.zeros_like(x) + time
-        back = _np.atleast_1d(background_kernel(_np.vstack((t,x,y))))
-        if data_copy.shape[-1] > 0:
-            # In principle this is quicker, but we end up evaluating `trigger_kernel`
-            # on a large numpy array, and if `trigger_kernel` also manipulates large
-            # arrays (it does, in our case!) you end with a massive array and out of memory.
-            #t = _np.zeros_like(x) + time
-            #p = _np.vstack([t,x,y])
-            #combined = p[...,None] - now_data[:,None,:]
-            #out = trigger_kernel(combined.reshape(3, combined.shape[1] * combined.shape[2]))
-            #out = out.reshape((combined.shape[1], combined.shape[2]))
-            #back += _np.sum(out, axis=1)
-            for i,(xx,yy) in enumerate(zip(x,y)):
-                pts = _np.array([time,xx,yy])[:,None] - data_copy
-                if space_cutoff is not None:
-                    mask = pts[1]**2 + pts[2]**2 < space_cutoff**2
-                    pts = pts[:, mask]
-                    if pts.shape[-1] == 0:
-                        continue
-                back[i] += _np.sum(trigger_kernel(pts))
-        return back
-    return kernel
+    return SpaceKernel(time, background_kernel, trigger_kernel, data_copy, space_cutoff)
 
 
 class AverageTimeAdjustedKernel(kernels.Kernel):

@@ -1,8 +1,10 @@
 import numpy as np
 import pytest
 import unittest.mock as mock
+import io, pickle
 
 import open_cp.sepp as testmod
+import open_cp.data
 
 def uniform_data(length=10):
     times = np.arange(length) * 0.1
@@ -152,3 +154,19 @@ def test_make_space_kernel():
     assert( kernel(pts[:,1]) == pytest.approx(4) )
     assert( kernel(pts[:,2]) == pytest.approx(4.2) )
     np.testing.assert_allclose(kernel(pts), [2, 4, 4.2])
+    
+def test_pickle_result():
+    trainer = testmod.SEPPTrainer()
+    times = [np.datetime64("2017-05-10") + np.timedelta64(1,"h") * i for i in range(100)]
+    xcs = np.random.random(size=100)
+    ycs = np.random.random(size=100)
+    data = open_cp.data.TimedPoints.from_coords(times, xcs, ycs)
+    trainer.data = data
+    result = trainer.train(iterations=1)
+    
+    with io.BytesIO() as file:
+        pickle.dump(result, file)
+        
+    result.data = data
+    result.predict(np.datetime64("2017-05-11"))
+    
