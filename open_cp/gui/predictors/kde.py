@@ -136,7 +136,7 @@ class KDE(predictor.Predictor):
             self._time_kernel = time_kernel
             self._space_kernel_provider = space_kernel_provider
 
-        def __call__(self, predict_time, length):
+        def __call__(self, predict_time, length=None):
             start_time, end_time, time_unit = self._time_task(predict_time)
             predictor = open_cp.kde.KDE(grid=self._grid)
             predictor.data = self._timed_points
@@ -361,7 +361,7 @@ class TrainOnly():
             self._times = train_start, train_end
 
         def __call__(self, predict_time):
-            return self._times, np.timedelta64(1, "s")
+            return (*self._times, np.timedelta64(1, "s"))
 
     class View(ttk.Frame):
         def __init__(self, model, parent):

@@ -25,6 +25,14 @@ class ExponentialTimeKernel():
     """
     def __init__(self, scale):
         self._scale = scale
+        
+    @property
+    def scale(self):
+        return self._scale
+    
+    @scale.setter
+    def scale(self, v):
+        self._scale = v
     
     def __call__(self, x):
         return _np.exp( - _np.asarray(x) / self._scale )
@@ -37,6 +45,14 @@ class QuadDecayTimeKernel():
     def __init__(self, scale):
         self._scale = scale
     
+    @property
+    def scale(self):
+        return self._scale
+    
+    @scale.setter
+    def scale(self, v):
+        self._scale = v
+
     def __call__(self, x):
         x = _np.asarray(x)
         return 1 / (1 + (x / self._scale)**2)
@@ -65,6 +81,15 @@ class GaussianNearestNeighbourProvider(KernelProvider):
     a kernel."""
     def __init__(self, k):
         self._k = k
+        
+    @property
+    def k(self):
+        """The nearest neighbour to look at for local bandwidth estimation."""
+        return self._k
+    
+    @k.setter
+    def k(self, v):
+        self._k = v
 
     def __call__(self, data):
         return _kernels.GaussianNearestNeighbour(data, self._k)
