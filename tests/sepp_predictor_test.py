@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 import unittest.mock as mock
-import io, pickle
+import io, pickle, datetime
 
 import open_cp.sepp as testmod
 import open_cp.data
@@ -155,18 +155,45 @@ def test_make_space_kernel():
     assert( kernel(pts[:,2]) == pytest.approx(4.2) )
     np.testing.assert_allclose(kernel(pts), [2, 4, 4.2])
     
-def test_pickle_result():
-    trainer = testmod.SEPPTrainer()
+@pytest.fixture
+def tp1():
     times = [np.datetime64("2017-05-10") + np.timedelta64(1,"h") * i for i in range(100)]
     xcs = np.random.random(size=100)
     ycs = np.random.random(size=100)
     data = open_cp.data.TimedPoints.from_coords(times, xcs, ycs)
-    trainer.data = data
+    return data    
+    
+def test_pickle_result(tp1):
+    trainer = testmod.SEPPTrainer()
+    trainer.data = tp1
     result = trainer.train(iterations=1)
     
     with io.BytesIO() as file:
         pickle.dump(result, file)
         
-    result.data = data
+    result.data = tp1
     result.predict(np.datetime64("2017-05-11"))
+    
+def test_initial_bandwidths(tp1):
+    trainer = testmod.SEPPTrainer()
+    assert trainer.initial_time_bandwidth ==  24 * 6
+    
+    trainer.initial_time_bandwidth = 50
+    assert trainer.initial_time_bandwidth ==  50
+    
+    trainer.initial_time_bandwidth = datetime.timedelta(days=1)
+    assert trainer.initial_time_bandwidth ==  24 * 60
+
+    trainer.initial_time_bandwidth = np.timedelta64(5, "h")
+    assert trainer.initial_time_bandwidth ==  5 * 60
+
+    assert trainer.initial_space_bandwidth == 50
+    
+    trainer.initial_space_bandwidth = 12.5
+    assert trainer.initial_space_bandwidth == pytest.approx(12.5)
+    
+    trainer.data = tp1
+    de = trainer.make_stocastic_decluster()
+    assert de.initial_time_bandwidth ==  5 * 60
+    assert de.initial_space_bandwidth == pytest.approx(12.5)
     

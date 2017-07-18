@@ -519,6 +519,9 @@ class SEPPTrainer(predictors.DataTrainer):
         self._space_cutoff = 500
         self._time_cutoff = 120 * 24 * 60 # minutes
         self._trigger_kernel_estimator = kernels.KthNearestNeighbourGaussianKDE(self.k_space)
+        # From Rosser, Cheng, suggested 0.1 day^{-1} and 50 metres
+        self._initial_time_bandwidth = 24 * 60 / 10 # minutes
+        self._initial_space_bandwidth = 50.0
 
     @property
     def trigger_kernel_estimator(self):
@@ -531,6 +534,30 @@ class SEPPTrainer(predictors.DataTrainer):
     @trigger_kernel_estimator.setter
     def trigger_kernel_estimator(self, estimator):
         self._trigger_kernel_estimator = estimator
+
+    @property
+    def initial_time_bandwidth(self):
+        """The initial "bandwidth" to use in training, when first guessing a
+        kernel.  Rosser, Cheng suggest 0.1 day^{-1} which is the default."""
+        return self._initial_time_bandwidth
+    
+    @initial_time_bandwidth.setter
+    def initial_time_bandwidth(self, val):
+        try:
+            as_td = _np.timedelta64(val)
+            self._initial_time_bandwidth = as_td / _np.timedelta64(1, "m")
+        except:
+            self._initial_time_bandwidth = val
+
+    @property
+    def initial_space_bandwidth(self):
+        """The initial "bandwidth" to use in training, when first guessing a
+        kernel.  Rosser, Cheng suggest 50 m which is the default."""
+        return self._initial_space_bandwidth
+        
+    @initial_space_bandwidth.setter
+    def initial_space_bandwidth(self, v):
+        self._initial_space_bandwidth = v
 
     @property
     def space_cutoff(self):
@@ -576,9 +603,8 @@ class SEPPTrainer(predictors.DataTrainer):
         decluster = StocasticDecluster()
         decluster.trigger_kernel_estimator = self._trigger_kernel_estimator
         decluster.background_kernel_estimator = kernels.KNNG1_NDFactors(self.k_time, self.k_space)
-        # From Rosser, Cheng, suggested 0.1 day^{-1} and 50 metres
-        decluster.initial_time_bandwidth = 24 * 60 / 10 # minutes
-        decluster.initial_space_bandwidth = 50.0
+        decluster.initial_time_bandwidth = self.initial_time_bandwidth
+        decluster.initial_space_bandwidth = self.initial_space_bandwidth
         decluster.space_cutoff = self._space_cutoff
         decluster.time_cutoff = self._time_cutoff
         decluster.points = self.as_time_space_points(cutoff_time)
