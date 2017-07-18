@@ -52,9 +52,6 @@ class RunAnalysis():
         if hasattr(self, "_off_thread"):
             self._off_thread.cancel()
 
-    _Task = collections.namedtuple("RunAnalysis_Task", ["task", "off_process",
-            "projection", "grid", "type"])
-
     @staticmethod
     def _chain_dict(dictionary):
         for name, li in dictionary.items():
@@ -66,8 +63,8 @@ class RunAnalysis():
         for proj_name, proj in self._chain_dict(self._model.projectors):
             for grid_name, grid in self._chain_dict(self._model.grids):
                 for pred_name, pred in self._chain_dict(self._model.grid_prediction_tasks):
-                    task = self._Task(
-                        task = lambda g=grid, p=proj, pr=pred: pr(self.main_model, g, p),
+                    task = _RunAnalysis_Task(
+                        task = _RunAnalysis_Task._InnerTask(self.main_model, grid, proj, pred),
                         off_process = pred.off_process,
                         projection = proj_name,
                         grid = grid_name,
@@ -112,6 +109,30 @@ class RunAnalysis():
             results = [PredictionResult(key, result) for (key, result) in self._off_thread.results]
             result = RunAnalysisResult(results)
             self.controller.new_run_analysis_result(result)
+
+
+class _RunAnalysis_Task():
+    """Pulled out to allow pickling"""
+    def __init__(self, task, off_process, projection, grid, type):
+        self.task = task
+        self.off_process = off_process
+        self.projection = projection
+        self.grid = grid
+        self.type = type
+        
+    def __repr__(self):
+        return "_RunAnalysis_Task(task={}, off_process={}, projection={}, grid={}, type={})".format(
+                self.task, self.off_process, self.projection, self.grid, self.type)
+
+    class _InnerTask():
+        def __init__(self, main_model, grid, proj, pred):
+            self.main_model = main_model
+            self.grid = grid
+            self.proj = proj
+            self.pred = pred
+            
+        def __call__(self):
+            return self.pred(self.main_model, self.grid, self.proj)
 
 
 class RunAnalysisResult():
@@ -391,6 +412,8 @@ class BaseRunner():
         """
         def __init__(self, key, task):
             super().__init__(key)
+            if task is None:
+                raise ValueError()
             self._task = task
 
         @property
@@ -422,6 +445,7 @@ class _RunnerThread(BaseRunner):
         futures = []
         for task in self._tasks:
             if task.off_process:
+                raise NotImplementedError("This currently does not work due to pickling issues.")
                 task = self.RunPredTask(task, task.task)
                 futures.append(self._executor.submit(task))
             else:
@@ -443,6 +467,8 @@ class _RunnerThread(BaseRunner):
         def __init__(self, task, start, length):
             self.start = start
             self.length = length
+            if task is None:
+                raise ValueError()
             self.task = task
         
         def __call__(self):

@@ -34,7 +34,7 @@ def _top_slice_one_dim(risk, fraction):
             have -= 1
             if have == n:
                 return mask
-    raise AssertionError()
+    raise Exception("Failed to sufficient cells")
     
 def top_slice(risk, fraction):
     """Returns a boolean array of the same shape as `risk` where there are

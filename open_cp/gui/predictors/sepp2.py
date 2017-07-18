@@ -24,7 +24,8 @@ _text = {
         + "parameters and the background rate in each cell.\n"
         + "Training Data usage: The training data is used to estimate the parameters of the model.  These parameters "
         + "are then held fixed for each prediction.\n\n"
-        + "WARNING: We have found that this model often performs poorly on real data."
+        + "WARNING: We have found that this model often performs poorly on real data.  If you obtain a "
+        + "'convergence failed' error, try increasing the size of the grid."
         ),
     "no_data" : "No data points found in training time range: have enough crime types been selected?",
 
@@ -65,7 +66,7 @@ class SEPP(predictor.Predictor):
         
     class Task(predictor.GridPredictorTask):
         def __init__(self):
-            super().__init__(True)
+            super().__init__(False)
 
         def __call__(self, analysis_model, grid_task, project_task):
             timed_points = self.projected_data(analysis_model, project_task)
@@ -79,13 +80,13 @@ class SEPP(predictor.Predictor):
             trainer = open_cp.seppexp.SEPPTrainer(grid=grid)
             trainer.data = training_points
             pred = trainer.train(iterations=40, use_corrected=True)
+            pred.data = timed_points
             
             return SEPP.SubTask(pred)        
 
     class SubTask(predictor.SingleGridPredictor):
         def __init__(self, pred):
-            # Probably more efficient not to run off-thread!
-            super().__init__(False)
+            super().__init__(True)
             self._pred = pred
 
         def __call__(self, predict_time, length=None):

@@ -16,6 +16,7 @@ from . import prohotspot
 from . import prohotspotcts
 from . import stscan
 from . import kde
+from . import sepp2
 
 # End #######################################################################
 

@@ -28,6 +28,7 @@ References
 from . import predictors
 import numpy as _np
 import itertools as _itertools
+import logging as _logging
 
 def _normalise_matrix(p):
     column_sums = _np.sum(p, axis=0)
@@ -274,6 +275,7 @@ class SEPPTrainer(predictors.DataTrainer):
       a :class:`BoundedGrid` instance.
     """
     def __init__(self, region=None, grid_size=50, grid=None):
+        self._logger = _logging.getLogger(__name__)
         if grid is None:
             self.grid_size = grid_size
             self.region = region
@@ -306,8 +308,16 @@ class SEPPTrainer(predictors.DataTrainer):
         if use_corrected:
             for _ in range(iterations):
                 omega, theta, mu = maximisation_corrected(cells, omega, theta, mu, time_duration)
+                if not _np.all(_np.isfinite([omega, theta])) or not _np.all(_np.isfinite(mu)):
+                    raise Exception("Convergence failed!")
+            self._logger.debug("Using edge-corrected algorithm, estimated omega=%s, theta=%s, mu=%s",
+                               omega, theta, mu)
         else:
             for _ in range(iterations):
                 omega, theta, mu = maximisation(cells, omega, theta, mu, time_duration)
+                if not _np.all(_np.isfinite([omega, theta])) or not _np.all(_np.isfinite(mu)):
+                    raise Exception("Convergence failed!")
+            self._logger.debug("Using quicker algorithm, estimated omega=%s, theta=%s, mu=%s",
+                               omega, theta, mu)
 
         return SEPPPredictor(self.region, self.grid_size, omega, theta, mu)

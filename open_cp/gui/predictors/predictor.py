@@ -57,6 +57,7 @@ class GridTask(Task):
 _TYPE_GRID_PREDICTOR = 100
 
 class GridPredictorTask(Task):
+    """Current does not support running off-process, due to pickling issues."""
     def __call__(self, analysis_model, grid_task, project_task):
         """For the given instance of :class:`analysis.Model` generate one or
         more instances of :class:`SingleGridPredictor` making actual
