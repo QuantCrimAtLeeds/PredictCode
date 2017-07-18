@@ -534,7 +534,11 @@ class GaussianBase():
     
     
 class GaussianNearestNeighbour(GaussianBase):
-    """As :func:`kth_nearest_neighbour_gaussian_kde`"""
+    """A subclass of :class:`GaussianBase` which performs as    
+    :func:`kth_nearest_neighbour_gaussian_kde`.  The :attr:`covariance_matrix`
+    and :attr:`bandwidth` are set automatically, but you may sensibly alter
+    :attr:`weights`.
+    """
     def __init__(self, coords, k=15):
         super().__init__(coords)
         stds = _np.std(self.data, axis=1, ddof=1)
