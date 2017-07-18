@@ -71,7 +71,7 @@ def test_changing_theme(root, view, config_obj):
     assert c.model.theme == "matt"
     assert root.style.theme_use.called_with("matt")
     
-    view.ConfigView.return_value.wait_window.assert_called()
+    assert view.ConfigView.return_value.wait_window.called
     
 def test_cancel(root, view, settings, config_obj):
     c = config_obj
