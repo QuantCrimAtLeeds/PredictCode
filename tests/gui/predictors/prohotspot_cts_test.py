@@ -14,7 +14,7 @@ def test_ProHotspot_serialise(model, project_task, analysis_model, grid_task):
 
 class OurContinuousPrediction(open_cp.predictors.ContinuousPrediction):
     def risk(self, x, y):
-        return 1.0
+        return 1.0 + np.zeros_like(x)
 
 
 @mock.patch("open_cp.prohotspot.ProspectiveHotSpotContinuous")

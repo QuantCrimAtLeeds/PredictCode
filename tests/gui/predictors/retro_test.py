@@ -83,7 +83,7 @@ def test_RetroHotspot_Gaussian_options(model, project_task, analysis_model, grid
 
 class ConstCtsPred(open_cp.predictors.ContinuousPrediction):
     def risk(self, x, y):
-        return 1.5
+        return 1.5 + np.zeros_like(x)
     
 @mock.patch("open_cp.retrohotspot.RetroHotSpot")
 def test_RetroHotspotCtsGrid_subtask(model, project_task, analysis_model, grid_task):

@@ -197,34 +197,19 @@ def test_KernelRiskPredictor(random_mock):
     np.testing.assert_allclose(kernel.call_args[0][0], [[2, 4], [5, 10]])
     
 
-@patch("numpy.random.random")
-def test_from_continuous_prediction(random_mock):
-    random_mock.return_value = np.array([0.1, 0.2])
+def test_from_continuous_prediction():
     class Test(testmod.ContinuousPrediction):
         def risk(self, x, y):
-            return x
+            x = np.asarray(x)
+            return ((x >= 100) & (x < 150)).astype(np.float)
 
     test = testmod.GridPredictionArray.from_continuous_prediction(Test(), 5, 10)
     assert(test.intensity_matrix.shape == (10, 5))
     # (2,3) -> [100,150] x [150,200]
-    expected = (105 + 110) / 2
-    assert(test.grid_risk(2,3) == pytest.approx(expected))
-    assert(test.grid_risk(2,9) == pytest.approx(expected))
+    assert(test.grid_risk(2,3) == 1)
+    assert(test.grid_risk(2,9) == 1)
+    assert(test.grid_risk(3,3) == 0)
     assert(test.grid_risk(2,10) == 0)
-
-@patch("numpy.random.random")
-def test_from_continuous_prediction(random_mock):
-    random_mock.return_value = np.array([0.1, 0.2])
-    class Test(testmod.ContinuousPrediction):
-        def risk(self, x, y):
-            return y
-
-    region = open_cp.data.RectangularRegion(20, 50, 30, 60)
-    test = testmod.GridPredictionArray.from_continuous_prediction_region(Test(), region, 15, 10)
-    # (1,2) ->  ? x 30 + [20,30]  ==  ? x [50,60]
-    expected = (51 + 52) / 2
-    assert(test.grid_risk(1,2) == pytest.approx(expected))
-    assert(test.grid_risk(2,3) == 0)
 
 def test_continuous_prediction_samples():
     cp = testmod.ContinuousPrediction(20, 30, 0, 0, samples = 123)

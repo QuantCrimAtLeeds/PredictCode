@@ -26,7 +26,16 @@ def test_construct(data1):
     # Scaled up as grid size is 20
     assert pred.region().max == (100, 60)
     
-@mock.patch("open_cp.kernels.GaussianBase")
+@pytest.fixture
+def gb_mock():
+    gb = mock.Mock()
+    def fake_call(pts):
+        return pts[0]
+    gb.return_value = mock.MagicMock()
+    gb.return_value.side_effect = fake_call
+    with mock.patch("open_cp.kernels.GaussianBase", gb):
+        yield gb
+    
 def test_kernel_constructed_correctly(gb_mock, data1):
     region = open_cp.data.RectangularRegion(xmin=0, xmax=100, ymin=20, ymax=50)
     predictor = kde.KDE(region, 20)
@@ -41,7 +50,6 @@ def test_kernel_constructed_correctly(gb_mock, data1):
     
     print(gb_mock.return_value.call_args_list)
 
-@mock.patch("open_cp.kernels.GaussianBase")
 def test_time_delta_usage(gb_mock, data1):
     region = open_cp.data.RectangularRegion(xmin=0, xmax=100, ymin=20, ymax=50)
     predictor = kde.KDE(region, 20)
@@ -54,7 +62,6 @@ def test_time_delta_usage(gb_mock, data1):
     assert len(predictor.time_kernel.call_args_list[0][0]) == 1
     np.testing.assert_allclose(predictor.time_kernel.call_args_list[0][0][0], [48, 24, 0])
 
-@mock.patch("open_cp.kernels.GaussianBase")
 def test_time_delta_usage_with_end_time(gb_mock, data1):
     region = open_cp.data.RectangularRegion(xmin=0, xmax=100, ymin=20, ymax=50)
     predictor = kde.KDE(region, 20)
@@ -71,7 +78,6 @@ def test_time_delta_usage_with_end_time(gb_mock, data1):
     call = gb_mock.call_args_list[0]
     np.testing.assert_allclose(call[0][0], [[5,50], [30,20]])
 
-@mock.patch("open_cp.kernels.GaussianBase")
 def test_time_delta_usage_with_start_time(gb_mock, data1):
     region = open_cp.data.RectangularRegion(xmin=0, xmax=100, ymin=20, ymax=50)
     predictor = kde.KDE(region, 20)

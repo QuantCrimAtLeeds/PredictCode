@@ -5,9 +5,6 @@
 
 
 
-- Can we speed up the cts -> grid predictition sampling??
-
-
 # GUI
 
 - When viewing the results of an "analysis run" there is a chain of combo boxes behaving in a

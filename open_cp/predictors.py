@@ -157,10 +157,7 @@ class GridPredictionArray(GridPrediction):
         :param width: Width of the grid, in number of cells
         :param height: Height of the grid, in number of cells
         """
-        matrix = _np.empty((height, width))
-        for x in range(width):
-            for y in range(height):
-                matrix[y][x] = prediction.grid_risk(x, y)
+        matrix = prediction.to_matrix(width, height)
         return GridPredictionArray(prediction.cell_width, prediction.cell_height,
             matrix, prediction.xoffset, prediction.yoffset)
 
@@ -283,6 +280,19 @@ class ContinuousPrediction():
         y = (gy + _np.random.random(self.samples)) * self.cell_height + self.yoffset
         return _np.mean(self.risk(x, y))
         
+    def to_matrix(self, width, height):
+        """Sample the risk at each grid point from `(0, 0)` to
+        `(width-1, height-1)` inclusive.  Optimised."""
+        matrix = _np.empty((height, width))
+        for gy in range(height):
+            y = (gy + _np.random.random(size=self.samples * width)) * self.cell_height + self.yoffset
+            # 0,1,...,width-1, 0,1,...,width-1  with the block repeated self.sample times
+            gx = _np.broadcast_to(_np.arange(width), (self.samples, width)).ravel()
+            x = (gx + _np.random.random(self.samples * width)) * self.cell_width + self.xoffset
+            assert x.shape == y.shape
+            matrix[gy] = _np.mean(_np.reshape(self.risk(x, y), (self.samples, width)), axis=0)
+        return matrix
+
     def to_kernel(self):
         """Returns a callable object which when called at `point` gives the
         risk at (point[0], point[1]).  `point` may be an array."""

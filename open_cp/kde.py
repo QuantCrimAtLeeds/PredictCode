@@ -102,7 +102,7 @@ class KDE(_predictors.DataTrainer):
     the standard "out of the box" kernel estimators, and the "Prohotspot" type
     estimators.
 
-    The preditor itself is simple.  We select an interval time (or all time)
+    The predictor itself is simple.  We select an interval time (or all time)
     and use just the data from that time range.  The distance in time from each
     event to the end time is calculated, and optionally a "time kernel" is
     calculated: typically this kernel falls off in time, so that events in the

@@ -41,7 +41,7 @@ def test_ScipyKDE_make_task_no_date(model, project_task, analysis_model, grid_ta
 
 class OurContinuousPrediction(open_cp.predictors.ContinuousPrediction):
     def risk(self, x, y):
-        return 1.0
+        return np.zeros_like(x) + 1.0
 
 
 @mock.patch("open_cp.naive.ScipyKDE")
