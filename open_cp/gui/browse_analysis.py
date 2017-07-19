@@ -135,6 +135,8 @@ class BrowseAnalysisModel():
         """
         return self._run_comparison_model.get_projector(key_string)
 
+    ### Start of "hierarchical" section
+
     @property
     def projections(self):
         """List of all "projection"s used in the run."""
@@ -200,6 +202,8 @@ class BrowseAnalysisModel():
         preds = set(preds)
 
         return [result for result in self._result.results if result.key in preds]
+
+    ## END
 
     @property
     def current_prediction(self):
