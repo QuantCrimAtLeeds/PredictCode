@@ -66,7 +66,7 @@ class SEPP(predictor.Predictor):
         
     class Task(predictor.GridPredictorTask):
         def __init__(self):
-            super().__init__(False)
+            super().__init__(True)
 
         def __call__(self, analysis_model, grid_task, project_task):
             timed_points = self.projected_data(analysis_model, project_task)

@@ -86,10 +86,9 @@ class MainWindow():
     def recent(self):
         self.view.destroy()
         filename = session.Session(self._root).run()
+        self.init()
         if filename is not None:
             self.load_session(filename)
-        else:
-            self.init()
 
     def config(self):
         self.view.destroy()

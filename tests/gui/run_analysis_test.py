@@ -19,6 +19,8 @@ def runAnalysis(log_queue):
     class Model():
         def selected_by_crime_type_data(self):
             return self.times, self.xcoords, self.ycoords
+        def clone(self):
+            return self
     model = Model()
     model.analysis_tools_model = analysis.AnalysisToolsModel(model)
     model.comparison_model = analysis.ComparisonModel(model)

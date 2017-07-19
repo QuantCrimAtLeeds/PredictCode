@@ -75,6 +75,7 @@ class RunAnalysis():
         self._msg_logger.info(run_analysis_view._text["log7"], total)
         
         self._off_thread = _RunnerThread(tasks, self._model.predict_tasks, self)
+        self._off_thread.force_gc()
         locator.get("pool").submit(self._off_thread, self._finished)
 
     def to_msg_logger(self, msg, *args, level=logging.DEBUG):
@@ -126,7 +127,8 @@ class _RunAnalysis_Task():
 
     class _InnerTask():
         def __init__(self, main_model, grid, proj, pred):
-            self.main_model = main_model
+            # Make a copy of the :class:`DataModel` and not the extra baggage.
+            self.main_model = main_model.clone()
             self.grid = grid
             self.proj = proj
             self.pred = pred
@@ -352,11 +354,11 @@ class BaseRunner():
         """To be run off the main GUI thread"""
         self._controller.start_progress()
         self._controller.to_msg_logger(run_analysis_view._text["log9"])
-        self._executor.start()
+        self.executor.start()
         try:
             tasks = list(self.make_tasks())
             self._controller.to_msg_logger(run_analysis_view._text["log13"])
-            futures = [ self._executor.submit(t) for t in tasks if t.off_process ]
+            futures = [ self.executor.submit(t) for t in tasks if t.off_process ]
             on_thread_tasks = [t for t in tasks if not t.off_process]
             done, out_of = 0, len(futures) + len(on_thread_tasks)
 
@@ -374,8 +376,20 @@ class BaseRunner():
                 if self.cancelled:
                     break
         finally:
-            self._executor.terminate()
+            # Context management would call `shutdown` but we definitely want
+            # to call terminate.
+            self.executor.terminate()
         self._controller.end_progress()
+
+    def force_gc(self):
+        """Fixes, or at least mitigates, issue #6.  Call on the main GUI thread
+        prior to invoking `__call__`."""
+        import gc
+        gc.collect()
+
+    @property
+    def executor(self):
+        return self._executor
 
     def _process_futures(self, futures):
         results, futures = pool.check_finished(futures)
@@ -445,13 +459,12 @@ class _RunnerThread(BaseRunner):
         futures = []
         for task in self._tasks:
             if task.off_process:
-                raise NotImplementedError("This currently does not work due to pickling issues.")
+                #raise NotImplementedError("This currently does not work due to pickling issues.")
                 task = self.RunPredTask(task, task.task)
-                futures.append(self._executor.submit(task))
+                futures.append(self.executor.submit(task))
             else:
                 tasks.extend( self._make_new_task(task, task.task()) )
         if len(futures) > 0:
-            to_gui_pool = locator.get("pool")
             for key, result in pool.yield_task_results(futures):
                 tasks.extend( self._make_new_task(key, result) )
         return tasks

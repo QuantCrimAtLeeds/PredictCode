@@ -567,7 +567,7 @@ class HREF(ttk.Label):
         self._init()
         self["style"] = "Href.TLabel"
         self._link()
-        self.bind("<Button>", self.open)
+        self.bind("<Button-1>", self.open)
 
     def open(self, event):
         """Open the URL using a webbrower."""

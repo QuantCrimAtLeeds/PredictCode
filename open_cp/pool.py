@@ -15,6 +15,7 @@ import concurrent.futures as _futures
 import pickle as _pickle
 import multiprocessing as _mp
 import multiprocessing.pool as _mp_pool
+import time as _time
 
 class OurProcessPoolExecutor():
     """Minimal version of the standard library :class:`ProcessPoolExecutor`
@@ -171,25 +172,27 @@ def check_finished(futures):
             still_to_complete.append( future )
     return (results, still_to_complete)
 
-def yield_task_results(async_results, timeout=None):
+def yield_task_results(futures, timeout=None):
     """Standard way to extract the key and return value from a future wrapping
     a task.  Yields pairs `(key, return value)` as the futures complete.
 
     This is a simple implementation that repeatedly checks the future objects
     for completion, and then `sleep`s for a short time.  As such, it is not
     suitable for low-latency applications.
+    
+    :param futures: Iterable of futures to wait for
+    :param timeout: An optional timeout is seconds
     """
     if timeout is not None:
         import datetime
         end = datetime.datetime.now() + datetime.timedelta(seconds=timeout)
-    wait_for = list(async_results)
+    wait_for = list(futures)
     while len(wait_for) > 0:
         results, wait_for = check_finished(wait_for)
         yield from results
         if timeout is not None and datetime.datetime.now() > end:
             raise TimeoutError()
-        import time
-        time.sleep(0.1)
+        _time.sleep(0.1)
 
 
 class RestorableExecutor():

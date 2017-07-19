@@ -113,6 +113,7 @@ class RunComparison():
             if isinstance(input, Exception):
                 raise input
             self._off_thread = _RunnerThreadOne(input, self)
+            self._off_thread.force_gc()
             locator.get("pool").submit(self._off_thread, self._finished)
         except:
             self._msg_logger.exception(run_analysis_view._text["genfail1"])

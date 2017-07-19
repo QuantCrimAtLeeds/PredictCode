@@ -234,16 +234,15 @@ class Analysis():
 
 ## The model #############################################################
 
-class Model():
-    """The model 
+class DataModel():
+    """Just stores the actual time/coordinates data, which is what we need to
+    pass around to certain tasks.
 
-    :param filename: Name of the file we loaded
     :param data: `(timestamps, xcoords, ycoords, crime_types)`
     :param parse_settings: An instance of :class:`import_file_model.ParseSettings`
     """
-    def __init__(self, filename, data, parse_settings):
-        self._errors = []
-        self.filename = filename
+    def __init__(self, data, parse_settings):
+        self._parse_settings = parse_settings
         self.times = np.asarray([np.datetime64(x) for x in data[0]])
         self.xcoords = np.asarray(data[1]).astype(np.float)
         self.ycoords = np.asarray(data[2]).astype(np.float)
@@ -251,7 +250,181 @@ class Model():
         if len(self.crime_types) > 0 and len(self.crime_types[0]) > 2:
             raise ValueError("Cannot handle more than 2 crime types.")
         self._make_unique_crime_types()
-        self._parse_settings = parse_settings
+        
+    def clone(self):
+        """Make a copy; deliberately makes a "slice" of a sub-class, in C++
+        speak."""
+        data = [self.times, self.xcoords, self.ycoords, []]
+        new_model = DataModel(data, self._parse_settings)
+        new_model._unique_crime_types = self._unique_crime_types
+        new_model.crime_types = self.crime_types
+        new_model._selected_crime_types = self._selected_crime_types
+        new_model._time_range = self._time_range
+        return new_model
+        
+    @property
+    def num_crime_type_levels(self):
+        """Zero if no crime type field was selected, 1 if one field selected,
+        etc."""
+        if len(self.unique_crime_types) == 0:
+            return 0
+        return len(self.unique_crime_types[0])
+
+    def _make_unique_crime_types(self):
+        data = [tuple(x) for x in self.crime_types]
+        self._unique_crime_types = list(set(data))
+        if len(self._unique_crime_types) > 1000:
+            self._errors.append(analysis_view._text["ctfail3"].format(len(self._unique_crime_types)))
+            self.crime_types = [[] for _ in self.crime_types]
+            self._make_unique_crime_types()
+        else:
+            self._unique_crime_types.sort()
+            lookup = dict()
+            self.crime_types = array.array("l")
+            for x in data:
+                if x not in lookup:
+                    lookup[x] = self._unique_crime_types.index(x)
+                self.crime_types.append(lookup[x])
+        self.crime_types = np.asarray(self.crime_types).astype(np.int)
+
+    @property
+    def unique_crime_types(self):
+        """Return a list of crime types.  This ordering should be used by the
+        view to maintain coherence with the model.  Each crime type will be a
+        tuple, the length of which agrees with :attr:`num_crime_type_levels`.
+        """
+        return self._unique_crime_types
+
+    @property
+    def num_rows(self):
+        return len(self.times)
+    
+    @property
+    def coord_type(self):
+        return self._parse_settings.coord_type
+    
+    @property
+    def time_range(self):
+        """(training_start, training_end, assessment_start, assessment_end)."""
+        return self._time_range
+
+    @time_range.setter
+    def time_range(self, value):
+        if len(value) != 4:
+            raise ValueError()
+        self._time_range = tuple(value)
+
+    def _datetime64_to_datetime(self, dt):
+        dt = np.datetime64(dt)
+        ts = (dt - np.datetime64('1970-01-01T00:00:00Z')) / np.timedelta64(1, 's')
+        return datetime.datetime.utcfromtimestamp(ts)
+
+    def _round_dt(self, dt, how="past"):
+        dt = self._datetime64_to_datetime(dt)
+        if how == "past":
+            return datetime.datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute)
+        if how == "future":
+            return datetime.datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute, 59)
+        raise ValueError()
+
+    def reset_times(self):
+        """Set the default time ranges."""
+        start = self._round_dt(np.min(self.times), "past")
+        end = self._round_dt(np.max(self.times), "future")        
+        mid = self._round_dt(start + (end - start) / 2, "past")
+        if mid - start > datetime.timedelta(days=365):
+            mid = start + datetime.timedelta(days=365)
+        self.time_range = (start, mid, mid, end)
+
+    @property
+    def time_range_of_data(self):
+        """`(start, end)` times for the whole dataset."""
+        return (self._datetime64_to_datetime(np.min(self.times)),
+                self._datetime64_to_datetime(np.max(self.times)))
+
+    @property
+    def selected_crime_types(self):
+        """The selected crime types.  A set of indexes into
+        :attr:`unique_crime_types`."""
+        return self._selected_crime_types
+
+    @selected_crime_types.setter
+    def selected_crime_types(self, value):
+        if value is None or len(value) == 0:
+            self._selected_crime_types = []
+            return
+        value = set(value)
+        limit = len(self.unique_crime_types)
+        for x in value:
+            if x < 0 or x >= limit:
+                raise ValueError()
+        self._selected_crime_types = value
+
+    def _crime_selected_mask(self):
+        if self.num_crime_type_levels == 0:
+            return (np.zeros_like(self.crime_types) + 1).astype(np.bool)
+        allowed = list(self.selected_crime_types)
+        if len(allowed) == 0:
+            return np.zeros_like(self.crime_types).astype(np.bool)
+        # Oddly, faster than doing massive single numpy operation
+        mask = (self.crime_types == allowed[0])
+        for x in allowed[1:]:
+            mask |= (self.crime_types == x)
+        return mask
+
+    def counts_by_crime_type(self):
+        """:return: The number of events with the selected crime type(s)."""
+        return np.sum(self._crime_selected_mask())
+
+    def training_data(self):
+        """`(times, xcoords, ycoords)` for the selected time range and crime
+        types.
+        """
+        start, end = self.time_range[0], self.time_range[1]
+        start, end = np.datetime64(start), np.datetime64(end)
+        mask = (self.times >= start) & (self.times <= end)
+        mask &= self._crime_selected_mask()
+        return self.times[mask], self.xcoords[mask], self.ycoords[mask]
+
+    def assess_data(self):
+        """`(times, xcoords, ycoords)` for the selected time range and crime
+        types.
+        """
+        start, end = self.time_range[2], self.time_range[3]
+        start, end = np.datetime64(start), np.datetime64(end)
+        mask = (self.times > start) & (self.times <= end)
+        mask &= self._crime_selected_mask()
+        return self.times[mask], self.xcoords[mask], self.ycoords[mask]
+
+    def selected_by_crime_type_data(self):
+        """`(times, xcoords, ycoords)` for the crime types (but with any
+        timestamp).
+        """
+        mask = self._crime_selected_mask()
+        return self.times[mask], self.xcoords[mask], self.ycoords[mask]
+
+    def counts_by_time(self):
+        """:return: `(train_count, assess_count)`"""
+        start, end = self.time_range[0], self.time_range[1]
+        start, end = np.datetime64(start), np.datetime64(end)
+        train_count = np.sum((self.times >= start) & (self.times <= end))
+        start, end = self.time_range[2], self.time_range[3]
+        start, end = np.datetime64(start), np.datetime64(end)
+        assess_count = np.sum((self.times > start) & (self.times <= end))
+        return train_count, assess_count
+
+
+class Model(DataModel):
+    """The model 
+
+    :param filename: Name of the file we loaded
+    :param data: `(timestamps, xcoords, ycoords, crime_types)`
+    :param parse_settings: An instance of :class:`import_file_model.ParseSettings`
+    """
+    def __init__(self, filename, data, parse_settings):
+        super().__init__(data, parse_settings)
+        self._errors = []
+        self.filename = filename
         self.analysis_tools_model = AnalysisToolsModel(self)
         self.comparison_model = ComparisonModel(self)
         self._time_range = None
@@ -262,7 +435,7 @@ class Model():
         self._analysis_runs = []
         self._loaded_from_dict = None
         self.session_filename = None
-
+        
     class AnalysisRunHolder():
         def __init__(self, result, filename=None):
             self._result = result
@@ -436,43 +609,6 @@ class Model():
         return errors
 
     @property
-    def num_crime_type_levels(self):
-        """Zero if no crime type field was selected, 1 if one field selected,
-        etc."""
-        if len(self.unique_crime_types) == 0:
-            return 0
-        return len(self.unique_crime_types[0])
-
-    def _make_unique_crime_types(self):
-        data = [tuple(x) for x in self.crime_types]
-        self._unique_crime_types = list(set(data))
-        if len(self._unique_crime_types) > 1000:
-            self._errors.append(analysis_view._text["ctfail3"].format(len(self._unique_crime_types)))
-            self.crime_types = [[] for _ in self.crime_types]
-            self._make_unique_crime_types()
-        else:
-            self._unique_crime_types.sort()
-            lookup = dict()
-            self.crime_types = array.array("l")
-            for x in data:
-                if x not in lookup:
-                    lookup[x] = self._unique_crime_types.index(x)
-                self.crime_types.append(lookup[x])
-        self.crime_types = np.asarray(self.crime_types).astype(np.int)
-
-    @property
-    def unique_crime_types(self):
-        """Return a list of crime types.  This ordering should be used by the
-        view to maintain coherence with the model.  Each crime type will be a
-        tuple, the length of which agrees with :attr:`num_crime_type_levels`.
-        """
-        return self._unique_crime_types
-
-    @property
-    def num_rows(self):
-        return len(self.times)
-
-    @property
     def num_empty_rows(self):
         return self._empty_rows
 
@@ -487,120 +623,6 @@ class Model():
     @num_error_rows.setter
     def num_error_rows(self, value):
         self._error_rows = value
-
-    @property
-    def coord_type(self):
-        return self._parse_settings.coord_type
-    
-    @property
-    def time_range(self):
-        """(training_start, training_end, assessment_start, assessment_end)."""
-        return self._time_range
-
-    @time_range.setter
-    def time_range(self, value):
-        if len(value) != 4:
-            raise ValueError()
-        self._time_range = tuple(value)
-
-    def _datetime64_to_datetime(self, dt):
-        dt = np.datetime64(dt)
-        ts = (dt - np.datetime64('1970-01-01T00:00:00Z')) / np.timedelta64(1, 's')
-        return datetime.datetime.utcfromtimestamp(ts)
-
-    def _round_dt(self, dt, how="past"):
-        dt = self._datetime64_to_datetime(dt)
-        if how == "past":
-            return datetime.datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute)
-        if how == "future":
-            return datetime.datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute, 59)
-        raise ValueError()
-
-    def reset_times(self):
-        """Set the default time ranges."""
-        start = self._round_dt(np.min(self.times), "past")
-        end = self._round_dt(np.max(self.times), "future")        
-        mid = self._round_dt(start + (end - start) / 2, "past")
-        if mid - start > datetime.timedelta(days=365):
-            mid = start + datetime.timedelta(days=365)
-        self.time_range = (start, mid, mid, end)
-
-    @property
-    def time_range_of_data(self):
-        """`(start, end)` times for the whole dataset."""
-        return (self._datetime64_to_datetime(np.min(self.times)),
-                self._datetime64_to_datetime(np.max(self.times)))
-
-    @property
-    def selected_crime_types(self):
-        """The selected crime types.  A set of indexes into
-        :attr:`unique_crime_types`."""
-        return self._selected_crime_types
-
-    @selected_crime_types.setter
-    def selected_crime_types(self, value):
-        if value is None or len(value) == 0:
-            self._selected_crime_types = []
-            return
-        value = set(value)
-        limit = len(self.unique_crime_types)
-        for x in value:
-            if x < 0 or x >= limit:
-                raise ValueError()
-        self._selected_crime_types = value
-
-    def _crime_selected_mask(self):
-        if self.num_crime_type_levels == 0:
-            return (np.zeros_like(self.crime_types) + 1).astype(np.bool)
-        allowed = list(self.selected_crime_types)
-        if len(allowed) == 0:
-            return np.zeros_like(self.crime_types).astype(np.bool)
-        # Oddly, faster than doing massive single numpy operation
-        mask = (self.crime_types == allowed[0])
-        for x in allowed[1:]:
-            mask |= (self.crime_types == x)
-        return mask
-
-    def counts_by_crime_type(self):
-        """:return: The number of events with the selected crime type(s)."""
-        return np.sum(self._crime_selected_mask())
-
-    def training_data(self):
-        """`(times, xcoords, ycoords)` for the selected time range and crime
-        types.
-        """
-        start, end = self.time_range[0], self.time_range[1]
-        start, end = np.datetime64(start), np.datetime64(end)
-        mask = (self.times >= start) & (self.times <= end)
-        mask &= self._crime_selected_mask()
-        return self.times[mask], self.xcoords[mask], self.ycoords[mask]
-
-    def assess_data(self):
-        """`(times, xcoords, ycoords)` for the selected time range and crime
-        types.
-        """
-        start, end = self.time_range[2], self.time_range[3]
-        start, end = np.datetime64(start), np.datetime64(end)
-        mask = (self.times > start) & (self.times <= end)
-        mask &= self._crime_selected_mask()
-        return self.times[mask], self.xcoords[mask], self.ycoords[mask]
-
-    def selected_by_crime_type_data(self):
-        """`(times, xcoords, ycoords)` for the crime types (but with any
-        timestamp).
-        """
-        mask = self._crime_selected_mask()
-        return self.times[mask], self.xcoords[mask], self.ycoords[mask]
-
-    def counts_by_time(self):
-        """:return: `(train_count, assess_count)`"""
-        start, end = self.time_range[0], self.time_range[1]
-        start, end = np.datetime64(start), np.datetime64(end)
-        train_count = np.sum((self.times >= start) & (self.times <= end))
-        start, end = self.time_range[2], self.time_range[3]
-        start, end = np.datetime64(start), np.datetime64(end)
-        assess_count = np.sum((self.times > start) & (self.times <= end))
-        return train_count, assess_count
 
 
 ## Bases classes for the predictors / comparitors ########################
@@ -723,7 +745,7 @@ class AnalysisToolsController(_ListController):
             projs = self.model.predictors_of_type(predictors.predictor._TYPE_COORD_PROJ)
             if len(projs) == 0:
                 out.append(analysis_view._text["noproj"])
-        # TODO: Support continuous projections
+        # TODO: Support continuous predictions
         grids = self.model.predictors_of_type(predictors.predictor._TYPE_GRID)
         if len(grids) == 0:
             out.append(analysis_view._text["nogrid"])
