@@ -780,9 +780,12 @@ class AnalysisToolsModel(_ListModel):
             if len(pred) > 1:
                 errors.append(analysis_view._text["pi_fail2"].format(name))
                 continue
-            pred = pred[0](self._model)
-            pred.from_dict(pred_data["settings"])
-            v.append(pred)
+            try:
+                pred = pred[0](self._model)
+                pred.from_dict(pred_data["settings"])
+                v.append(pred)
+            except Exception as ex:
+                errors.append(analysis_view._text["pi_fail3"].format(name, type(ex), ex))
         self.objects = v
         if len(errors) > 0:
             raise ValueError("\n".join(errors))
@@ -896,9 +899,12 @@ class ComparisonModel(_ListModel):
             if len(pred) > 1:
                 errors.append(analysis_view._text["ci_fail2"].format(name))
                 continue
-            pred = pred[0](self._model)
-            pred.from_dict(pred_data["settings"])
-            v.append(pred)
+            try:
+                pred = pred[0](self._model)
+                pred.from_dict(pred_data["settings"])
+                v.append(pred)
+            except Exception as ex:
+                errors.append(analysis_view._text["ci_fail3"].format(name, type(ex), ex))
         self.objects = v
         if len(errors) > 0:
             raise ValueError("\n".join(errors))

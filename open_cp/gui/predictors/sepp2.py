@@ -34,7 +34,6 @@ _text = {
 class SEPP(predictor.Predictor):
     def __init__(self, model):
         super().__init__(model)
-        pass
     
     @staticmethod
     def describe():

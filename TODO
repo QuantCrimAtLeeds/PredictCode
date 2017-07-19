@@ -1,17 +1,14 @@
 # Main code
 
-- Sort out convergence issues in SEPP code
-   - See comment on GitHub
-- Look at the grid-based SEPP method which seems to perform badly
-
 - Could think about how best to produce a "prediction" from an SEPP method:
   - Say we want predict the next week.  Is a "point" estimate appropriate, or should we somehow "integrate" over time??
 
 
+
+- Can we speed up the cts -> grid predictition sampling??
+
+
 # GUI
 
-- Predictors:
-  - Do other predictors
-    - Think all but SEPP, which don't 100% work, are now done.
-    - Currently working on the `seppexp` method.  Needs tests.
-- Would be useful to have some mechanism for a "predictor" to communicate log details back to the main task.
+- When viewing the results of an "analysis run" there is a chain of combo boxes behaving in a
+  certain way.  Abstract this into a class...  And then use for viewing results of comparisons.

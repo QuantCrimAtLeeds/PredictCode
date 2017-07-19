@@ -203,9 +203,13 @@ def kth_nearest_neighbour_gaussian_kde(coords, k=15):
 
     if len(coords.shape) == 1:
         stds = _np.std(coords, ddof=1)
+        if stds == 0:
+            raise ValueError("0 standard deviation")
         points = coords / stds
     else:
         stds = _np.std(means, axis=0, ddof=1)
+        if _np.any(stds < 1e-8):
+            raise ValueError("0 standard deviation: {}".format(stds))
         points = coords / stds[:, None]
     distance_to_k = compute_kth_distance(points, k)
     # We have a problem if the `k`th neighbour is 0 distance
