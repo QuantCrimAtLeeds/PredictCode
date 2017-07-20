@@ -127,8 +127,14 @@ _text = {
     "comall" : "All",
     "comalltt" : "Run the current 'comparison' methods on all prediction runs",
     "comallview" : "View results of comparing all predictions",
+    "waiting" : "Loading saved settings",
 
 }
+
+class FurtherWait(util.ModalWaitWindow):
+    def __init__(self, parent):
+        super().__init__(parent, _text["waiting"])
+
 
 class AnalysisView(tk.Frame):
     def __init__(self, model, controller, root):

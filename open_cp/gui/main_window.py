@@ -58,7 +58,7 @@ class MainWindow():
         if filename is None:
             return
         try:
-            model = self._load_session(filename)
+            model, data = self._load_session(filename)
         except self.CancelException:
             return
         except Exception as e:
@@ -67,7 +67,7 @@ class MainWindow():
             return
         self.view.destroy()
         model.session_filename = filename
-        analysis.Analysis(model, self._root).run()
+        analysis.Analysis(model, self._root, data).run()
         self.init()
 
     def _load_session(self, filename):
@@ -81,7 +81,7 @@ class MainWindow():
             raise self.CancelException()
         model = analysis.Model.init_from_process_file_model(filename, pf.model)
         model.settings_from_dict(data)
-        return model
+        return model, data
 
     def recent(self):
         self.view.destroy()

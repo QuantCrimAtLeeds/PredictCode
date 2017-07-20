@@ -12,6 +12,7 @@ import open_cp.gui.analysis as analysis
 from open_cp.gui import locator
 import csv
 import array
+import logging
 
 
 class ImportFile():
@@ -20,9 +21,13 @@ class ImportFile():
         self.parse_settings = import_file_model.ParseSettings()
         self._process_model = None
         self._root = root
+        self._logger = logging.getLogger(__name__)
+        self.model = None
     
     def run(self):
         self._load_file()
+        if self.model is None:
+            return
         self.view = import_file_view.ImportFileView(self._root, self.model, self)
         self.view.wait_window(self.view)
         if self._process_model is not None:
@@ -57,7 +62,10 @@ class ImportFile():
         return import_file_model.InitialData(header, rows, row_count, self._filename)
         
     def _done_process_file(self, value):
-        self.model = import_file_model.Model(value)
+        if isinstance(value, Exception):
+            import_file_view.display_error("{} / {}".format(type(value), value))
+        else:
+            self.model = import_file_model.Model(value)
         self.view.destroy()
 
     def notify_time_format(self, format_string, initial=False):

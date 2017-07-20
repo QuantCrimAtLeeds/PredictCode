@@ -592,3 +592,19 @@ class HREF(ttk.Label):
 
     _font = None
     _style = None
+
+
+class ModalWaitWindow(ModalWindow):
+    """Very simple modal window with an "indeterminate" progress bar."""
+    def __init__(self, parent, title):
+        super().__init__(parent, title)
+        stretchy_columns(self, [0])
+        centre_window_percentage(self, 20, 10)
+        
+    def add_widgets(self):
+        bar = ttk.Progressbar(self, mode="indeterminate")
+        bar.grid(row=1, column=0, padx=2, pady=2, sticky=tk.NSEW)
+        bar.start()
+        frame = ttk.Frame(self, height=30)
+        frame.grid(row=0, column=0)
+        frame.grid_propagate(False)

@@ -6,6 +6,7 @@ import_file_view
 import tkinter as tk
 import tkinter.filedialog as tk_fd
 import tkinter.ttk as ttk
+import tkinter.messagebox
 from . import util
 from . import simplesheet
 from . import tooltips
@@ -75,6 +76,10 @@ class LoadFileProgress(tk.Frame):
         bar = ttk.Progressbar(self, mode="indeterminate")
         bar.grid(sticky=util.NSEW)
         bar.start()
+
+
+def display_error(message):
+    tkinter.messagebox.showerror("Error", message)
 
 
 class ImportFileView(tk.Frame):
