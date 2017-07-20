@@ -116,6 +116,7 @@ def test_pred_serialisation(model_with_preds, parse_settings):
     mdl._parse_settings = parse_settings
     mdl._parse_settings.coord_type = import_file_model.CoordType.LonLat
     mdl.settings_from_dict(model_with_preds)
+    mdl.load_settings_slow(model_with_preds)
 
     assert len(mdl.analysis_tools_model.objects) == 1
     assert mdl.analysis_tools_model.objects[0].describe() == "Project LonLat coordinates to meters"
@@ -125,6 +126,7 @@ def test_pred_serialisation_error(model_with_preds):
     mdl._parse_settings = parse_settings()
     model_with_preds["analysis_tools"]["predictors"][0]["name"] = "bob"
     mdl.settings_from_dict(model_with_preds)
+    mdl.load_settings_slow(model_with_preds)
 
     assert len(mdl.analysis_tools_model.objects) == 0
     assert mdl.consume_errors() == ["Cannot find a match for a predictor named bob"]
