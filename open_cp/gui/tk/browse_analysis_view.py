@@ -18,6 +18,7 @@ _text = {
     "grid" : "Grid system used:",
     "pred" : "Prediction type:",
     "date" : "Prediction date:",
+    "len" : "Prediction length:",
     "graph_name" : "Estimated (relative) risk",
     "risktype" : "Plot type",
     "rrisk" : "Relative risk",
@@ -32,7 +33,8 @@ _text = {
     "topcus_tt" : "Show just the top % of grid cells by risk",
     "adj" : "Adjusters",
     "none" : "None",
-    
+    "exit" : "Exit",
+
 }
 
 class BrowseAnalysisView(util.ModalWindow):
@@ -46,23 +48,15 @@ class BrowseAnalysisView(util.ModalWindow):
         frame = ttk.LabelFrame(self, text=_text["risktype"])
         frame.grid(row=0, column=1)
         self._risk_choice = tk.IntVar()
-        rb = ttk.Radiobutton(frame, text=_text["rrisk"], value=0, variable=self._risk_choice, command=self._risk_choice_change)
-        rb.grid(row=0, column=0, padx=2, sticky=tk.W)
-        tooltips.ToolTipYellow(rb, _text["rrisk_tt"])
-        rb = ttk.Radiobutton(frame, text=_text["top1"], value=1, variable=self._risk_choice, command=self._risk_choice_change)
-        rb.grid(row=1, column=0, padx=2, sticky=tk.W)
-        tooltips.ToolTipYellow(rb, _text["top1_tt"])
-        rb = ttk.Radiobutton(frame, text=_text["top5"], value=2, variable=self._risk_choice, command=self._risk_choice_change)
-        rb.grid(row=2, column=0, padx=2, sticky=tk.W)
-        tooltips.ToolTipYellow(rb, _text["top5_tt"])
-        rb = ttk.Radiobutton(frame, text=_text["top10"], value=3, variable=self._risk_choice, command=self._risk_choice_change)
-        rb.grid(row=3, column=0, padx=2, sticky=tk.W)
-        tooltips.ToolTipYellow(rb, _text["top10_tt"])
+        for row, (text, tt) in enumerate([ (_text["rrisk"], _text["rrisk_tt"]),
+            (_text["top1"], _text["top1_tt"]),
+            (_text["top5"], _text["top5_tt"]),
+            (_text["top10"], _text["top10_tt"]) ]):
+            self._make_rb(frame, row, text, tt).grid(row=row, column=0, padx=2, sticky=tk.W)
+
         subframe = ttk.Frame(frame)
         subframe.grid(row=4, column=0, sticky=tk.W)
-        rb = ttk.Radiobutton(subframe, text=_text["topcus"], value=4, variable=self._risk_choice, command=self._risk_choice_change)
-        rb.grid(row=0, column=0, padx=2, sticky=tk.W)
-        tooltips.ToolTipYellow(rb, _text["topcus_tt"])
+        self._make_rb(subframe, 4, _text["topcus"], _text["topcus_tt"]).grid(row=0, column=0, padx=2, sticky=tk.W)
         self._risk_level = tk.StringVar()
         self._risk_level.set("5")
         self._risk_level_entry = ttk.Entry(subframe, textvariable=self._risk_level)
@@ -70,31 +64,38 @@ class BrowseAnalysisView(util.ModalWindow):
         self._risk_level_entry["state"] = tk.DISABLED
         util.PercentageValidator(self._risk_level_entry, self._risk_level, callback=self._risk_choice_change)
 
+    def _make_rb(self, frame, value, text, tt):
+        rb = ttk.Radiobutton(frame, text=text, value=value,
+            variable=self._risk_choice, command=self._risk_choice_change)
+        tooltips.ToolTipYellow(rb, tt)
+        return rb
+
     def add_choice_widgets(self):
         self._selection_frame = ttk.Frame(self)
         self._selection_frame.grid(row=0, column=0)
-        ttk.Label(self._selection_frame, text=_text["cp"]).grid(row=0, column=0, padx=2, sticky=tk.E)
-        ttk.Label(self._selection_frame, text=_text["grid"]).grid(row=1, column=0, padx=2, sticky=tk.E)
-        ttk.Label(self._selection_frame, text=_text["pred"]).grid(row=2, column=0, padx=2, sticky=tk.E)
-        ttk.Label(self._selection_frame, text=_text["date"]).grid(row=3, column=0, padx=2, sticky=tk.E)
+        for row, text in enumerate([_text["cp"], _text["grid"], _text["pred"],
+                _text["date"], _text["len"]]):
+            ttk.Label(self._selection_frame, text=text).grid(row=row, column=0, padx=2, sticky=tk.E)
         self._hview = hierarchical_view.HierarchicalView(self.model.prediction_hierarchy, None, self._selection_frame)
-        for row, frame in zip(range(4), self._hview.frames):
+        for row, frame in zip(range(5), self._hview.frames):
             frame.grid(row=row, column=1, padx=2, pady=2, sticky=tk.W)
 
     def add_adjust_widgets(self):
         self._adjust_frame = ttk.LabelFrame(self, text=_text["adj"])
-        self._adjust_frame.grid(row=1, column=0, columnspan=2)
+        self._adjust_frame.grid(row=1, column=0, sticky=tk.EW)
+        util.stretchy_rows_cols(self._adjust_frame, [0], [0])
         choices = [key for (key,_) in self.controller.model.adjust_tasks]
         self._adjust_choice = ttk.Combobox(self._adjust_frame, height=5,
-            state="readonly", values=choices)
+            state="readonly", values=choices)#, width=50)
         self._adjust_choice.bind("<<ComboboxSelected>>", self._adjust_changed)
         self._adjust_choice.current(0)
-        self._adjust_choice.grid(padx=2, pady=2)
+        self._adjust_choice.grid(padx=2, pady=2, sticky=tk.EW)
 
     def add_widgets(self):
         self.add_choice_widgets()
         self.add_risk_choice_widgets()
         self.add_adjust_widgets()
+        ttk.Button(self, text=_text["exit"], command=self.destroy).grid(row=1,column=1,sticky=tk.NSEW, padx=10, pady=5)
 
     def _adjust_changed(self, event):
         self.controller.notify_adjust_choice(event.widget.current())
@@ -144,10 +145,10 @@ class BrowseAnalysisView(util.ModalWindow):
             return fig
         if not hasattr(self, "_plot") or self._plot is None:
             frame = ttk.LabelFrame(self, text=_text["graph_name"])
-            frame.grid(row=10, column=0, columnspan=3, padx=2, pady=2, sticky=tk.NSEW)
+            frame.grid(row=10, column=0, columnspan=2, padx=2, pady=2, sticky=tk.NSEW)
             util.stretchy_rows_cols(frame, [0], [0])
             util.stretchy_rows(self, [10])
-            util.stretchy_columns(self, [0,1,2])
+            util.stretchy_columns(self, [0,1])
             self._plot = mtp.CanvasFigure(frame)
             self._plot.grid(padx=2, pady=2, sticky=tk.NSEW)
         self._plot.set_figure_task(make_fig, dpi=50)
