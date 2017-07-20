@@ -3,6 +3,9 @@ run_analysis
 ~~~~~~~~~~~~
 
 Model / Controller for running the actual analysis.
+
+TODO: The random `print` statements are to try to catch a rare deadlock
+  condition.
 """
 
 import open_cp.gui.tk.run_analysis_view as run_analysis_view
@@ -342,7 +345,6 @@ class RunAnalysisModel():
 class BaseRunner():
     """Abstract base class which runs "tasks" and communicates with a
     "controller" to show progress.
-    
     """
     def __init__(self, controller):
         self._executor = pool.PoolExecutor()
@@ -374,11 +376,15 @@ class BaseRunner():
                     time.sleep(0.5)
                 self._controller.set_progress(done, out_of)
                 if self.cancelled:
+                    print("Exiting...")
                     break
         finally:
             # Context management would call `shutdown` but we definitely want
             # to call terminate.
+            print("Terminating...")
             self.executor.terminate()
+            print("Done")
+        print("Ending progress...")
         self._controller.end_progress()
 
     def force_gc(self):

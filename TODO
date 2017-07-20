@@ -7,5 +7,11 @@
 
 # GUI
 
-- When viewing the results of an "analysis run" there is a chain of combo boxes behaving in a
-  certain way.  Abstract this into a class...  And then use for viewing results of comparisons.
+- Fix stalling GUI on Windows when loading a complex session.
+
+
+
+
+## Very low priority
+
+- See comments in `run_comparison.py` about memory usage

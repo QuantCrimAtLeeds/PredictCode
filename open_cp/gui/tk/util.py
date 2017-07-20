@@ -45,7 +45,8 @@ def centre_window(window, width=None, height=None):
     minw = min(minw, width)
     minh = min(minh, height)
     window.minsize(minw, minh)
-    window.geometry("{}x{}+{}+{}".format(width, height, x, y))
+    fmt_str = "{}x{}+{}+{}".format(width, height, x, y)
+    window.geometry(fmt_str)
 
 def centre_window_percentage(window, width_percentage, height_percentage):
     """Set the window to be the given percentages of the total screen size,

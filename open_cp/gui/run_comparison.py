@@ -4,12 +4,25 @@ run_comparison
 
 Run the comparisons on an existing set of results.
 
-Currently this is multi-stage:
-    
-1. Run any "adjustments" on the raw predictions.  For example, clamping them
-  to known geometries.
-2. ???
+TODO: This is currently rather memory intensive, I _think_ because I have
+written it to run in "stages" and we store results between stages.  Better
+would be to make a "pipeline".
 
+The stages are:
+
+1. `_stage1` runs `_run_adjust_tasks` if necessary, or `_no_adjustments_case`
+  otherwise.
+1a. `_run_adjust_tasks` Sorts the predictions by the projection which was used.
+  Run the "adjustment" task over each prediction <-- Memory usage
+2. `_stage2` runs `_run_compare_tasks`
+2a. Project points as necessary (needed)
+2b. Just builds a list of tasks.
+3. `_stage3` pushes these tasks out to processes in "bundles".
+
+With further thought, this isn't excessive memory usage: in my testing, it
+looks bad because I have a very poorly chosen piece of geometry, and so the
+intermediate results are unexpectedly large.  So, we should fix, but this is
+low priority.
 """
 
 from . import run_analysis
@@ -146,7 +159,6 @@ class RunComparison():
             self._msg_logger.log(level, msg, *args))
 
     def _run_adjust_tasks(self, tasks):
-        # TODO: This chews up a lot of memory...
         preds_by_projection = dict()
         for pred in self.result.results:
             key = pred.key.projection
@@ -174,10 +186,12 @@ class RunComparison():
         self.view.done()
         if isinstance(out, Exception):
             self._msg_logger.error(run_analysis_view._text["log11"].format(out))
+            self._off_thread = None
             return
 
         if self._off_thread.cancelled:
             self.view.cancel()
+            self._off_thread = None
             return
 
         chunks = self._off_thread.results
@@ -187,6 +201,7 @@ class RunComparison():
             all_results.extend(result)
         result = RunComparisonResult(all_results)
         self.controller.new_run_comparison_result(result)
+        self._off_thread = None
 
     def start_progress(self):
         locator.get("pool").submit_gui_task(lambda : self.view.start_progress_bar())
@@ -332,6 +347,7 @@ class RunComparisonResult():
 
 
 class _RunnerThreadOne(run_analysis.BaseRunner):
+    """Runs tasks in "chunks" in other processes."""
     def __init__(self, tasks, controller):
         super().__init__(controller)
         self._tasks = tasks

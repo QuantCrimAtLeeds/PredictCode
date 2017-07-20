@@ -137,8 +137,8 @@ class AnalysisView(tk.Frame):
         self._controller = controller
         self.grid(sticky=util.NSEW)
         self.master.protocol("WM_DELETE_WINDOW", self.cancel)
-        util.centre_window_percentage(self.master, 70, 80)
         self.add_widgets()
+        util.centre_window_percentage(self.master, 70, 80)
 
     def _info_frame(self, parent):
         self._info_frame = ttk.Frame(parent)
