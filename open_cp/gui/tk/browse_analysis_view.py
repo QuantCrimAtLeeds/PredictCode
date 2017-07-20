@@ -9,6 +9,7 @@ import tkinter.ttk as ttk
 import open_cp.gui.tk.util as util
 import open_cp.gui.tk.tooltips as tooltips
 import open_cp.gui.tk.mtp as mtp
+import open_cp.gui.tk.hierarchical_view as hierarchical_view
 
 _text = {
     "title" : "Previous Analysis results.  Run @ {}",
@@ -41,14 +42,7 @@ class BrowseAnalysisView(util.ModalWindow):
         super().__init__(parent, title, resize="wh")
         self.set_size_percentage(50, 60)
 
-    def add_widgets(self):
-        self._selection_frame = ttk.Frame(self)
-        self._selection_frame.grid(row=0, column=0)
-        ttk.Label(self._selection_frame, text=_text["cp"]).grid(row=0, column=0, padx=2, sticky=tk.E)
-        ttk.Label(self._selection_frame, text=_text["grid"]).grid(row=1, column=0, padx=2, sticky=tk.E)
-        ttk.Label(self._selection_frame, text=_text["pred"]).grid(row=2, column=0, padx=2, sticky=tk.E)
-        ttk.Label(self._selection_frame, text=_text["date"]).grid(row=3, column=0, padx=2, sticky=tk.E)
-        
+    def add_risk_choice_widgets(self):
         frame = ttk.LabelFrame(self, text=_text["risktype"])
         frame.grid(row=0, column=1)
         self._risk_choice = tk.IntVar()
@@ -76,11 +70,31 @@ class BrowseAnalysisView(util.ModalWindow):
         self._risk_level_entry["state"] = tk.DISABLED
         util.PercentageValidator(self._risk_level_entry, self._risk_level, callback=self._risk_choice_change)
 
+    def add_choice_widgets(self):
+        self._selection_frame = ttk.Frame(self)
+        self._selection_frame.grid(row=0, column=0)
+        ttk.Label(self._selection_frame, text=_text["cp"]).grid(row=0, column=0, padx=2, sticky=tk.E)
+        ttk.Label(self._selection_frame, text=_text["grid"]).grid(row=1, column=0, padx=2, sticky=tk.E)
+        ttk.Label(self._selection_frame, text=_text["pred"]).grid(row=2, column=0, padx=2, sticky=tk.E)
+        ttk.Label(self._selection_frame, text=_text["date"]).grid(row=3, column=0, padx=2, sticky=tk.E)
+        self._hview = hierarchical_view.HierarchicalView(self.model.prediction_hierarchy, None, self._selection_frame)
+        for row, frame in zip(range(4), self._hview.frames):
+            frame.grid(row=row, column=1, padx=2, pady=2, sticky=tk.W)
+
+    def add_adjust_widgets(self):
         self._adjust_frame = ttk.LabelFrame(self, text=_text["adj"])
         self._adjust_frame.grid(row=1, column=0, columnspan=2)
         choices = [key for (key,_) in self.controller.model.adjust_tasks]
-        self._adjust_choice = self._cbox(self._adjust_frame, choices, self._adjust_changed)
+        self._adjust_choice = ttk.Combobox(self._adjust_frame, height=5,
+            state="readonly", values=choices)
+        self._adjust_choice.bind("<<ComboboxSelected>>", self._adjust_changed)
+        self._adjust_choice.current(0)
         self._adjust_choice.grid(padx=2, pady=2)
+
+    def add_widgets(self):
+        self.add_choice_widgets()
+        self.add_risk_choice_widgets()
+        self.add_adjust_widgets()
 
     def _adjust_changed(self, event):
         self.controller.notify_adjust_choice(event.widget.current())
@@ -103,121 +117,13 @@ class BrowseAnalysisView(util.ModalWindow):
         else:
             raise ValueError()
 
-    def _cbox(self, parent, choices, command=None):
-        cbox = ttk.Combobox(parent, height=5, state="readonly")
-        cbox["values"] = choices
-        cbox.bind("<<ComboboxSelected>>", command)
-        cbox.current(0)
-        cbox["width"] = max(len(str(t)) for t in choices)
-        return cbox
-
-    def _cbox_or_label(self, parent, choices, command=None):
-        """Produces a :class:`ttk.Combobox` unless `choices` is of length 1,
-        in which case just produces a label.
-
-        :return: Pair of `(widget, flag)` where `flag` is True if and only if
-          we produced a box.
-        """
-        if len(choices) == 1:
-            p = choices[0]
-            label = ttk.Label(parent, text=str(p))
-            return label, False
-        else:
-            return self._cbox(parent, choices, command), True
-
-    def update_projections(self):
-        w, flag = self._cbox_or_label(self._selection_frame, self.controller.model.projections, command=self._proj_chosen)
-        w.grid(row=0, column=1, padx=2, pady=2, sticky=tk.W)
-        if flag:
-            self._proj_cbox = w
-        else:
-            self._proj_cbox = None
-        self._proj_choice = 0
-        self.controller.notify_projection_choice(0)
-
-    def _proj_chosen(self, event):
-        self._proj_choice = event.widget.current()
-        self.controller.notify_projection_choice(self._proj_choice)
-
-    @property
-    def projection_choice(self):
-        """Pair of (index, string_value)"""
-        if self._proj_cbox is None:
-            return 0, self.controller.model.projections[0]
-        return self._proj_choice, self._proj_cbox["values"][self._proj_choice]
-
-    def update_grids(self, choices):
-        self._grid_choices = list(choices)
-        w, flag = self._cbox_or_label(self._selection_frame, self._grid_choices, command=self._grid_chosen)
-        w.grid(row=1, column=1, padx=2, pady=2, sticky=tk.W)
-        if flag:
-            self._grid_cbox = w
-        else:
-            self._grid_cbox = None
-        self._grid_choice = 0
-        self.controller.notify_grid_choice(0)
-        
-    def _grid_chosen(self, event):
-        self._grid_choice = event.widget.current()
-        self.controller.notify_grid_choice(self._grid_choice)
-
-    @property
-    def grid_choice(self):
-        """Pair of (index, string_value)"""
-        if self._grid_cbox is None:
-            return 0, self._grid_choices[0]
-        return self._grid_choice, self._grid_cbox["values"][self._grid_choice]
-        
-    def update_predictions(self, choices):
-        self._pred_choices = list(choices)
-        w, flag = self._cbox_or_label(self._selection_frame, self._pred_choices, command=self._pred_chosen)
-        w.grid(row=2, column=1, padx=2, pady=2, sticky=tk.W)
-        if flag:
-            self._pred_cbox = w
-        else:
-            self._pred_cbox = None
-        self._pred_choice = 0
-        self.controller.notify_pred_choice(0)
-        
-    def _pred_chosen(self, event):
-        self._pred_choice = event.widget.current()
-        self.controller.notify_pred_choice(self._pred_choice)
-
-    @property
-    def prediction_choice(self):
-        """Pair of (index, string_value)"""
-        if self._pred_cbox is None:
-            return 0, self._pred_choices[0]
-        return self._pred_choice, self._pred_cbox["values"][self._pred_choice]
-
-    def update_dates(self, choices, choice_index=0):
-        self._date_choices = list(choices)
-        w, flag = self._cbox_or_label(self._selection_frame, self._date_choices, command=self._date_chosen)
-        w.grid(row=3, column=1, padx=2, pady=2, sticky=tk.W)
-        if flag:
-            self._date_cbox = w
-            self._date_cbox.current(choice_index)
-        else:
-            self._date_cbox = None
-        self._date_choice = choice_index
-        self.controller.notify_date_choice(choice_index)
-        
-    def _date_chosen(self, event):
-        self._date_choice = event.widget.current()
-        self.controller.notify_date_choice(self._date_choice)
-
-    @property
-    def date_choice(self):
-        """Pair of (index, string_value)"""
-        if not hasattr(self, "_date_cbox"):
-            return -1, ""
-        if self._date_cbox is None:
-            return 0, self._date_choices[0]
-        return self._date_choice, self._date_cbox["values"][self._date_choice]
-
     @property
     def model(self):
         return self.controller.model
+
+    @property
+    def hierarchical_view(self):
+        return self._hview
 
     def update_prediction(self, level=-1, adjust_task=None):
         """Change the plotted prediction.
@@ -228,7 +134,7 @@ class BrowseAnalysisView(util.ModalWindow):
         def make_fig():
             fig = mtp.new_figure((20,20))
             ax = fig.add_subplot(1,1,1)
-            prediction = self.model.current_prediction.prediction
+            prediction = self.model.current_prediction
             if level == -1:
                 plot_risk(prediction, ax, adjust_task)
             else:

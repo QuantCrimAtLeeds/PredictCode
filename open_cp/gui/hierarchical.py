@@ -34,18 +34,24 @@ without a widget to choose it.
     as being `1` (this is the only choice) but leave column 2 choice as `d`
     (with `c` as another choice).
 
-The canonical use is in `browse_analysis`
+For technical reasons (ultimately tied to the usage of `tkinter`) all key
+values are treated as _strings_ internally.  We hide this, a bit, from the
+user, but you should make sure that:
+  - Any key has a sensibly defined `__str__` method
+  - Calling `str` maintains uniqueness
+At the level of the model, we work with Python types; but the view and
+controller convert these to strings internally.
 
-
-Here we present an abstract model, controller and view.
-
-TODO: Factor out the view...
+The canonical use is in `browse_analysis`.
 """
 
+from open_cp.gui.tk.hierarchical_view import HierarchicalView
+
 class Model():
-    """Base class which just defines methods for accessing available keys.
+    """(Absract) base class which just defines methods for accessing available
+    keys.
     
-    :param number_keys: The number of "keys" we'll use.
+    :param number_keys: The number of "keys"/"columns" we'll use.
     """
     def __init__(self, number_keys):
         self._number_keys = number_keys
@@ -54,9 +60,29 @@ class Model():
     def number_keys(self):
         """The number of keys which defines each entry."""
         return self._number_keys
-        
+
+    @property
+    def current_selection(self):
+        """A tuple giving the current selection."""
+        return self._selection
+
+    @current_selection.setter
+    def current_selection(self, key):
+        key = tuple(key)
+        try:
+            self.get(key)
+            self._selection = key
+        except KeyError:
+            raise ValueError("Key not valid")
+    
+    @property
+    def current_item(self):
+        """Return the data item indexed by the current selection."""
+        return self.get(self.current_selection)
+
     def get(self, key):
-        """Obtain the data object corresponding to the key.
+        """Obtain the data object corresponding to the key.  Should raise
+        :class:`KeyError` on failure to find.
         
         :param key: Tuple of length `self.number_keys`
         """
@@ -90,8 +116,10 @@ class DictionaryModel(Model):
     def _key_length(dictionary):
         length = -1
         for k in dictionary.keys():
-            if not isinstance(k, tuple):
-                raise ValueError("Keys should be tuples")
+            try:
+                k = tuple(k)
+            except:
+                raise ValueError("Keys should be (convertible to) tuples")
             if length == -1:
                 length = len(k)
             if len(k) != length:
@@ -104,5 +132,77 @@ class DictionaryModel(Model):
     def get_key_options(self, partial_key):
         partial_key = tuple(partial_key)
         prefix_length = len(partial_key)
-        return { key[prefix_length] for key in self._dict.keys()
+        return { tuple(key)[prefix_length] for key in self._dict.keys()
             if key[:prefix_length] == partial_key }
+
+
+class Hierarchical():
+    """Main class.  Pass in the instance of :class:`Model` you wish to use.
+    The "view" can be accessed from the :attr:`view` attribute.  Register a
+    callback on a selection change by setting the :attr:`callback` attribute.
+    
+    :param model: Instance of :class:`Model`
+    :param view: View object; typically leave as `None` to use the default
+    :param parent: If you wish to build the default view, pass the `tk` parent
+      widget.
+    """
+    def __init__(self, model, view=None, parent=None):
+        self._model = model
+        if view is None:
+            view = HierarchicalView(model, self, parent)
+        else:
+            view.controller = self
+        self.view = view
+        self._callback = None
+        self._init()
+
+    @property
+    def callback(self):
+        """A callable with signature `callback()` which is called when a
+        selection changes.  Interrogate the model to see the selection."""
+        return self._callback
+
+    @callback.setter
+    def callback(self, v):
+        self._callback = v
+
+    def _init(self):
+        self._in_fill_choices((), None)
+
+    def _in_fill_choices(self, partial_selection, old_selection):
+        while len(partial_selection) < self._model.number_keys:
+            index = len(partial_selection)
+            new_choices = list(self._model.get_key_options(partial_selection))
+            new_choices.sort()
+            self.view.set_choices(index, new_choices)
+            if old_selection is None or old_selection[index] not in new_choices:
+                next_value = new_choices[0]
+            else:
+                next_value = old_selection[index]
+            self.view.set_selection(index, next_value)
+            partial_selection += (next_value,)
+        self._model.current_selection = partial_selection
+        if self.callback is not None:
+            self.callback()
+
+    def _de_stringify(self, partial_selection, string_value):
+        for k in self._model.get_key_options(partial_selection):
+            if str(k) == string_value:
+                return k
+        raise ValueError()
+
+    def new_selection(self, level, value):
+        """Notify that the user has selected `value` from column `level`.
+
+        We should refresh the choices of selections of each subsequent level,
+        aiming to leave the selection unchanged if possible.
+
+        :param value: Assumed to be the _string representation_ of the key
+        """
+        if level < 0 or level >= self._model.number_keys:
+            raise ValueError()
+        old_selection = self._model.current_selection
+        partial_selection = old_selection[:level]
+        value = self._de_stringify(partial_selection, str(value))
+        partial_selection += (value,)
+        self._in_fill_choices(partial_selection, old_selection)
