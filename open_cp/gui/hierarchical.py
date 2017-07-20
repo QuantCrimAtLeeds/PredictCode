@@ -68,9 +68,8 @@ class Model():
 
     @current_selection.setter
     def current_selection(self, key):
-        key = tuple(key)
         try:
-            self.get(key)
+            self.get(tuple(key))
             self._selection = key
         except KeyError:
             raise ValueError("Key not valid")
@@ -84,7 +83,8 @@ class Model():
         """Obtain the data object corresponding to the key.  Should raise
         :class:`KeyError` on failure to find.
         
-        :param key: Tuple of length `self.number_keys`
+        :param key: Tuple of length `self.number_keys`, or object which can
+          be converted to a key.
         """
         raise NotImplementedError()
         
@@ -127,13 +127,34 @@ class DictionaryModel(Model):
         return length
     
     def get(self, key):
-        return self._dict[tuple(key)]
+        try:
+            return self._dict[key]
+        except:
+            key = self._tuple_to_key(key)
+            return self._dict[key]
+
+    def _tuple_to_key(self, key):
+        key = tuple(key)
+        for k in self._dict.keys():
+            if tuple(k) == key:
+                return k
+        raise KeyError("Key not valid")
 
     def get_key_options(self, partial_key):
         partial_key = tuple(partial_key)
         prefix_length = len(partial_key)
         return { tuple(key)[prefix_length] for key in self._dict.keys()
-            if key[:prefix_length] == partial_key }
+            if tuple(key)[:prefix_length] == partial_key }
+
+    @property
+    def current_selection(self):
+        """A tuple giving the current selection.  Will always be a key of the
+        original dictionary, and not necessarily a tuple."""
+        return self._selection
+
+    @current_selection.setter
+    def current_selection(self, key):
+        self._selection = self._tuple_to_key(key)
 
 
 class Hierarchical():
@@ -201,7 +222,7 @@ class Hierarchical():
         """
         if level < 0 or level >= self._model.number_keys:
             raise ValueError()
-        old_selection = self._model.current_selection
+        old_selection = tuple(self._model.current_selection)
         partial_selection = old_selection[:level]
         value = self._de_stringify(partial_selection, str(value))
         partial_selection += (value,)

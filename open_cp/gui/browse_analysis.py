@@ -42,7 +42,8 @@ class BrowseAnalysis():
     def notify_adjust_choice(self, choice):
         _, task = self.model.adjust_tasks[choice]
         # Slight hack: 0 = projection (see :class:`run_analysis.TaskKey`)
-        proj_str = str(self.model.prediction_hierarchy.current_selection[0])
+        #proj_str = str(self.model.prediction_hierarchy.current_selection[0])
+        proj_str = str(self.model.prediction_hierarchy.current_selection.projection)
         proj = self.model.get_projector(proj_str)
         self._current_adjust_task = lambda pred, proj=proj : task(proj, pred)
         self._update_plot()
@@ -65,11 +66,7 @@ class BrowseAnalysisModel():
     def __init__(self, result, main_model):
         self._result = result
         self._ph = hierarchical.DictionaryModel({
-            tuple(r.key) : r.prediction for r in self._result.results })
-        
-        # Do we need this?
-        self._grids = list(set(key.grid for key in self._result_keys))
-        
+            r.key : r.prediction for r in self._result.results })
         self._current_prediction = None
         self._plot_risk_level = -1
         self._run_comparison_model = run_comparison.RunComparisonModel(main_model)
