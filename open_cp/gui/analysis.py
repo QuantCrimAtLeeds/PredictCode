@@ -20,6 +20,7 @@ from open_cp.gui.import_file_model import CoordType
 import open_cp.gui.run_analysis as run_analysis
 import open_cp.gui.run_comparison as run_comparison
 import open_cp.gui.browse_analysis as browse_analysis
+import open_cp.gui.browse_comparison as browse_comparison
 import open_cp.gui.locator as locator
 import open_cp.gui.session as session
 
@@ -173,6 +174,14 @@ class Analysis():
         result = run_analysis.merge_all_results(self.model.analysis_runs)
         browse_analysis.BrowseAnalysis(self._root, result, self.model).run()
         
+    def view_comparison(self, analysis_index, comparison_index):
+        result = self.model.analysis_run_comparisons(analysis_index)[comparison_index]
+        browse_comparison.BrowseComparison(self._root, result).run()
+
+    def view_all_comparisons(self):
+        result = self.model.complete_comparison
+        browse_comparison.BrowseComparison(self._root, result).run()
+
     def run_comparison_for(self, run):
         self._last_comprison_run_for = run
         result = self.model.analysis_runs[run]
@@ -505,6 +514,7 @@ class Model(DataModel):
         self._analysis_runs[run_index].filename = filename
 
     def load_analysis_run(self, filename):
+        self._logger.debug("Attempting to load past analysis run: '%s'", filename)
         with lzma.open(filename, "rb") as file:
             result = pickle.load(file)
         self.new_analysis_run(result, filename)

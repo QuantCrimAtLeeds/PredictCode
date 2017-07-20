@@ -75,7 +75,10 @@ def hit_rates(grid_pred, timed_points, percentage_coverage):
     :param percentage_coverage: An iterable of percentage coverages to test.
 
     :return: A dictionary from percentage coverage to hit rate percentage.
+      If there were no events in the `timed_points`, we return -1.
     """
+    if len(timed_points.xcoords) == 0:
+        return {cov : -1.0 for cov in percentage_coverage}
     risk = grid_pred.intensity_matrix
     out = dict()
     for coverage in percentage_coverage:
@@ -87,7 +90,7 @@ def hit_rates(grid_pred, timed_points, percentage_coverage):
         gx, gy = gx[~mask], gy[~mask]
         count = _np.sum(covered[(gy,gx)])
 
-        out[coverage] = count / timed_points.coords.shape[1]
+        out[coverage] = count / len(timed_points.xcoords)
     return out
 
 def maximum_hit_rate(grid, timed_points, percentage_coverage):

@@ -78,8 +78,8 @@ class HitRate(comparitor.Comparitor):
             start = np.datetime64(predict_date)
             end = start + np.timedelta64(predict_length)
             mask = ( (timed_points.timestamps >= start) & (timed_points.timestamps < end) )
-            rates = open_cp.evaluation.hit_rates(grid_prediction,
-                timed_points[mask], [self._coverage])
+            points = timed_points[mask]
+            rates = open_cp.evaluation.hit_rates(grid_prediction, points, [self._coverage])
             # Return is a _dictionary!_
             return rates[self._coverage]
 

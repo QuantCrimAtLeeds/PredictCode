@@ -41,8 +41,6 @@ class BrowseAnalysis():
 
     def notify_adjust_choice(self, choice):
         _, task = self.model.adjust_tasks[choice]
-        # Slight hack: 0 = projection (see :class:`run_analysis.TaskKey`)
-        #proj_str = str(self.model.prediction_hierarchy.current_selection[0])
         proj_str = str(self.model.prediction_hierarchy.current_selection.projection)
         proj = self.model.get_projector(proj_str)
         self._current_adjust_task = lambda pred, proj=proj : task(proj, pred)

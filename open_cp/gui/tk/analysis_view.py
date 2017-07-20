@@ -472,7 +472,10 @@ class AnalysisView(tk.Frame):
 
     def _view_comparison(self, analysis_run_index, comparison_run_index):
         # analysis_run_index == -1 means "all comparison"
-        pass
+        if analysis_run_index == -1:
+            self._controller.view_all_comparisons()
+        else:
+            self._controller.view_comparison(analysis_run_index, comparison_run_index)
     
     def _save_comparison_run(self, analysis_run_index, comparison_run_index):
         filename = util.ask_save_filename(filetypes = [(_text["c_save1"], "*.csv")],

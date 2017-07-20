@@ -146,6 +146,7 @@ class RunComparison():
             self._msg_logger.log(level, msg, *args))
 
     def _run_adjust_tasks(self, tasks):
+        # TODO: This chews up a lot of memory...
         preds_by_projection = dict()
         for pred in self.result.results:
             key = pred.key.projection
@@ -329,8 +330,6 @@ class RunComparisonResult():
             writer.writerow(header)
             writer.writerows(rows)
 
-
-### Not used ####
 
 class _RunnerThreadOne(run_analysis.BaseRunner):
     def __init__(self, tasks, controller):

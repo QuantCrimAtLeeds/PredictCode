@@ -103,7 +103,9 @@ class Model():
         
 class DictionaryModel(Model):
     """Implementation of :class:`Model` where the input data is a dictionary,
-    each key of which should be a tuple of a fixed length.
+    each key of which should be a tuple of a fixed length.  We do not assume
+    that the dictionary keys are tuples-- they merely have to be uniquely
+    convertable to a tuple (e.g. have a sensible implementation of `__iter__`).
     
     :param dictionary: The input dictionary.  We do not make a copy, so it is
       possible to mutate this, if you are careful...
