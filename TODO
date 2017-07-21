@@ -2,12 +2,16 @@
 
 - Could think about how best to produce a "prediction" from an SEPP method:
   - Say we want predict the next week.  Is a "point" estimate appropriate, or should we somehow "integrate" over time??
+  - After a bit of thought, this seems complicated (even e.g. for a time-only Hawkes process).  Which is
+     perhaps why other authors haven't addressed it.
 
+- Start work on network based framework.
 
 
 # GUI
 
-- Fix stalling GUI on Windows when loading a complex session.
+- Awaiting input from colleagues on "evaluation" techniques before I do too much work which
+  might not be useful.
 
 
 
