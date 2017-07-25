@@ -62,6 +62,8 @@ class Optimiser():
         self._model = model
         self._points = points
         self._p = _np.asarray( p_matrix(model, points) )
+        if _np.any(self._p < 0):
+            raise ValueError("p should ve +ve")
         
     @property
     def p(self):

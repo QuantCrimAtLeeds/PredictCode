@@ -7,6 +7,13 @@ Utility methods for interacting with matplotlib
 
 import matplotlib.patches
 from . import data as _data
+try:
+    import descartes
+except:
+    import sys
+    print("Failed to load 'descartes' package.", file=sys.stderr)
+    descartes = None
+
 
 def patches_from_grid(grid):
     """Returns a list of `matplotlib` `patches` from the passed
@@ -85,3 +92,39 @@ def lines_from_regular_grid(grid):
         yy1 = yy0 + height * grid.ysize
         _add_line(lines, xx0,yy0, xx0,yy1)
     return lines
+
+def patches_from_geometry(geo, **kwargs):
+    """Convert an iterable of geometry to `matplotlib` patches.
+    
+    :param geo: An iterable of geometry items.  If `descartes` cannot parse
+      an item, it is ignored.
+    :param **kwargs: Any key-word arguments to forward on to the `patch`
+      constructor.
+      
+    :return: A list of `matplotlib.patches.Patch` objects.
+    """
+    patches = []
+    for x in geo:
+        try:
+            patches.append(descartes.PolygonPatch(x, **kwargs))
+        except:
+            pass
+    return patches
+
+def lines_from_geometry(geo):
+    """Convert an iterable of geometry to lines.  Suitable for passing 
+    directly to `matplotlib.collections.LineCollection`.
+    
+    :param geo: An iterable of geometry items.  If cannot be coverted to a
+      line, then ignored.
+      
+    :return: A list of coordinates.
+    """
+    lines = []
+    for x in geo:
+        try:
+            lines.append( list(x.coords) )
+        except:
+            pass
+    return lines
+    
