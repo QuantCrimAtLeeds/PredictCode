@@ -22,7 +22,10 @@ class ModelBase():
     
     def background(self, points):
         """Evaluate the background kernel at `points`.  If `points is of
-        shape `(3,N)` then should return an array of shape `(N,)`"""
+        shape `(3,N)` then should return an array of shape `(N,)`.
+        
+        :return: Array of shape `(N,)`
+        """
         raise NotImplementedError()
         
     def trigger(self, trigger_point, delta_points):
@@ -32,19 +35,33 @@ class ModelBase():
         
         :param trigger_point: Array of shape `(3,)` specifying the `(t, x, y)`
           coords of the (single) trigger event.
-        :param delta_points: Array of shape `(3,?)` specifying the deltas to
+        :param delta_points: Array of shape `(3,m)` specifying the deltas to
           the triggered events.  Add to `trigger_point` to get the absolute
           location of the triggered events.
+          
+        :return: Array of shape `(m,)`
         """
         raise NotImplementedError()
         
+    def log_likelihood_base(self, points):
+        """Computes the non-normalised log likelihood,
+        :math:`\sum_{i=1}^n \log \lambda^*(t_i,x_i,y_i)`.
+        The normalisation requires integrating which is best left to a concrete
+        subclass.
+        """
+        points = _np.asarray(points)
+        out = 0.0
+        for i in range(points.shape[1]):
+            pt = points[:,i]
+            ptt = pt[:,None]
+            li = self.background(ptt)[0]
+            deltas = ptt - points[:,:i]
+            li += _np.sum(self.trigger(pt, deltas))
+            out += _np.log(li)
+        return out
+        
 
-def p_matrix(model, points):
-    """Compute the normalised "p" matrix.
-    
-    :param model: Instance of :class:`ModelBase`
-    :param points: Data
-    """
+def non_normalised_p_matrix(model, points):
     d = points.shape[1]
     p = _np.zeros((d,d))
     p[_np.diag_indices(d)] = model.background(points)
@@ -52,6 +69,15 @@ def p_matrix(model, points):
         trigger_point = points[:,i]
         delta_points = trigger_point[:,None] - points[:, :i]
         p[:i, i] = model.trigger(trigger_point, delta_points)
+    return p
+
+def p_matrix(model, points):
+    """Compute the normalised "p" matrix.
+    
+    :param model: Instance of :class:`ModelBase`
+    :param points: Data
+    """
+    p = non_normalised_p_matrix(model, points)
     return p / _np.sum(p, axis=0)[None,:]
 
 

@@ -43,7 +43,8 @@ def load_data(datadir, side="South"):
     :return: Pair of `(geometry, points)`
     """
     chicago.set_data_directory(datadir)
-    points = chicago.load(os.path.join(datadir, "chicago_two.csv"), {"BURGLARY"}, type="all_other")
+    #points = chicago.load(os.path.join(datadir, "chicago_two.csv"), {"BURGLARY"}, type="all_other")
+    points = chicago.load(os.path.join(datadir, "chicago_all_old.csv"), {"BURGLARY"}, type="all")
     start = np.datetime64("2011-03-01")
     end = np.datetime64("2012-01-07")
     points = points[(points.timestamps >= start) & (points.timestamps <= end)]
