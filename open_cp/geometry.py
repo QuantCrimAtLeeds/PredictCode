@@ -8,6 +8,7 @@ Methods to help with geometry work.  Uses `shapely`.
 import numpy as _np
 from . import data as _data
 import logging as _logging
+import numpy as _np
 
 _logger = _logging.getLogger(__name__)
 
@@ -181,3 +182,56 @@ def intersect_timed_points(timed_points, geo):
     mask = _np.array(mask, dtype=_np.bool)
     return _data.TimedPoints(timed_points.timestamps[mask],
                        timed_points.coords[:,mask])
+    
+    
+    
+##### Point and line geometry #####
+
+def _project_point_to_line(point, line):
+    """Assumes line is only 2 points
+    """
+    v = line[1] - line[0]
+    x = point - line[0]
+    t = _np.dot(x, v) / _np.dot(v, v)
+    if t <= 0:
+        return line[0]
+    if t >= 1:
+        return line[1]
+    return line[0] + t * v
+
+def project_point_to_line(point, line):
+    """Find the closest point on the line segment to the point.
+    
+    :param point: Pair `(x,y)`(
+    :param line: A single linear segment, `[ [x_1,y_1], [x_2,y_2], ...,
+      [x_n,y_n] ]`.  This ordering is compatible with `shapely` (and not
+      compatible with our own code!)
+    """
+    point = _np.asarray(point)
+    if len(point.shape) == 2:
+        if point.shape[0] != 1:
+            raise ValueError("Need a single point")
+        point = point[0]
+    if point.shape != (2,):
+        raise ValueError("Point should be (x,y)")
+    line = _np.asarray(line)
+    if len(line.shape) != 2 or line.shape[0] < 2 or line.shape[1] != 2:
+        raise ValueError("Line should be ((x_1,y_1), ..., (x_n,y_n))")    
+    options = [ _project_point_to_line(point, line[i:i+2,:]) 
+        for i in range(line.shape[0] - 1) ]
+    if line.shape[0] == 2:
+        return options[0]
+    distsq = [_np.sum((point - opt)**2) for opt in options]
+    return options[_np.argmin(distsq)]
+
+def project_point_to_lines(point, lines):
+    """Find the closest point on one of the line segments to the point.
+    
+    :param point: Pair `(x,y)`(
+    :param line: A list of linear segments (see :func:`project_point_to_line`).
+    """
+    point = _np.asarray(point)
+    options = [project_point_to_line(point, line) for line in lines]
+    distsq = [_np.sum((point - opt)**2) for opt in options]
+    return options[_np.argmin(distsq)]
+    

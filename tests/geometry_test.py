@@ -9,7 +9,7 @@ import datetime
 
 def test_grid_intersection():
     geo = shapely.geometry.Polygon([[0,0],[10,0],[10,10],[0,10]])
-    grid = data.Grid(xoffset=2, yoffset=2, xsize=7, ysize=4)
+    grid = open_cp.data.Grid(xoffset=2, yoffset=2, xsize=7, ysize=4)
     out = geometry.grid_intersection(geo, grid)
 
     expected = []
@@ -18,7 +18,7 @@ def test_grid_intersection():
             expected.append((x,y))
     assert(set(expected) == set(out))
 
-def test_grid_intersection():
+def test_grid_intersection1():
     geo = shapely.geometry.Polygon([[0,0],[10,0],[10,10],[0,10]])
     gp = open_cp.predictors.GridPrediction(xsize=11, ysize=3, xoffset=2, yoffset=-1)
     out = geometry.grid_intersection(geo, gp)
@@ -78,4 +78,49 @@ def test_mask_grid_by_points_intersection(points1):
 def test_configure_gdal():
     geometry.configure_gdal()
     import os
+    print("This seems to fail on linux when run with `pytest tests\geometry_test.py")
+    print("But is fine if run with `pytest`")
+    print("Sadly I do not understand...")
     assert "GDAL_DATA" in os.environ
+    
+def test_shapely_line_format():
+    # Paranoid, and annoyingly different convention to us
+    line = shapely.geometry.LineString(((1,2), (3,1)))
+    np.testing.assert_allclose(line.xy[0], [1,3])
+    np.testing.assert_allclose(line.xy[1], [2,1])
+    x = np.asarray(line.coords)
+    np.testing.assert_allclose(x[0], [1,2])
+    np.testing.assert_allclose(x[1], [3,1])
+    
+def test_project_point_to_line():
+    line = [(0,0), (10,0)]
+    np.testing.assert_allclose(geometry.project_point_to_line((3,1), line), (3,0))
+    np.testing.assert_allclose(geometry.project_point_to_line((3,-1), line), (3,0))
+    np.testing.assert_allclose(geometry.project_point_to_line((-1,1), line), (0,0))
+    np.testing.assert_allclose(geometry.project_point_to_line((11,-1), line), (10,0))
+    
+    line = shapely.geometry.LineString(((5,2), (5,12)))
+    np.testing.assert_allclose(geometry.project_point_to_line((3,5), line.coords), (5,5))
+    np.testing.assert_allclose(geometry.project_point_to_line((-3,6), line.coords), (5,6))
+    np.testing.assert_allclose(geometry.project_point_to_line((4,1), line.coords), (5,2))
+    np.testing.assert_allclose(geometry.project_point_to_line([(5,14)], line.coords), (5,12))
+    
+    with pytest.raises(ValueError):
+        geometry.project_point_to_line((3,5,6), line.coords)
+    with pytest.raises(ValueError):
+        geometry.project_point_to_line((3), line.coords)
+                                       
+    with pytest.raises(ValueError):
+        geometry.project_point_to_line((3,5), [1,2])
+    with pytest.raises(ValueError):
+        geometry.project_point_to_line((3), [[1,2],[3,4],[5,6]])
+    with pytest.raises(ValueError):
+        geometry.project_point_to_line((3), [[1,2,3],[3,4,7]])
+
+    line = [(0,0), (10,0), (10,6)]
+    np.testing.assert_allclose(geometry.project_point_to_line((1,1), line), (1,0))
+    np.testing.assert_allclose(geometry.project_point_to_line((8,1), line), (8,0))
+    np.testing.assert_allclose(geometry.project_point_to_line((9.5,1), line), (10,1))
+    np.testing.assert_allclose(geometry.project_point_to_line((9,7), line), (10,6))
+    np.testing.assert_allclose(geometry.project_point_to_line((11,-1), line), (10,0))
+    
