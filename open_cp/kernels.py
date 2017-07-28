@@ -275,9 +275,12 @@ class ReflectedKernel(Kernel):
         if len(points.shape) <= 1:
             reflected = -points
         else:
-            reflect = _np.zeros(points.shape[0]) + 1
-            reflect[self.reflected_axis] = -1
-            reflected = points * reflect[:,None]
+            reflected = _np.empty_like(points)
+            for i in range(points.shape[0]):
+                if i == self.reflected_axis:
+                    reflected[i, :] = -points[i, :]
+                else:
+                    reflected[i, :] = points[i, :]
         return self.delegate(points) + self.delegate(reflected)
 
     def set_scale(self, value):

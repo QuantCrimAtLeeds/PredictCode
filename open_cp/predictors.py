@@ -279,7 +279,21 @@ class ContinuousPrediction():
         x = (gx + _np.random.random(self.samples)) * self.cell_width + self.xoffset
         y = (gy + _np.random.random(self.samples)) * self.cell_height + self.yoffset
         return _np.mean(self.risk(x, y))
-        
+
+    def _risk_array(self, x, y):
+        # Like `return self.risk(x,y)` but do in blocks of at most 50 to avoid
+        # excessive memory usage
+        assert len(x.shape) == 1
+        out = _np.empty_like(x)
+        offset = 0
+        length = x.shape[0]
+        while offset < length:
+            end = min(offset + 50, length)
+            xx, yy = x[offset : end], y[offset : end]
+            out[offset : end] = self.risk(xx, yy)
+            offset = end
+        return out
+    
     def to_matrix(self, width, height):
         """Sample the risk at each grid point from `(0, 0)` to
         `(width-1, height-1)` inclusive.  Optimised."""
@@ -289,8 +303,7 @@ class ContinuousPrediction():
             # 0,1,...,width-1, 0,1,...,width-1  with the block repeated self.sample times
             gx = _np.broadcast_to(_np.arange(width), (self.samples, width)).ravel()
             x = (gx + _np.random.random(self.samples * width)) * self.cell_width + self.xoffset
-            assert x.shape == y.shape
-            matrix[gy] = _np.mean(_np.reshape(self.risk(x, y), (self.samples, width)), axis=0)
+            matrix[gy] = _np.mean(_np.reshape(self._risk_array(x, y), (self.samples, width)), axis=0)
         return matrix
 
     def to_kernel(self):

@@ -123,4 +123,41 @@ def test_project_point_to_line():
     np.testing.assert_allclose(geometry.project_point_to_line((9.5,1), line), (10,1))
     np.testing.assert_allclose(geometry.project_point_to_line((9,7), line), (10,6))
     np.testing.assert_allclose(geometry.project_point_to_line((11,-1), line), (10,0))
+
+@pytest.fixture
+def lines():
+    return [  [(0,0), (10,0)],
+               [(0,1), (5,5), (9,1)]
+           ]
     
+def test_project_point_to_lines(lines):
+    np.testing.assert_allclose(geometry.project_point_to_lines((5,1), lines), (5,0))
+    np.testing.assert_allclose(geometry.project_point_to_lines((-0.5, -0.5), lines), (0,0))
+    np.testing.assert_allclose(geometry.project_point_to_lines((-0.1,1), lines), (0,1))
+    np.testing.assert_allclose(geometry.project_point_to_lines((5,4.8), lines), (5.1,4.9))
+    np.testing.assert_allclose(geometry.project_point_to_lines((9,.4), lines), (9,0))
+    np.testing.assert_allclose(geometry.project_point_to_lines((9,.6), lines), (9,1))
+    
+def test_project_point_to_lines_shapely(lines):
+    lines = [ shapely.geometry.LineString(line) for line in lines ]
+    np.testing.assert_allclose(geometry.project_point_to_lines_shapely((5,1), lines), (5,0))
+    np.testing.assert_allclose(geometry.project_point_to_lines_shapely((-0.5, -0.5), lines), (0,0))
+    np.testing.assert_allclose(geometry.project_point_to_lines_shapely((-0.1,1), lines), (0,1))
+    np.testing.assert_allclose(geometry.project_point_to_lines_shapely((5,4.8), lines), (5.1,4.9))
+    np.testing.assert_allclose(geometry.project_point_to_lines_shapely((9,.4), lines), (9,0))
+    np.testing.assert_allclose(geometry.project_point_to_lines_shapely((9,.6), lines), (9,1))
+    
+def test_ProjectPointLinesRTree(lines):
+    pp = geometry.ProjectPointLinesRTree(lines)
+    np.testing.assert_allclose(pp.project_point((5,1)), (5,0))
+    
+def test_project_point_to_lines_compare(lines):
+    lines_shapely = [ shapely.geometry.LineString(line) for line in lines ]
+    pp = geometry.ProjectPointLinesRTree(lines)
+    for _ in range(100):
+        pt = np.random.random(2) * 10
+        a = geometry.project_point_to_lines(pt, lines)
+        b = geometry.project_point_to_lines_shapely(pt, lines_shapely)
+        np.testing.assert_allclose(a, b)
+        c = pp.project_point(pt)
+        np.testing.assert_allclose(a, c)

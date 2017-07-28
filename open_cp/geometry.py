@@ -235,3 +235,66 @@ def project_point_to_lines(point, lines):
     distsq = [_np.sum((point - opt)**2) for opt in options]
     return options[_np.argmin(distsq)]
     
+def project_point_to_lines_shapely(point, lines):
+    """As :func:`project_point_to_lines` but uses `shapely` at a first pass.
+    
+    :param point: Pair `(x,y)`
+    :param lines: A list of :class:`shapely.geometry.LineString` objects.
+    """
+    pt = _geometry.Point(point)
+    dists = _np.asarray([line.distance(pt) for line in lines])
+    line = lines[dists.argmin()]
+    return project_point_to_line(point, line.coords)
+
+
+try:
+    import rtree as _rtree
+except:
+    _logger.error("Failed to import `rtree`.")
+    _rtree = None
+ 
+class ProjectPointLinesRTree():
+    """Stuff...
+    
+    :param lines: A list of linear segments (see
+      :func:`project_point_to_line`).
+    """
+    def __init__(self, lines):
+        self._lines = list(lines)
+        def gen():
+            for i, line in enumerate(self._lines):
+                bds = self._bounds(line)
+                yield i, bds, None
+        self._idx = _rtree.index.Index(gen())
+
+    @staticmethod
+    def _bounds(line):
+        it = iter(line)
+        x, y = next(it)
+        xmin, xmax = x, x
+        ymin, ymax = y, y
+        for (x, y) in it:
+            xmin = min(xmin, x)
+            xmax = max(xmax, x)
+            ymin = min(ymin, y)
+            ymax = max(ymax, y)
+        return [xmin, ymin, xmax, ymax]
+
+    def project_point(self, point):
+        """As :func:`project_point_to_lines` but uses `rtree` at a first pass.
+    
+        :param point: Pair `(x,y)`
+        """
+        point = _np.asarray(point)
+        h = 1
+        while True:
+            xmin, xmax = point[0] - h, point[0] + h
+            ymin, ymax = point[1] - h, point[1] + h
+            indices = list(self._idx.intersection((xmin,ymin,xmax,ymax)))
+            if len(indices) > 0:
+                choices = [self._lines[i] for i in indices]
+                best = project_point_to_lines(point, choices)        
+                distsq = _np.sum((best - point)**2)
+                if distsq <= h*h:
+                    return best
+            h += h
