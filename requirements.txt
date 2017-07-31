@@ -1,11 +1,14 @@
 numpy
 scipy
-pyproj
-shapely
 python-dateutil
 matplotlib
 Pillow
+
+# Semi-optional
+pyproj
+shapely
 geopandas
+rtree
 
 pytest
 codecov
