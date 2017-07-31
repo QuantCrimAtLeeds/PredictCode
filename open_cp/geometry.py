@@ -8,7 +8,6 @@ Methods to help with geometry work.  Uses `shapely`.
 import numpy as _np
 from . import data as _data
 import logging as _logging
-import numpy as _np
 
 _logger = _logging.getLogger(__name__)
 
