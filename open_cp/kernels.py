@@ -378,7 +378,7 @@ class KNNG1_NDFactors(TimeSpaceFactorsEstimator):
 
 
 class GaussianBase():
-    """Abstract base class which can perform a variety of Gaussian kernel
+    """Base class which can perform a variety of Gaussian kernel
     tasks.  Any kernel estimation using this class is always of the form
     :math:`f(x) = \big(\sum_i w_i\big)^{-1}\frac{1}{|S|^{1/2}}\sum_{i=1}^N w_i
       frac{1}{h_i^n} K(h_i^{-2}(x_i-x)^T S^{-1} (x_i-x))`

@@ -10,6 +10,7 @@ presented in the plane is vital.
 """
 
 import numpy as _np
+import scipy.spatial as _spatial
 #from . import data as _data
 import logging as _logging
 
@@ -17,7 +18,12 @@ _logger = _logging.getLogger(__name__)
 
 
 class PlanarGraphGeoBuilder():
-    """TODO
+    """Construct a :class:`PlanarGraph` instance from a series of "paths".
+    A path is formed from one or more contiguous line segments.  We only allow
+    paths to intersect at their end points (geometrically, paths are allowed
+    to intersect, but this will never be reflected in the generate graph.  This
+    allows over and under passes, for example).  These assumptions are
+    satisfied by the UK Ordnance Survey data.
     """
     def __init__(self):
         self._nodes = dict()
@@ -86,6 +92,144 @@ class PlanarGraphGeoBuilder():
         return PlanarGraph(vertices, self.edges)
 
 
+class PlanarGraphNodeOneShot():
+    """Like :class:`PlanarGraphNodeBuilder` but much faster, at the cost of
+    needing all possible nodes to be set in the constructor.
+    
+    :param nodes: An iterable of pairs `(x,y)` of coordinates.  (Also allowed
+      is `(x,y,z)` but the `z` will be ignored.)
+    :param tolerance: The cut-off distance at which nodes will be merged.
+    """
+    def __init__(self, nodes, tolerance = 0.1):
+        self._edges = []
+        all_nodes = []
+        for (x,y,*z) in nodes:
+            all_nodes.append((x,y))
+        all_nodes = list(set(all_nodes))
+        tree = _spatial.cKDTree(all_nodes)
+        self._lookup = dict()
+        self._nodes = []
+        inv_lookup = dict()
+        
+        for i, pt in enumerate(all_nodes):
+            if i in inv_lookup:
+                continue
+            close = tree.query_ball_point(pt, tolerance)
+            if close[0] < i:
+                index = inv_lookup[close[0]]
+                self._lookup[pt] = index
+                continue
+            self._nodes.append(pt)
+            index = len(self._nodes) - 1
+            for j in close:
+                self._lookup[all_nodes[j]] = index
+                inv_lookup[j] = index
+
+    def _add_node(self, x, y):
+        return self._lookup[(x,y)]
+        
+    def add_path(self, path):
+        """Add a new "path" to the graph.  A "path" has a start and end node,
+        and possibly nodes in the middle.
+
+        :param path: A list of coordinates `(x,y)` (or possibly `(x,y,z)` with
+          the `z` to be ignored).  This is compatible with the `shapely`
+          format.
+        """
+        path = list(path)
+        for i in range(len(path) - 1):
+            x1,y1,*z = path[i]
+            x2,y2,*z = path[i + 1]
+            self.add_edge(x1, y1, x2, y2)
+
+    def add_edge(self, x1, y1, x2, y2):
+        """Add an edge from `(x1, y1)` to `(x2, y2)`."""
+        key1 = self._add_node(x1, y1)
+        key2 = self._add_node(x2, y2)
+        self._edges.append((key1, key2))
+        
+    def build(self):
+        vertices = [ (key, x, y) for key, (x,y) in enumerate(self._nodes) ]
+        return PlanarGraph(vertices, self._edges)
+
+        
+class PlanarGraphNodeBuilder():
+    """Construct a :class:`PlanarGraph` instance from a series of "paths".
+    A path is formed from one or more contiguous line segments.  The start and
+    end of each line segment is converted to being a node, and nodes which have
+    _almost_ (subject to a certain tolerance) are merged.  As such, for example,
+    if an over-pass and an under-pass share a node, there will be a "path" from
+    one to the other in the generated graph.
+
+    This class is slow when the graph is large.  See
+    :class`:PlanarGraphNodeOneShot` as well.
+    
+    These (weaker) assumptions are suitable for the US TIGER/Lines data, for
+    example.
+    """
+    def __init__(self):
+        self._nodes = []
+        self._edges = []
+        self._tolerance = 0.1
+        
+    @property
+    def tolerance(self):
+        """Nodes which are within this distance of one another will be merged.
+        """
+        return self._tolerance
+    
+    @tolerance.setter
+    def tolerance(self, v):
+        self._tolerance = v
+    
+    @property
+    def coord_nodes(self):
+        """A list (do not mutate!) of coordinates `(x,y)`"""
+        return self._nodes
+    
+    @property
+    def edges(self):
+        """A list of unordered edges `(key1, key2)`."""
+        return self._edges
+    
+    def _add_node(self, x, y):
+        if len(self._nodes) == 0:
+            self._nodes.append((x, y))
+            return 0
+        n = _np.asarray(self._nodes).T
+        distsq = (n[0] - x)**2 + (n[1] - y)**2
+        index = _np.argmin(distsq)
+        if distsq[index] < self._tolerance * self._tolerance:
+            return index
+        self._nodes.append((x, y))
+        return len(self._nodes) - 1
+        
+    def add_path(self, path):
+        """Add a new "path" to the graph.  A "path" has a start and end node,
+        and possibly nodes in the middle.
+
+        :param path: A list of coordinates `(x,y)` (or possibly `(x,y,z)` with
+          the `z` to be ignored).  This is compatible with the `shapely`
+          format.
+        """
+        path = list(path)
+        for i in range(len(path) - 1):
+            x1,y1,*z = path[i]
+            x2,y2,*z = path[i + 1]
+            self.add_edge(x1, y1, x2, y2)
+
+    def add_edge(self, x1, y1, x2, y2):
+        """Add an edge from `(x1, y1)` to `(x2, y2)`."""
+        key1 = self._add_node(x1, y1)
+        key2 = self._add_node(x2, y2)
+        self._edges.append((key1, key2))
+    
+    def build(self):
+        vertices = [ (key, x, y) for key, (x,y) in enumerate(self._nodes) ]
+        return PlanarGraph(vertices, self.edges)
+
+
+
 class PlanarGraph():
     """A simple graph class.
     
@@ -127,6 +271,62 @@ class PlanarGraph():
         """A list of unordered edges `(key1, key2)`."""
         return self._edges
     
+    def length(self, edge_index):
+        """The length of the given edge; results are pre-computed.
+        
+        :param edge_index: 0,1,... index into `self.edges`
+        """
+        if not hasattr(self, "_edge_lengths"):
+            quads = self.as_quads().T
+            self._edge_lengths = _np.sqrt((quads[0] - quads[2])**2 + (quads[1] - quads[3])**2)
+        return self._edge_lengths[edge_index]
+    
+    def neighbours(self, vertex_key):
+        """A list of all the neighbours of the given vertex"""
+        # TODO: Pre-compute results?
+        out = []
+        for key1, key2 in self.edges:
+            if key1 == vertex_key:
+                out.append(key2)
+            elif key2 == vertex_key:
+                out.append(key1)
+        out.sort()
+        return out
+    
+    def neighbourhood_edges(self, vertex_key):
+        """A list of all the edges (as indicies into `self.edges`) incident
+        with the given vertex."""
+        # TODO: Pre-compute results?
+        out = []
+        for index, (key1, key2) in enumerate(self.edges):
+            if key1 == vertex_key or key2 == vertex_key:
+                out.append(index)
+        return out
+
+    def paths_between(self, key_start, key_end, max_length):
+        """Iterable yielding all paths which start and end at the given
+        vertices, and which are of length at most `max_length`.  A path will
+        never be cyclic.
+        
+        :return: Iterable yielding lists of vertices which start and end at
+          the prescribed vertices, and do not feature repeats.
+        """
+        # Depth-first search of all partial paths
+        todo = [ ([key_start], 0.0) ]
+        while len(todo) > 0:
+            partial_path, current_length = todo.pop()
+            end_key = partial_path[-1]
+            if end_key == key_end:
+                yield partial_path
+                continue
+            for edge_index in self.neighbourhood_edges(end_key):
+                key1, key2 = self.edges[edge_index]
+                if key2 == end_key:
+                    key1, key2 = key2, key1
+                new_length = current_length + self.length(edge_index)
+                if new_length <= max_length and key2 not in partial_path:
+                    todo.append((partial_path + [key2], new_length))
+                    
     def as_quads(self):
         """Returns a numpy array of shape `(N,4)` where `N` is the number of
         edges in the graph.  Each entry is `(x1,y1,x2,y1)` giving the
@@ -252,5 +452,25 @@ class PointProjector():
                 if distsq <= h*h:
                     return indices[index], t
             h += h
-        
-        
+
+
+def approximately_equal(graph1, graph2, tolerance=0.1):
+    """Do the two graphs represent the same edges, where nodes are allowed to
+    vary by tolerance?  Applies a greedy algorithm, so will be falsely
+    negative in rare edge cases."""
+    lines1 = list(graph1.as_quads())
+    lines2 = list(graph2.as_quads())
+    if len(lines1) != len(lines2):
+        return False
+    
+    cutoff = 2 * tolerance * tolerance
+    for li in lines1:
+        lines = _np.asarray(lines2).T
+        distsq = ((lines[0] - li[0])**2 + (lines[1] - li[1])**2 +
+                  (lines[2] - li[2])**2 + (lines[3] - li[3])**2)
+        index = _np.argmin(distsq)
+        if distsq[index] < cutoff:
+            del lines2[index]
+        else:
+            return False
+    return True
