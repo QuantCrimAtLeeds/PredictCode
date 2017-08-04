@@ -13,6 +13,10 @@ import numpy as _np
 import scipy.spatial as _spatial
 #from . import data as _data
 import logging as _logging
+import bz2 as _bz2
+import io as _io
+import base64 as _base64
+import json as _json
 
 _logger = _logging.getLogger(__name__)
 
@@ -258,6 +262,72 @@ class PlanarGraph():
             if key1 == key2:
                 raise ValueError("Cannot have an edge from vertex {} to itself".format(key1))
             self._edges.append((key1, key2))
+            
+    def dump_bytes(self):
+        """Write data to a `bytes` object.  The vertices are saved using the
+        `numpy.save` method (which is portable and won't leave to floating
+        point errors) and then `base64` encoded.  This data and other settings
+        are written to a JSON payload.  This is compressed using `bz2` and
+        returned.
+        
+        The keys need to be integers.
+        """
+        return _bz2.compress(self.dump_json().encode("UTF8"))
+        
+    def dump_json(self):
+        """As :meth:`dump_bytes` but returns the JSON payload."""
+        keys, xcs, ycs, edges = self._to_arrays()
+        out = dict()
+        for name, array in [("keys", keys), ("xcoords", xcs), ("ycoords", ycs),
+                            ("edges", edges)]:
+            with _io.BytesIO() as file:
+                _np.save(file, array, allow_pickle=False)
+                b = file.getvalue()
+                out[name] = _base64.b64encode(b).decode("UTF8")
+        return _json.dumps(out)
+        
+    @staticmethod
+    def from_json(json):
+        in_dict = _json.loads(json)
+        keys = PlanarGraph._load_numpy_array(in_dict["keys"])
+        xcs = PlanarGraph._load_numpy_array(in_dict["xcoords"])
+        ycs = PlanarGraph._load_numpy_array(in_dict["ycoords"])
+        edges = PlanarGraph._load_numpy_array(in_dict["edges"])
+        return PlanarGraph(zip(keys, xcs, ycs), edges)
+
+    @staticmethod
+    def from_bytes(data):
+        json = _bz2.decompress(data).decode("UTF8")
+        return PlanarGraph.from_json(json)
+        
+    @staticmethod
+    def _load_numpy_array(b64data):
+        if isinstance(b64data, str):
+            b64data = b64data.encode("UTF8")
+        b = _base64.b64decode(b64data)
+        with _io.BytesIO(b) as file:
+            return _np.load(file)
+    
+    def _to_arrays(self):
+        try:
+            for x in self._vertices.keys():
+                assert x == int(x)
+        except:
+            raise ValueError("Vertex keys need to be integers.")
+        
+        number_vertices = len(self._vertices)
+        keys = _np.empty(number_vertices, dtype=_np.int)
+        xcs = _np.empty(number_vertices)
+        ycs = _np.empty(number_vertices)
+        for i, (key, (x,y)) in enumerate(self._vertices.items()):
+            keys[i] = key
+            xcs[i] = x
+            ycs[i] = y
+
+        edges = _np.asarray(self._edges, dtype=_np.int)
+        assert edges.shape == (len(self._edges), 2)
+
+        return keys, xcs, ycs, edges
             
     @property
     def vertices(self):

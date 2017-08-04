@@ -129,6 +129,19 @@ def test_PlanarGraph_project(graph1):
     assert edge == (2, 3)
     assert t == pytest.approx(0.402439024)
 
+def test_io(graph1):
+    js = graph1.dump_json()
+    import json
+    out = json.loads(js)
+    assert set(out.keys()) == {"keys", "xcoords", "ycoords", "edges"}
+    
+    g = network.PlanarGraph.from_json(js)
+    assert network.approximately_equal(graph1, g)
+    
+    b = graph1.dump_bytes()
+    g = network.PlanarGraph.from_bytes(b)
+    assert network.approximately_equal(graph1, g)
+
 @pytest.fixture
 def graph2():
     b = network.PlanarGraphGeoBuilder()
@@ -179,5 +192,16 @@ def test_PlanarGraph_neighbourhood_paths_between(graph2):
     assert len(set(out)) == len(out)
     assert set(out) == {(0,1,2,3,4,7), (0,1,2,5,6,4,7), (0,1,5,6,4,7), (0,1,5,2,3,4,7)}
     
-    # TODO: With length bounds...
+def test_PlanarGraph_neighbourhood_paths_between_length_bound(graph2):
+    assert list(graph2.paths_between(0,1,1)) == [[0,1]]
+    assert list(graph2.paths_between(0,1,0.9)) == []
+    
+    assert list(graph2.paths_between(0,2,2)) == []
+    assert list(graph2.paths_between(0,2,2.5)) == [[0,1,2]]
+    
+    assert list(graph2.paths_between(0,6,3)) == []
+    assert list(graph2.paths_between(0,6,3.5)) == [[0,1,5,6]]
+    out = [ tuple(x) for x in graph2.paths_between(0,6,5.5) ]
+    assert len(set(out)) == len(out)
+    assert set(out) == {(0,1,5,6), (0,1,2,5,6)}
     
