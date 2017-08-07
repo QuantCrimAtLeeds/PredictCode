@@ -299,22 +299,19 @@ def order_by_time(timestamps, xcoords, ycoords):
     return timestamps[args], xcoords[args], ycoords[args]
 
 
-class TimedPoints:
-    """Stores a list of timestamped x-y coordinates of events.
-    
+class TimeStamps():
+    """Base class for e.g. :class:`TimedPoints` which stores timestamps only.
+
     :param timestamps: An array of timestamps (must be convertible to
       :class:`numpy.datetime64`).
-    :param coords: An array of shape (2,n) where `n` must match the number of
-      timestamps.
     """
-    def __init__(self, timestamps, coords):
+    def __init__(self, timestamps):
         self._assert_times_ordered(timestamps)
-        self.timestamps = _np.array(timestamps, dtype="datetime64[ms]")
-        self.coords = _np.array(coords).astype(_np.float64)
-        if len(self.coords.shape) != 2 or self.coords.shape[0] != 2:
-            raise Exception("Coordinates should be of shape (2,#)")
-        if len(self.timestamps) != self.coords.shape[1]:
-            raise Exception("Input data should all be of the same length")
+        self._timestamps = _np.array(timestamps, dtype="datetime64[ms]")
+
+    def _assert_times_ordered(self, timestamps):
+        if not self._is_time_ordered(timestamps):
+            raise ValueError("Input must be time ordered")
 
     @staticmethod
     def _is_time_ordered(timestamps):
@@ -328,9 +325,53 @@ class TimedPoints:
             prev = time
         return True
 
-    def _assert_times_ordered(self, timestamps):
-        if not self._is_time_ordered(timestamps):
-            raise ValueError("Input must be time ordered")
+    @property
+    def timestamps(self):
+        """Array of timestamps, as :class:`numpy.datetime64` objects."""
+        return self._timestamps
+
+    @property
+    def time_range(self):
+        """Find the time range.
+
+        :return: A pair (start, end) of timestamps.
+        """
+        return ( self.timestamps[0], self.timestamps[-1] )
+
+    def time_deltas(self, time_unit = _np.timedelta64(1, "m")):
+        """Returns a numpy array of floats, converted from the timestamps,
+        starting from 0, and with the optional unit.
+
+        :param time_unit: The unit to measure time by.  Defaults to 1 minute,
+          so timestamps an hour apart will be converted to floats 60.0 apart.
+          No rounding occurs, so there is no loss in accuracy by passing a
+          different time unit.
+        """
+        return ( self.timestamps - self.timestamps[0] ) / time_unit
+
+    def times_datetime(self):
+        """Return an array of timestamps using the :class:`datetime.datetime`
+        standard library class.  Useful for plotting with matplotlib, for
+        example.
+        """
+        return self.timestamps.astype(_datetime.datetime)
+
+
+class TimedPoints(TimeStamps):
+    """Stores a list of timestamped x-y coordinates of events.
+    
+    :param timestamps: An array of timestamps (must be convertible to
+      :class:`numpy.datetime64`).
+    :param coords: An array of shape (2,n) where `n` must match the number of
+      timestamps.
+    """
+    def __init__(self, timestamps, coords):
+        super().__init__(timestamps)
+        self.coords = _np.array(coords).astype(_np.float64)
+        if len(self.coords.shape) != 2 or self.coords.shape[0] != 2:
+            raise Exception("Coordinates should be of shape (2,#)")
+        if len(self.timestamps) != self.coords.shape[1]:
+            raise Exception("Input data should all be of the same length")
 
     @property
     def xcoords(self):
@@ -390,25 +431,6 @@ class TimedPoints:
             xmax = _np.max(self.xcoords), ymin = _np.min(self.ycoords),
             ymax = _np.max(self.ycoords))
 
-    @property
-    def time_range(self):
-        """Find the time range.
-
-        :return: A pair (start, end) of timestamps.
-        """
-        return ( self.timestamps[0], self.timestamps[-1] )
-
-    def time_deltas(self, time_unit = _np.timedelta64(1, "m")):
-        """Returns a numpy array of floats, converted from the timestamps,
-        starting from 0, and with the optional unit.
-
-        :param time_unit: The unit to measure time by.  Defaults to 1 minute,
-          so timestamps an hour apart will be converted to floats 60.0 apart.
-          No rounding occurs, so there is no loss in accuracy by passing a
-          different time unit.
-        """
-        return ( self.timestamps - self.timestamps[0] ) / time_unit
-
     def to_time_space_coords(self, time_unit = _np.timedelta64(1, "m")):
         """Returns a single numpy array `[t,x,y]` where the time stamps are
         converted to floats, starting from 0, and with the optional unit.
@@ -420,13 +442,6 @@ class TimedPoints:
         """
         times = self.time_deltas(time_unit)
         return _np.vstack([times, self.xcoords, self.ycoords])
-
-    def times_datetime(self):
-        """Return an array of timestamps using the :class:`datetime.datetime`
-        standard library class.  Useful for plotting with matplotlib, for
-        example.
-        """
-        return self.timestamps.astype(_datetime.datetime)
 
     @staticmethod
     def from_coords(timestamps, xcoords, ycoords):

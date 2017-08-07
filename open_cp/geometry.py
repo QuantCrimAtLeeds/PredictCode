@@ -183,7 +183,6 @@ def intersect_timed_points(timed_points, geo):
                        timed_points.coords[:,mask])
     
     
-    
 ##### Point and line geometry #####
 
 def _project_point_to_line(point, line):
@@ -245,6 +244,48 @@ def project_point_to_lines_shapely(point, lines):
     line = lines[dists.argmin()]
     return project_point_to_line(point, line.coords)
 
+def intersect_line_box(start, end, box_bounds):
+    """...
+
+    :param start: Pair `(x,y)` of the start of the line segment
+    :param end: Pair `(x,y)` of the end of the line segment
+    :param box_bounds: `(xmin, ymin, xmax, ymax)` of the box
+
+    :return: `None` or `(t1, t2)` where `start * (1-t) + end * t` is
+      in the box for `t1 < t < t2`.
+    """
+    dx, dy = end[0] - start[0], end[1] - start[1]
+    xmin, ymin, xmax, ymax = box_bounds
+    if _np.abs(dx) < 1e-10:
+        if not ( xmin <= start[0] and start[0] <= xmax ):
+            return None
+        if _np.abs(dy) < 1e-10:
+            if not ( ymin <= start[1] and start[1] <= ymax ):
+                return None
+            return 0, 1
+        else:
+            c, d = ymin - start[1], ymax - start[1]
+            if dy > 0:
+                c, d = c / dy, d / dy
+            else:
+                c, d = d / dy, c / dy
+            return max(0, c), min(1, d)
+    else:
+        a, b = xmin - start[0], xmax - start[0]
+        if dx > 0:
+            a, b = a / dx, b / dx
+        else:
+            a, b = b / dx, a / dx
+        c, d = ymin - start[1], ymax - start[1]
+        if dy > 0:
+            c, d = c / dy, d / dy
+        else:
+            c, d = d / dy, c / dy
+        if a <= c and c <= b:
+            return max(0, c), min(1, b)
+        if c <= a and a <= d:
+            return max(0, a), min(1, d)
+        return None
 
 try:
     import rtree as _rtree
@@ -253,7 +294,7 @@ except:
     _rtree = None
  
 class ProjectPointLinesRTree():
-    """Stuff...
+    """Accelerated projection code using `rtree`.
     
     :param lines: A list of linear segments (see
       :func:`project_point_to_line`).

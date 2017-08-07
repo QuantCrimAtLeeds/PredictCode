@@ -11,7 +11,7 @@ presented in the plane is vital.
 
 import numpy as _np
 import scipy.spatial as _spatial
-#from . import data as _data
+from . import data as _data
 import logging as _logging
 import bz2 as _bz2
 import io as _io
@@ -233,6 +233,54 @@ class PlanarGraphNodeBuilder():
         return PlanarGraph(vertices, self.edges)
 
 
+class PlanarGraphBuilder():
+    """General purpose builder class.  Can be constructed from a
+    :class:`PlanarGraph` instance; is designed for mutating a
+    :class:`PlanarGraph` instance.
+
+    :param graph: If not `None`, construct from the network in this instance.
+    """
+    def __init__(self, graph=None):
+        if graph is None:
+            self._vertices = dict()
+            self._edges = []
+        else:
+            self._vertices = dict(graph.vertices)
+            self._edges = list(graph.edges)
+
+    @property
+    def vertices(self):
+        """Dictionary from key to coordinates `(x,y)`.
+        Mutate to change the vertices."""
+        return self._vertices
+
+    @property
+    def edges(self):
+        """List of unordered edges `(key1, key2)`.  Mutate to change."""
+        return self._edges
+
+    def add_edge(self, key1, key2):
+        self._edges.append((key1, key2))
+
+    def set_vertex(self, key, x, y):
+        self._vertices[key] = (x,y)
+
+    def add_vertex(self, x, y):
+        """Assumes that vertices are keyed by integers.
+        
+        :return: The key added.
+        """
+        if len(self.vertices) == 0:
+            key = 0
+        else:
+            key = max(self.vertices.keys()) + 1
+        self.set_vertex(key, x, y)
+        return key
+
+    def build(self):
+        verts = ((key,x,y) for key,(x,y) in self.vertices.items())
+        return PlanarGraph(verts, self.edges)
+
 
 class PlanarGraph():
     """A simple graph class.
@@ -245,8 +293,8 @@ class PlanarGraph():
     most one edge, and an edge is always between _distinct_ vertices).
     
     This class is immutable (at least by design: do not mutate the underlying
-    dictionaries!)  See the static constructors and the builder class for ways
-    to construct a graph.    
+    dictionaries!)  See the static constructors and the builder classes for
+    ways to construct a graph.    
     
     :param vertices: An iterables of triples `(key, x, y)`.
     :param edges: An iterable of (unordered) pairs `(key1, key2)`.
@@ -262,6 +310,7 @@ class PlanarGraph():
             if key1 == key2:
                 raise ValueError("Cannot have an edge from vertex {} to itself".format(key1))
             self._edges.append((key1, key2))
+        self._neighbourhood_edges = dict()
             
     def dump_bytes(self):
         """Write data to a `bytes` object.  The vertices are saved using the
@@ -351,6 +400,25 @@ class PlanarGraph():
             self._edge_lengths = _np.sqrt((quads[0] - quads[2])**2 + (quads[1] - quads[3])**2)
         return self._edge_lengths[edge_index]
     
+    def find_edge(self, key1, key2):
+        """Find the edge in the list of edges.  Raises `KeyError` on failure
+        to find.
+
+        :return: `(index, order)` where `index` is into :attr:`edges` and
+          `order==1` if `self.edges[index] == (key1, key2)` while
+          `order==-1` if `self.edges[index] == (key2, key1)`.
+        """
+        try:
+            index = self._edges.index((key1, key2))
+            return index, 1
+        except ValueError:
+            pass
+        try:
+            index = self._edges.index((key2, key1))
+            return index, -1
+        except ValueError:
+            raise KeyError("{}->{} not found".format(key1, key2))
+
     def neighbours(self, vertex_key):
         """A list of all the neighbours of the given vertex"""
         # TODO: Pre-compute results?
@@ -366,12 +434,18 @@ class PlanarGraph():
     def neighbourhood_edges(self, vertex_key):
         """A list of all the edges (as indicies into `self.edges`) incident
         with the given vertex."""
-        # TODO: Pre-compute results?
-        out = []
-        for index, (key1, key2) in enumerate(self.edges):
-            if key1 == vertex_key or key2 == vertex_key:
-                out.append(index)
-        return out
+        if vertex_key not in self._neighbourhood_edges:
+            out = []
+            for index, (key1, key2) in enumerate(self.edges):
+                if key1 == vertex_key or key2 == vertex_key:
+                    out.append(index)
+            out.sort()
+            self._neighbourhood_edges[vertex_key] = out
+        return self._neighbourhood_edges[vertex_key]
+
+    def degree(self, vertex_key):
+        """The degree (number of neighbours) of the vertex."""
+        return len(self.neighbourhood_edges(vertex_key))
 
     def paths_between(self, key_start, key_end, max_length):
         """Iterable yielding all paths which start and end at the given
@@ -381,8 +455,45 @@ class PlanarGraph():
         :return: Iterable yielding lists of vertices which start and end at
           the prescribed vertices, and do not feature repeats.
         """
+        yield from self.paths_between_avoiding(key_start, key_end, [], max_length)
+                    
+    def edge_paths_between(self, edge_start, edge_end, max_length):
+        """Iterable yielding paths which start in the middle of the starting
+        edge, and end in the middle of the ending edge.  We only report the
+        vertices visiting in the path.  The length calculation will ignore the
+        starting ending edges.
+        
+        :param edge_start: Unordered pair `(key1, key2)` giving the starting
+          edge.  Does not actually have to be an edge in the graph.
+        :param edge_end: Unordered pair `(key1, key2)` giving the ending edge.
+          Does not actually have to be an edge in the graph.
+
+        :return: Iterable yielding lists of vertices which start and end at
+          the prescribed edges, and do not feature repeats.
+        """
+        # Same as above, but need to not use both the start and end edges
+        to_avoid = [edge_start, edge_end]
+        yield from self.paths_between_avoiding(edge_start[0], edge_end[0], to_avoid, max_length)
+        yield from self.paths_between_avoiding(edge_start[0], edge_end[1], to_avoid, max_length)
+        yield from self.paths_between_avoiding(edge_start[1], edge_end[0], to_avoid, max_length)
+        yield from self.paths_between_avoiding(edge_start[1], edge_end[1], to_avoid, max_length)
+
+    def paths_between_avoiding(self, key_start, key_end, edges_to_avoid, max_length):
+        """Iterable yielding all paths which start and end at the given
+        vertices, and which are of length at most `max_length`.  A path will
+        never be cyclic.  Furthermore, we avoid walking along any "edge" (in
+        either direction) in the specified collection.
+        
+        :param edges_to_avoid: Iterable of pairs `(key1, key2)` giving edges
+          to avoid.
+
+        :return: Iterable yielding lists of vertices which start and end at
+          the prescribed vertices, and do not feature repeats.
+        """
         # Depth-first search of all partial paths
         todo = [ ([key_start], 0.0) ]
+        to_avoid = list(edges_to_avoid)
+        to_avoid.extend((a,b) for b,a in list(to_avoid))
         while len(todo) > 0:
             partial_path, current_length = todo.pop()
             end_key = partial_path[-1]
@@ -391,12 +502,48 @@ class PlanarGraph():
                 continue
             for edge_index in self.neighbourhood_edges(end_key):
                 key1, key2 = self.edges[edge_index]
+                if (key1, key2) in to_avoid:
+                    continue
                 if key2 == end_key:
                     key1, key2 = key2, key1
                 new_length = current_length + self.length(edge_index)
                 if new_length <= max_length and key2 not in partial_path:
                     todo.append((partial_path + [key2], new_length))
-                    
+
+    def walk_from(self, key1, key2):
+        """Start from the edge `(key1, key2)`, walk to `key1` and then search
+        outwards where we do not visit the same vertex twice, and we do not
+        use the edge `(key1, key2)`.  Depth-first search.
+
+        Implemented as a coroutine:
+        
+            search = graph.walk_from(key1, key2)
+            assert next(search) == ([key1], 0.0)
+        
+        To continue exploring this branch, use `next_path, length =
+        search.send(True)` or to cancel that branch of the search tree, use
+        `next_path, length = search.send(False)`.
+
+        The ordering is that we walk the edge which appears _last_ in the
+        :attr:`edges` list first.
+        """
+        todo = [ ([key1], 0.0) ]
+        while len(todo) > 0:
+            partial_path, current_length = todo.pop()
+            okay = yield partial_path, current_length
+            if not okay:
+                continue
+            end_key = partial_path[-1]
+            for edge_index in self.neighbourhood_edges(end_key):
+                k1, k2 = self.edges[edge_index]
+                if (k1, k2) == (key1, key2) or (k2, k1) == (key1, key2):
+                    continue
+                if k2 == end_key:
+                    k1, k2 = k2, k1
+                new_length = current_length + self.length(edge_index)
+                if k2 not in partial_path:
+                    todo.append((partial_path + [k2], new_length))
+
     def as_quads(self):
         """Returns a numpy array of shape `(N,4)` where `N` is the number of
         edges in the graph.  Each entry is `(x1,y1,x2,y1)` giving the
@@ -450,19 +597,6 @@ class PlanarGraph():
             self._projector = PointProjector(self.as_quads())
         index, t = self._projector.project_point(x, y)
         return self._edges[index], t
-        
-        
-        lines = self.as_quads().T
-        point = _np.array((x,y))
-        v = lines[2:4, :] - lines[0:2, :]
-        x = point[:,None] - lines[0:2, :]
-        t = (x[0]*v[0] + x[1]*v[1]) / (v[0]*v[0] + v[1]*v[1])
-        t[t < 0] = 0
-        t[t > 1] = 1
-        proj = lines[0:2, :] + t[None, :] * v
-        distsq = _np.sum((point[:,None] - proj)**2, axis=0)
-        index = _np.argmin(distsq)
-        return self._edges[index], t[index]
 
 
 try:
@@ -522,6 +656,84 @@ class PointProjector():
                 if distsq <= h*h:
                     return indices[index], t
             h += h
+
+
+class TimedNetworkPoints(_data.TimeStamps):
+    """A variant of :class:`Data.TimedPoints` where each event has a location
+    given by reference to a graph.
+
+    :param timestamps: An array of timestamps (must be convertible to
+      :class:`numpy.datetime64`).
+    :param locations: An iterable of pairs `(edge, t)` where `edge` is a pair
+      `(key1, key2)` describing an edge in a graph, and `0 <= t <= 1` gives the
+      location along the edge.
+    """
+    def __init__(self, timestamps, locations):
+        super().__init__(timestamps)
+        self._start_keys = []
+        self._end_keys = []
+        distances = []
+        for ((key1, key2), t) in locations:
+            self._start_keys.append(key1)
+            self._end_keys.append(key2)
+            distances.append(float(t))
+        self._start_keys = _np.asarray(self._start_keys)
+        self._end_keys = _np.asarray(self._end_keys)
+        self._distances = _np.asarray(distances)
+        if len(distances) != len(self.timestamps):
+            raise ValueError("Number of locations should match the number of timestamps")
+
+    @staticmethod
+    def project_timed_points(timed_points, graph):
+        """Construct a new instance by projecting coordinates onto a graph.
+
+        :param timed_points: Instance of :class:`data.TimedPoints`
+        :param graph: Instance of :class:`PlanarGraph`
+        """
+        def projector():
+            for x, y in zip(timed_points.xcoords, timed_points.ycoords):
+                yield graph.project_point_to_graph(x, y)
+        return TimedNetworkPoints(timed_points.timestamps, projector())
+
+    @property
+    def distances(self):
+        """Array of distances along each edge."""
+        return self._distances
+
+    @property
+    def start_keys(self):
+        """List of vertices which form the start of the edges"""
+        return self._start_keys
+
+    @property
+    def end_keys(self):
+        """List of vertices which form the end of the edges"""
+        return self._end_keys
+
+    def __getitem__(self, index):
+        if isinstance(index, int):
+            return [self.timestamps[index], self.start_keys[index], self.end_keys[index], self.distances[index]]
+        # Assume slice-like object
+        data = list(zip(self.timestamps[index], self.start_keys[index],
+                self.end_keys[index], self.distances[index]))
+        data.sort(key = lambda tup : tup[0])
+        new_times = [t for t,_,_,_ in data]
+        locations = [((k1,k2),t) for _,k1,k2,t in data]
+        return TimedNetworkPoints(new_times, locations)
+
+    def to_timed_points(self, graph):
+        """Use the graph object to convert to absolute coordinates.
+
+        :param graph: Instance of :class:`PlanarGraph` to use.
+
+        :return: Instance of :class:`data.TimedPoints`
+        """
+        xcs, ycs = [], []
+        for key1, key2, t in zip(self.start_keys, self.end_keys, self.distances):
+            x, y = graph.edge_to_coords(key1, key2, t)
+            xcs.append(x)
+            ycs.append(y)
+        return _data.TimedPoints.from_coords(self.timestamps, xcs, ycs)
 
 
 def approximately_equal(graph1, graph2, tolerance=0.1):

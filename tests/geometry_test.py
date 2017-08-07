@@ -161,3 +161,7 @@ def test_project_point_to_lines_compare(lines):
         np.testing.assert_allclose(a, b)
         c = pp.project_point(pt)
         np.testing.assert_allclose(a, c)
+
+def test_intersect_line_box():
+    assert geometry.intersect_line_box((0.5, -1), (0.5, 2), (0,0,2,1)) == pytest.approx((1/3, 2/3))
+    # TODO: Other cases...
