@@ -152,6 +152,18 @@ class PlanarGraphNodeOneShot():
         key1 = self._add_node(x1, y1)
         key2 = self._add_node(x2, y2)
         self._edges.append((key1, key2))
+
+    def remove_duplicate_edges(self):
+        """A neccessary evil."""
+        edges = set()
+        index = 0
+        while index < len(self._edges):
+            edge = frozenset(self._edges[index])
+            if edge in edges:
+                del self._edges[index]
+            else:
+                edges.add(edge)
+                index += 1
         
     def build(self):
         vertices = [ (key, x, y) for key, (x,y) in enumerate(self._nodes) ]
@@ -373,9 +385,14 @@ class Graph():
                 raise ValueError("Keys of vertices should be unique; but {} is repeated".format(key))
             self._vertices.add(key)
         self._edges = list()
+        edges_set = set()
         for key1, key2 in edges:
             if key1 == key2:
                 raise ValueError("Cannot have an edge from vertex {} to itself".format(key1))
+            e = frozenset((key1, key2))
+            if e in edges_set:
+                raise ValueError("Trying to add a 2nd edge from {} to {}".format(key1, key2))
+            edges_set.add(e)
             self._edges.append((key1, key2))
         if lengths is None:
             self._lengths = None
@@ -911,7 +928,59 @@ def approximately_equal(graph1, graph2, tolerance=0.1):
             return False
     return True
 
+def simple_reduce_graph(graph):
+    """Build a new graph where we have deleted all vertices of degree 2, while
+    maintaining our condition that the graph has to be simple (so we do not
+    delete a degree 2 vertex if that would lead to a double edge).
+
+    :return: The new graph.
+    """
+    neighbours = _collections.defaultdict(set)
+    for k1, k2 in graph.edges:
+        neighbours[k1].add(k2)
+        neighbours[k2].add(k1)
+    for key in list(neighbours.keys()):
+        nhood = list(neighbours[key])
+        if len(nhood) == 2 and nhood[1] not in neighbours[nhood[0]]:
+            del neighbours[key]
+            neighbours[nhood[0]].remove(key)
+            neighbours[nhood[0]].add(nhood[1])
+            neighbours[nhood[1]].remove(key)
+            neighbours[nhood[1]].add(nhood[0])
+
+    builder = GraphBuilder()
+    builder.vertices.update(neighbours.keys())
+    for key in list(neighbours.keys()):
+        for x in neighbours[key]:
+            builder.add_edge(key, x)
+            neighbours[x].discard(key)
+    return builder.build()
+
+
+
 def reduce_graph(graph):
+    """Build a new graph where we have deleted all vertices of degree 2, while
+    maintaining our condition that the graph has to be simple (so we do not
+    delete a degree 2 vertex if that would lead to a double edge).
+    
+    :return: `(graph, removed)` where `graph` is an instance of :class:`Graph`
+      with correctly aggregated lengths, if the source graph had lengths; and
+      `removed` is information about the removed vertices: a list the size of
+      `graph.edges` giving the total path in the original graph.
+    """
+    reduced = simple_reduce_graph(graph)
+    segments = list(graph.partition_by_segments)
+    builder = GraphBuilder()
+    for e in reduced.edges:
+        try:
+            i, _ = graph.find_edge(*e)
+            builder.add_edge(*graph.edges[i])
+        except KeyError:
+            # Find which segment it comes from...
+            pass
+
+
+def __reduce_graph(graph):
     """Build a new graph where we have deleted all vertices of degree 2, while
     maintaining our condition that the graph has to be simple (so we do not
     delete a degree 2 vertex if that would lead to a double edge).
@@ -931,7 +1000,7 @@ def reduce_graph(graph):
             builder.add_edge(*seg)
             removed.append(seg)
             edges.add( frozenset(seg) )
-        else:
+        elif seg[0] != seg[-1]:
             e = (seg[0], seg[-1])
             if frozenset(e) not in edges:
                 edges.add(frozenset(e))
@@ -942,6 +1011,7 @@ def reduce_graph(graph):
                     e = (seg[i], seg[i+1])
                     builder.add_edge(*e)
                     removed.append(e)
+
     if graph.lengths is not None:
         builder.lengths = []
         for seg in removed:

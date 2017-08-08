@@ -100,6 +100,25 @@ def test_PlanarGraphNodeOneShot():
     assert [g.vertices[x] for x in g.edges[1]] == [(1,1), (5.1,1.2)]
     assert [g.vertices[x] for x in g.edges[2]] == [(0,0), (2,2)]
 
+def test_PlanarGraphNodeOneShot_remove_duplicates():
+    nodes = [(0,0), (1,1), (5.1,1.2), (0.1,0.01), (2,2)]
+    b = network.PlanarGraphNodeOneShot(nodes, 0.2)
+    
+    b.add_path([(0,0),(1,1),(5.1,1.2)])
+    b.add_edge(0.1,0.01,2,2)
+    b.add_edge(0.1,0.01,2,2)
+
+    with pytest.raises(ValueError):
+        b.build()
+
+    b.remove_duplicate_edges()
+    g = b.build()
+    assert set(g.vertices.values()) == {(0,0), (1,1), (5.1,1.2), (2,2)}
+    assert len(g.edges) == 3
+    assert [g.vertices[x] for x in g.edges[0]] == [(0,0), (1,1)]
+    assert [g.vertices[x] for x in g.edges[1]] == [(1,1), (5.1,1.2)]
+    assert [g.vertices[x] for x in g.edges[2]] == [(0,0), (2,2)]
+
 def test_PlanarGraph_constructs():
     with pytest.raises(ValueError):
         network.PlanarGraph([(0,1,2), (0,2,3)], [])
@@ -422,34 +441,26 @@ def test_Graph_partition_by_segments(graph3):
     # Bad test: no reason (1,2,3) couldn't be (3,2,1)
     assert segs == {(0,1), (1,2,3), (3,5), (3,4,5), (5,6,7,1)}
     
-def test_reduce_graph(graph3):
-    g, rem = network.reduce_graph(graph3)
-    assert g.number_edges == 6
-    assert len(g.vertices) == 5
+def test_simple_reduce_graph(graph3):
+    g = network.simple_reduce_graph(graph3)
     assert g.vertices == {0,1,3,4,5}
-    assert g.lengths is None
-    removed = { frozenset(e) : r for e, r in zip(g.edges, rem)}
-    assert removed[frozenset((0,1))] == (0,1)
-    assert removed[frozenset((3,5))] == (3,5)
-    assert removed[frozenset((3,4))] == (3,4)
-    assert removed[frozenset((5,4))] == (4,5)
-    # Could be (3,2,1)
-    assert removed[frozenset((1,3))] == (1,2,3)
-    assert removed[frozenset((5,1))] == (5,6,7,1)
-    
-def test_reduce_graph_with_lengths(graph3):
-    b = network.GraphBuilder(graph3)
-    b.lengths = [1, 2, 1, 3, 2, 4, 2, 3, 4]
-    graph = b.build()
-    
-    g, rem = network.reduce_graph(graph)
     assert g.number_edges == 6
-    assert len(g.vertices) == 5
-    assert g.vertices == {0,1,3,4,5}
-    lens = { frozenset(e) : l for e, l in zip(g.edges, g.lengths)}
-    assert lens[frozenset((0,1))] == 1
-    assert lens[frozenset((3,1))] == 3
-    assert lens[frozenset((3,4))] == 3
-    assert lens[frozenset((3,5))] == 4
-    assert lens[frozenset((4,5))] == 2
-    assert lens[frozenset((5,1))] == 9
+    f = frozenset
+    edges = set(f(e) for e in g.edges)
+    assert edges == {f((0,1)), f((1,3)), f((3,4)), f((3,5)), f((4,5)), f((5,1))}
+
+@pytest.fixture
+def graph4():
+    b = network.GraphBuilder()
+    b.add_edge(0,1).add_edge(1,2).add_edge(2,3).add_edge(3,4)
+    b.add_edge(4,5).add_edge(5,0).add_edge(0,6).add_edge(0,7)
+    return b.build()
+
+def test_simple_reduce_graph2(graph4):
+    g = network.simple_reduce_graph(graph4)
+    assert g.number_edges == 5
+    f = frozenset
+    edges = set(f(e) for e in g.edges)
+    # Again, dodgy test...
+    assert edges == {f((0,6)), f((0,7)), f((0,4)), f((4,5)), f((5,0))}
+    
