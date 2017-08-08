@@ -140,6 +140,16 @@ def test_Predictor(graph, netpoints):
     assert result.risks[0] == pytest.approx(1)
     assert result.risks[1] == pytest.approx(1)
 
+def test_Predictor_with_time_kernel(graph, netpoints):
+    pred = network_hotspot.Predictor(netpoints, graph)
+    pred.kernel = network_hotspot.TriangleKernel(0.2)
+    pred.time_kernel = network_hotspot.ExponentialTimeKernel(1)
+    result = pred.predict()
+
+    assert result.graph is pred.graph
+    assert result.risks[0] == pytest.approx(1 * np.exp(-1/24))
+    assert result.risks[1] == pytest.approx(1)
+
 @pytest.fixture
 def graph2():
     b = open_cp.network.PlanarGraphGeoBuilder()
@@ -164,4 +174,21 @@ def test_Predictor_add_split(graph2):
     pred.add(risks, 7, -1, 0.5)
     np.testing.assert_allclose(risks, [0.25, 0.25, 0, 0, 0.5, 0.5, 0.5, 1, 0])
 
-# TODO: The timestamps code is not correct...  Why doesn't a test catch this?
+def test_Result_coverage(graph2):
+    risks = [0,5,4,3,2,6,7,1,8]
+    result = network_hotspot.Result(graph2, risks)
+
+    r1 = result.coverage(10)
+    assert r1.graph.number_edges == 2
+    assert r1.graph.edges[0] == (4,7)
+    assert r1.graph.edges[1] == (6,4)
+    np.testing.assert_allclose(r1.risks, [8,7])
+
+    r2 = result.coverage(21)
+    assert r2.graph.number_edges == 3
+    assert r2.graph.edges[0] == (4,7)
+    assert r2.graph.edges[1] == (6,4)
+    assert r2.graph.edges[2] == (5,6)
+    np.testing.assert_allclose(r2.risks, [8,7,6])
+    
+    

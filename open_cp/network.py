@@ -17,6 +17,7 @@ import bz2 as _bz2
 import io as _io
 import base64 as _base64
 import json as _json
+import collections as _collections
 
 _logger = _logging.getLogger(__name__)
 
@@ -276,13 +277,327 @@ class PlanarGraphBuilder():
             key = max(self.vertices.keys()) + 1
         self.set_vertex(key, x, y)
         return key
+    
+    def remove_unused_vertices(self):
+        """Remove any vertex which is not part of an edge."""
+        used_keys = set(k for k,_ in self._edges)
+        used_keys.update(k for _,k in self._edges)
+        for k in list(self._vertices.keys()):
+            if k not in used_keys:
+                del self._vertices[k]
 
     def build(self):
         verts = ((key,x,y) for key,(x,y) in self.vertices.items())
         return PlanarGraph(verts, self.edges)
 
 
-class PlanarGraph():
+class GraphBuilder():
+    """General purpose builder class.  Can be constructed from a
+    :class:`Graph` instance; is designed for mutating a
+    :class:`Graph` instance.
+
+    :param graph: If not `None`, construct from the network in this instance.
+    """
+    def __init__(self, graph=None):
+        if graph is None:
+            self._vertices = set()
+            self._edges = []
+            self._lengths = None
+        else:
+            self._vertices = set(graph.vertices)
+            self._edges = list(graph.edges)
+            if graph.lengths is None:
+                self._length = None
+            else:
+                self._lengths = list(graph.lengths)
+
+    @property
+    def vertices(self):
+        """Set of vertices.  Mutate to add a vertex."""
+        return self._vertices
+
+    @property
+    def edges(self):
+        """List of unordered edges `(key1, key2)`.  Mutate to change."""
+        return self._edges
+
+    @property
+    def lengths(self):
+        """List of lengths of edges.  Or `None`."""
+        return self._lengths
+    
+    @lengths.setter
+    def lengths(self, v):
+        self._lengths = v
+
+    def add_edge(self, key1, key2):
+        """Adds a edge.  Vertices automatically added."""
+        self._vertices.update([key1, key2])
+        self._edges.append((key1, key2))
+        return self
+    
+    def remove_unused_vertices(self):
+        """Remove any vertex which is not part of an edge."""
+        used_keys = set(k for k,_ in self._edges)
+        used_keys.update(k for _,k in self._edges)
+        self._vertices.intersection_update(used_keys)
+
+    def build(self):
+        if self.lengths is not None and len(self.edges) != len(self.lengths):
+            raise ValueError("Lengths of edges and lengths disagree.")
+        return Graph(self.vertices, self.edges, self.lengths)
+
+
+class Graph():
+    """A simple graph abstract class.
+    
+    - "Nodes" or "vertices" are simply keys given by any hashable Python object
+      (typically, integers).
+    - "Edges" are undirected links between two vertices.
+    - Each edge can, optionally, have a "length" associated with it.
+    
+    We assume that the graph is "simple" (between two vertices there is at
+    most one edge, and an edge is always between _distinct_ vertices).
+    
+    This class is immutable (at least by design: do not mutate the underlying
+    dictionaries!)  See the static constructors and the builder classes for
+    ways to construct a graph.    
+    
+    :param vertices: An iterables of of keys.
+    :param edges: An iterable of (unordered) pairs `(key1, key2)`.
+    """
+    def __init__(self, vertices, edges, lengths=None):
+        self._vertices = set()
+        for key in vertices:
+            if key in self._vertices:
+                raise ValueError("Keys of vertices should be unique; but {} is repeated".format(key))
+            self._vertices.add(key)
+        self._edges = list()
+        for key1, key2 in edges:
+            if key1 == key2:
+                raise ValueError("Cannot have an edge from vertex {} to itself".format(key1))
+            self._edges.append((key1, key2))
+        if lengths is None:
+            self._lengths = None
+        else:
+            self._lengths = _np.asarray(lengths)
+            if len(self._lengths) != len(self._edges):
+                raise ValueError("Should be as many lengths as edges.")
+        self._precompute()
+    
+    def _precompute(self):
+        self._neighbours = {k:set() for k in self._vertices}
+        for key1, key2 in self.edges:
+            self._neighbours[key1].add(key2)
+            self._neighbours[key2].add(key1)
+        for k in list(self._neighbours.keys()):
+            self._neighbours[k] = list(self._neighbours[k])
+            self._neighbours[k].sort()
+    
+        self._neighbourhood_edges = dict()
+        for index, edge in enumerate(self.edges):
+            for key in edge:
+                if key not in self._neighbourhood_edges:
+                    self._neighbourhood_edges[key] = []
+                self._neighbourhood_edges[key].append(index)
+        for k in list(self._neighbourhood_edges.keys()):
+            self._neighbourhood_edges[k].sort()
+            
+        self._edges_inverse = dict()
+        for index, edge in enumerate(self._edges):
+            self._edges_inverse[edge] = (index, 1)
+            e = (edge[1], edge[0])
+            self._edges_inverse[e] = (index, -1)
+    
+    @property
+    def vertices(self):
+        """A set (do not mutate!) of `key`s."""
+        return self._vertices
+
+    @property
+    def edges(self):
+        """A list of unordered edges `(key1, key2)`."""
+        return self._edges
+    
+    @property
+    def number_edges(self):
+        return len(self._edges)
+
+    def length(self, edge_index):
+        """If we have lengths, the length of this edge."""
+        if self._lengths is None:
+            raise ValueError("No lengths.")
+        return self._lengths[edge_index]
+    
+    @property
+    def lengths(self):
+        """Array of lengths of each edge, or None."""
+        return self._lengths
+        
+    def find_edge(self, key1, key2):
+        """Find the edge in the list of edges.  Raises `KeyError` on failure
+        to find.
+
+        :return: `(index, order)` where `index` is into :attr:`edges` and
+          `order==1` if `self.edges[index] == (key1, key2)` while
+          `order==-1` if `self.edges[index] == (key2, key1)`.
+        """
+        return self._edges_inverse[(key1, key2)]
+
+    def neighbours(self, vertex_key):
+        """A list of all the neighbours of the given vertex"""
+        return self._neighbours[vertex_key]
+    
+    def neighbourhood_edges(self, vertex_key):
+        """A list of all the edges (as indicies into `self.edges`) incident
+        with the given vertex."""
+        return self._neighbourhood_edges[vertex_key]
+
+    def degree(self, vertex_key):
+        """The degree (number of neighbours) of the vertex."""
+        return len(self.neighbourhood_edges(vertex_key))
+    
+    def paths_between(self, key_start, key_end, max_length=None):
+        """Iterable yielding all paths which start and end at the given
+        vertices, and which are of length at most `max_length`.  A path will
+        never be cyclic.
+        
+        :return: Iterable yielding lists of vertices which start and end at
+          the prescribed vertices, and do not feature repeats.
+        """
+        yield from self.paths_between_avoiding(key_start, key_end, [], max_length)
+                    
+    def edge_paths_between(self, edge_start, edge_end, max_length=None):
+        """Iterable yielding paths which start in the middle of the starting
+        edge, and end in the middle of the ending edge.  We only report the
+        vertices visiting in the path.  The length calculation will ignore the
+        starting ending edges.
+        
+        :param edge_start: Unordered pair `(key1, key2)` giving the starting
+          edge.  Does not actually have to be an edge in the graph.
+        :param edge_end: Unordered pair `(key1, key2)` giving the ending edge.
+          Does not actually have to be an edge in the graph.
+
+        :return: Iterable yielding lists of vertices which start and end at
+          the prescribed edges, and do not feature repeats.
+        """
+        # Same as above, but need to not use both the start and end edges
+        to_avoid = [edge_start, edge_end]
+        yield from self.paths_between_avoiding(edge_start[0], edge_end[0], to_avoid, max_length)
+        yield from self.paths_between_avoiding(edge_start[0], edge_end[1], to_avoid, max_length)
+        yield from self.paths_between_avoiding(edge_start[1], edge_end[0], to_avoid, max_length)
+        yield from self.paths_between_avoiding(edge_start[1], edge_end[1], to_avoid, max_length)
+
+    def paths_between_avoiding(self, key_start, key_end, edges_to_avoid, max_length=None):
+        """Iterable yielding all paths which start and end at the given
+        vertices, and which are of length at most `max_length`.  A path will
+        never be cyclic.  Furthermore, we avoid walking along any "edge" (in
+        either direction) in the specified collection.
+        
+        :param edges_to_avoid: Iterable of pairs `(key1, key2)` giving edges
+          to avoid.
+
+        :return: Iterable yielding lists of vertices which start and end at
+          the prescribed vertices, and do not feature repeats.
+        """
+        # Depth-first search of all partial paths
+        todo = [ ([key_start], 0.0) ]
+        to_avoid = list(edges_to_avoid)
+        to_avoid.extend((a,b) for b,a in list(to_avoid))
+        while len(todo) > 0:
+            partial_path, current_length = todo.pop()
+            end_key = partial_path[-1]
+            if end_key == key_end:
+                yield partial_path
+                continue
+            for edge_index in self.neighbourhood_edges(end_key):
+                key1, key2 = self.edges[edge_index]
+                if (key1, key2) in to_avoid:
+                    continue
+                if key2 == end_key:
+                    key1, key2 = key2, key1
+                new_length = current_length + self.length(edge_index)
+                if max_length is not None and new_length > max_length:
+                    continue
+                if key2 not in partial_path:
+                    todo.append((partial_path + [key2], new_length))
+
+    def walk_from(self, key1, key2):
+        """Start from the edge `(key1, key2)`, walk to `key1` and then search
+        outwards where we do not visit the same vertex twice, and we do not
+        use the edge `(key1, key2)`.  Depth-first search.
+
+        Implemented as a coroutine:
+        
+            search = graph.walk_from(key1, key2)
+            assert next(search) == ([key1], 0.0)
+        
+        To continue exploring this branch, use `next_path, length =
+        search.send(True)` or to cancel that branch of the search tree, use
+        `next_path, length = search.send(False)`.
+
+        The ordering is that we walk the edge which appears _last_ in the
+        :attr:`edges` list first.
+        """
+        todo = [ ([key1], 0.0) ]
+        while len(todo) > 0:
+            partial_path, current_length = todo.pop()
+            okay = yield partial_path, current_length
+            if not okay:
+                continue
+            end_key = partial_path[-1]
+            for edge_index in self.neighbourhood_edges(end_key):
+                k1, k2 = self.edges[edge_index]
+                if (k1, k2) == (key1, key2) or (k2, k1) == (key1, key2):
+                    continue
+                if k2 == end_key:
+                    k1, k2 = k2, k1
+                new_length = current_length + self.length(edge_index)
+                if k2 not in partial_path:
+                    todo.append((partial_path + [k2], new_length))
+
+    def partition_by_segments(self):
+        """A "segment" is a maximal path `(k1,k2,...,kn)` where the degree of
+        every vertex excepting `k1, kn` is 2.  This is well-defined, for if
+        `kn` has degree 2, then we can add the unique neighbour which is not
+        `k(n-1)` and get a longer segment.
+        
+        Returns a maximal list of maximal segments which must cover all edges.
+        Any simple segment `(k1,k2)` will be returned in the same order as it
+        appears in `edges`.
+        
+        Note that such a decomposition is not unique (for some graphs).
+        
+        :return: Yields segments
+        """
+        edges = set(self._edges)
+        def remove(a, b):
+            edges.discard((a,b))
+            edges.discard((b,a))
+        while len(edges) > 0:
+            segment = edges.pop()
+            while segment is not None:
+                if self.degree(segment[0]) == 2:
+                    nhood = set(self.neighbours(segment[0]))
+                    assert len(nhood) == 2
+                    nhood.discard(segment[1])
+                    key = nhood.pop()
+                    remove(key, segment[0])
+                    segment = (key, ) + segment
+                elif self.degree(segment[-1]) == 2:
+                    nhood = set(self.neighbours(segment[-1]))
+                    if not len(nhood) == 2:
+                        raise AssertionError(segment[-1])
+                    nhood.discard(segment[-2])
+                    key = nhood.pop()
+                    remove(key, segment[-1])
+                    segment = segment + (key, )
+                else:
+                    yield segment
+                    segment = None
+
+
+class PlanarGraph(Graph):
     """A simple graph class.
     
     - "Nodes" or "vertices" are (x,y) coordinates in the plane, but are also
@@ -300,17 +615,15 @@ class PlanarGraph():
     :param edges: An iterable of (unordered) pairs `(key1, key2)`.
     """
     def __init__(self, vertices, edges):
-        self._vertices = dict()
+        verts = dict()
         for key, x, y in vertices:
-            if key in self._vertices:
+            if key in verts:
                 raise ValueError("Keys of vertices should be unique; but {} is repeated".format(key))
-            self._vertices[key] = (x,y)
-        self._edges = list()
-        for key1, key2 in edges:
-            if key1 == key2:
-                raise ValueError("Cannot have an edge from vertex {} to itself".format(key1))
-            self._edges.append((key1, key2))
-        self._neighbourhood_edges = dict()
+            verts[key] = (x,y)
+        super().__init__(verts.keys(), edges)
+        self._vertices = verts
+        quads = self.as_quads().T
+        self._lengths = _np.sqrt((quads[0] - quads[2])**2 + (quads[1] - quads[3])**2)
             
     def dump_bytes(self):
         """Write data to a `bytes` object.  The vertices are saved using the
@@ -384,165 +697,6 @@ class PlanarGraph():
         `(x,y)`.
         """
         return self._vertices
-    
-    @property
-    def edges(self):
-        """A list of unordered edges `(key1, key2)`."""
-        return self._edges
-    
-    def length(self, edge_index):
-        """The length of the given edge; results are pre-computed.
-        
-        :param edge_index: 0,1,... index into `self.edges`
-        """
-        if not hasattr(self, "_edge_lengths"):
-            quads = self.as_quads().T
-            self._edge_lengths = _np.sqrt((quads[0] - quads[2])**2 + (quads[1] - quads[3])**2)
-        return self._edge_lengths[edge_index]
-    
-    def find_edge(self, key1, key2):
-        """Find the edge in the list of edges.  Raises `KeyError` on failure
-        to find.
-
-        :return: `(index, order)` where `index` is into :attr:`edges` and
-          `order==1` if `self.edges[index] == (key1, key2)` while
-          `order==-1` if `self.edges[index] == (key2, key1)`.
-        """
-        try:
-            index = self._edges.index((key1, key2))
-            return index, 1
-        except ValueError:
-            pass
-        try:
-            index = self._edges.index((key2, key1))
-            return index, -1
-        except ValueError:
-            raise KeyError("{}->{} not found".format(key1, key2))
-
-    def neighbours(self, vertex_key):
-        """A list of all the neighbours of the given vertex"""
-        # TODO: Pre-compute results?
-        out = []
-        for key1, key2 in self.edges:
-            if key1 == vertex_key:
-                out.append(key2)
-            elif key2 == vertex_key:
-                out.append(key1)
-        out.sort()
-        return out
-    
-    def neighbourhood_edges(self, vertex_key):
-        """A list of all the edges (as indicies into `self.edges`) incident
-        with the given vertex."""
-        if vertex_key not in self._neighbourhood_edges:
-            out = []
-            for index, (key1, key2) in enumerate(self.edges):
-                if key1 == vertex_key or key2 == vertex_key:
-                    out.append(index)
-            out.sort()
-            self._neighbourhood_edges[vertex_key] = out
-        return self._neighbourhood_edges[vertex_key]
-
-    def degree(self, vertex_key):
-        """The degree (number of neighbours) of the vertex."""
-        return len(self.neighbourhood_edges(vertex_key))
-
-    def paths_between(self, key_start, key_end, max_length):
-        """Iterable yielding all paths which start and end at the given
-        vertices, and which are of length at most `max_length`.  A path will
-        never be cyclic.
-        
-        :return: Iterable yielding lists of vertices which start and end at
-          the prescribed vertices, and do not feature repeats.
-        """
-        yield from self.paths_between_avoiding(key_start, key_end, [], max_length)
-                    
-    def edge_paths_between(self, edge_start, edge_end, max_length):
-        """Iterable yielding paths which start in the middle of the starting
-        edge, and end in the middle of the ending edge.  We only report the
-        vertices visiting in the path.  The length calculation will ignore the
-        starting ending edges.
-        
-        :param edge_start: Unordered pair `(key1, key2)` giving the starting
-          edge.  Does not actually have to be an edge in the graph.
-        :param edge_end: Unordered pair `(key1, key2)` giving the ending edge.
-          Does not actually have to be an edge in the graph.
-
-        :return: Iterable yielding lists of vertices which start and end at
-          the prescribed edges, and do not feature repeats.
-        """
-        # Same as above, but need to not use both the start and end edges
-        to_avoid = [edge_start, edge_end]
-        yield from self.paths_between_avoiding(edge_start[0], edge_end[0], to_avoid, max_length)
-        yield from self.paths_between_avoiding(edge_start[0], edge_end[1], to_avoid, max_length)
-        yield from self.paths_between_avoiding(edge_start[1], edge_end[0], to_avoid, max_length)
-        yield from self.paths_between_avoiding(edge_start[1], edge_end[1], to_avoid, max_length)
-
-    def paths_between_avoiding(self, key_start, key_end, edges_to_avoid, max_length):
-        """Iterable yielding all paths which start and end at the given
-        vertices, and which are of length at most `max_length`.  A path will
-        never be cyclic.  Furthermore, we avoid walking along any "edge" (in
-        either direction) in the specified collection.
-        
-        :param edges_to_avoid: Iterable of pairs `(key1, key2)` giving edges
-          to avoid.
-
-        :return: Iterable yielding lists of vertices which start and end at
-          the prescribed vertices, and do not feature repeats.
-        """
-        # Depth-first search of all partial paths
-        todo = [ ([key_start], 0.0) ]
-        to_avoid = list(edges_to_avoid)
-        to_avoid.extend((a,b) for b,a in list(to_avoid))
-        while len(todo) > 0:
-            partial_path, current_length = todo.pop()
-            end_key = partial_path[-1]
-            if end_key == key_end:
-                yield partial_path
-                continue
-            for edge_index in self.neighbourhood_edges(end_key):
-                key1, key2 = self.edges[edge_index]
-                if (key1, key2) in to_avoid:
-                    continue
-                if key2 == end_key:
-                    key1, key2 = key2, key1
-                new_length = current_length + self.length(edge_index)
-                if new_length <= max_length and key2 not in partial_path:
-                    todo.append((partial_path + [key2], new_length))
-
-    def walk_from(self, key1, key2):
-        """Start from the edge `(key1, key2)`, walk to `key1` and then search
-        outwards where we do not visit the same vertex twice, and we do not
-        use the edge `(key1, key2)`.  Depth-first search.
-
-        Implemented as a coroutine:
-        
-            search = graph.walk_from(key1, key2)
-            assert next(search) == ([key1], 0.0)
-        
-        To continue exploring this branch, use `next_path, length =
-        search.send(True)` or to cancel that branch of the search tree, use
-        `next_path, length = search.send(False)`.
-
-        The ordering is that we walk the edge which appears _last_ in the
-        :attr:`edges` list first.
-        """
-        todo = [ ([key1], 0.0) ]
-        while len(todo) > 0:
-            partial_path, current_length = todo.pop()
-            okay = yield partial_path, current_length
-            if not okay:
-                continue
-            end_key = partial_path[-1]
-            for edge_index in self.neighbourhood_edges(end_key):
-                k1, k2 = self.edges[edge_index]
-                if (k1, k2) == (key1, key2) or (k2, k1) == (key1, key2):
-                    continue
-                if k2 == end_key:
-                    k1, k2 = k2, k1
-                new_length = current_length + self.length(edge_index)
-                if k2 not in partial_path:
-                    todo.append((partial_path + [k2], new_length))
 
     def as_quads(self):
         """Returns a numpy array of shape `(N,4)` where `N` is the number of
@@ -722,7 +876,7 @@ class TimedNetworkPoints(_data.TimeStamps):
         return TimedNetworkPoints(new_times, locations)
 
     def to_timed_points(self, graph):
-        """Use the graph object to convert to absolute coordinates.
+        """Use the graph object to convert to absolute coordinates.list
 
         :param graph: Instance of :class:`PlanarGraph` to use.
 
@@ -756,3 +910,87 @@ def approximately_equal(graph1, graph2, tolerance=0.1):
         else:
             return False
     return True
+
+def reduce_graph(graph):
+    """Build a new graph where we have deleted all vertices of degree 2, while
+    maintaining our condition that the graph has to be simple (so we do not
+    delete a degree 2 vertex if that would lead to a double edge).
+    
+    :return: `(graph, removed)` where `graph` is an instance of :class:`Graph`
+      with correctly aggregated lengths, if the source graph had lengths; and
+      `removed` is information about the removed vertices: a list the size of
+      `graph.edges` giving the total path in the original graph.
+    """
+    segments = list(graph.partition_by_segments())
+    segments.sort(key = lambda x : len(x))
+    builder = GraphBuilder()
+    edges = set()
+    removed = []
+    for seg in segments:
+        if len(seg) == 2:
+            builder.add_edge(*seg)
+            removed.append(seg)
+            edges.add( frozenset(seg) )
+        else:
+            e = (seg[0], seg[-1])
+            if frozenset(e) not in edges:
+                edges.add(frozenset(e))
+                builder.add_edge(*e)
+                removed.append(seg)
+            else:
+                for i in range(len(seg)-1):
+                    e = (seg[i], seg[i+1])
+                    builder.add_edge(*e)
+                    removed.append(e)
+    if graph.lengths is not None:
+        builder.lengths = []
+        for seg in removed:
+            length = 0
+            for i in range(len(seg)-1):
+                index = graph.find_edge(seg[i], seg[i+1])[0]
+                length += graph.length(index)
+            builder.lengths.append(length)
+    return builder.build(), removed
+
+def _reduce_graph(graph):
+    """Build a new graph where we have deleted all vertices of degree 2, while
+    maintaining our condition that the graph has to be simple (so we do not
+    delete a degree 2 vertex if that would lead to a double edge).
+    
+    :return: `(graph, removed)` where `graph` is an instance of :class:`Graph`
+      with correctly aggregated lengths, if the source graph had lengths; and
+      `removed` is information about the removed vertices: a list the size of
+      `graph.edges` giving the total path in the original graph.
+    """
+    neighbours = _collections.defaultdict(set)
+    for k1, k2 in graph.edges:
+        neighbours[k1].add(k2)
+        neighbours[k2].add(k1)
+    if graph.lengths is not None:
+        lengths = { frozenset(e) : l for e,l in zip(graph.edges, graph.lengths) }
+    else:
+        lengths = { frozenset(e) : 0 for e in graph.edges }
+    for key in list(neighbours.keys()):
+        nhood = list(neighbours[key])
+        if len(nhood) == 2 and nhood[1] not in neighbours[nhood[0]]:
+            del neighbours[key]
+            neighbours[nhood[0]].remove(key)
+            neighbours[nhood[0]].add(nhood[1])
+            neighbours[nhood[1]].remove(key)
+            neighbours[nhood[1]].add(nhood[0])
+            s1, s2 = frozenset((key, nhood[0])), frozenset((key, nhood[1]))
+            lengths[ frozenset((nhood[0], nhood[1])) ] = lengths[s1] + lengths[s2]
+            del lengths[s1]
+            del lengths[s2]
+    
+    vertices = set(neighbours.keys())
+    edges, lens = [], []
+    for key in vertices:
+        nhood = neighbours[key]
+        for x in nhood:
+            edges.append( (key,x) )
+            neighbours[x].remove(key)
+            lens.append( lengths[frozenset((key,x))] )
+    if graph.lengths is None:
+        return Graph(vertices, edges)
+    return Graph(vertices, edges, lens)

@@ -9,6 +9,8 @@ import numpy as _np
 import collections as _collections
 from . import naive as _naive
 from . import predictors as _predictors
+from . import network as _network
+from . import geometry as _geometry
 
 def _top_slice_one_dim(risk, fraction):
     data = risk.compressed().copy()
@@ -61,6 +63,78 @@ def top_slice(risk, fraction):
         return _top_slice_one_dim(risk, fraction)
     mask = _top_slice_one_dim(risk.ravel(), fraction)
     return _np.reshape(mask, risk.shape)
+
+def grid_risk_to_graph(grid_pred, graph, percentage_coverage, intersection_cutoff=None):
+    """Find the given coverage for the grid prediction, and then intersect with
+    the graph.
+    
+    :param grid_pred: An instance of :class:`GridPrediction` to give a
+      prediction.
+    :param graph: An instance of :class:`network.PlanarGraph`
+    :param percentage_coverage: An iterable of percentage coverages to test.
+    :param intersection_cutoff: If `None` then return any edge in the graph
+      which intersects a grid cell.  Otherwise a value between 0 and 1
+      specifying the minimum intersection amount (based on length).
+    
+    :return: A new graph with only those edges which intersect.
+    """
+    builder = _network.PlanarGraphBuilder()
+    builder.vertices.update(graph.vertices)
+    covered = top_slice(grid_pred.intensity_matrix, percentage_coverage / 100)
+    for gy in range(covered.shape[0]):
+        for gx in range(covered.shape[1]):
+            if covered[gy][gx]:
+                _add_intersections(grid_pred.bounding_box_of_cell(gx, gy),
+                                   graph, builder, intersection_cutoff)
+    builder.remove_unused_vertices()
+    return builder.build()
+
+def _add_intersections(bbox, graph, builder, intersection_cutoff):
+    bbox = (*bbox.min, *bbox.max)
+    for edge in graph.edges:
+        start, end = graph.vertices[edge[0]], graph.vertices[edge[1]]
+        tt = _geometry.intersect_line_box(start, end, bbox)
+        if tt is not None:
+            if intersection_cutoff is None or tt[1] - tt[0] >= intersection_cutoff:
+                builder.edges.append(edge)
+
+def network_hit_rate(graph, timed_network_points, source_graph=None):
+    """Computes the "hit rate" for the given prediction for the passed
+    collection of events.  We compute the fraction of events which fall in the
+    graph.
+
+    :param graph: An instance of :class:`network.PlanarGraph` describing the
+      valid edges.
+    :param timed_network_points: An instance of :class:`TimedNetworkPoints`
+      to get events from.  We assume that the vertex keys used are the same
+      as in `graph`.
+    :param source_graph: If not `None` then this is assumed to be the orignal
+      graph associated with `timed_network_points` and we perform a check to
+      see that the vertex keys agree.
+
+    :return: The hit rate, a value between 0 and 1.
+      If there were no events in the `timed_points`, we return -1.
+    """
+    if len(timed_network_points.distances) == 0:
+        return -1
+    if source_graph is not None:
+        keys = set(timed_network_points.start_keys)
+        keys.update(timed_network_points.end_keys)
+        for key in keys:
+            if key not in graph.vertices:
+                continue
+            x, y = graph.vertices[key]
+            xx, yy = source_graph.vertices[key]
+            if ((x-xx)**2 + (y-yy)**2) > 1e-10:
+                raise ValueError("Graphs appear to differ")
+    
+    edges = set(graph.edges)
+    edges.update((b,a) for a,b in graph.edges)
+    hits = 0
+    for start, end in zip(timed_network_points.start_keys, timed_network_points.end_keys):
+        if (start, end) in edges:
+            hits += 1
+    return hits / len(timed_network_points.distances)
 
 def hit_rates(grid_pred, timed_points, percentage_coverage):
     """Computes the "hit rate" for the given prediction for the passed

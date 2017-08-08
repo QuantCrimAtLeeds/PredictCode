@@ -99,7 +99,6 @@ class GridPredictionArray(GridPrediction):
     :param xoffset: How much to offset the input x coordinate by; default 0.
     :param yoffset: How much to offset the input y coordinate by; default 0.
     """
-
     def __init__(self, xsize, ysize, matrix, xoffset = 0, yoffset = 0):
         super().__init__(xsize, ysize, xoffset, yoffset)
         self._matrix = matrix

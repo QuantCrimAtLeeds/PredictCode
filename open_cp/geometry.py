@@ -245,7 +245,7 @@ def project_point_to_lines_shapely(point, lines):
     return project_point_to_line(point, line.coords)
 
 def intersect_line_box(start, end, box_bounds):
-    """...
+    """Intersect a line with a rectangular box.
 
     :param start: Pair `(x,y)` of the start of the line segment
     :param end: Pair `(x,y)` of the end of the line segment
@@ -256,6 +256,8 @@ def intersect_line_box(start, end, box_bounds):
     """
     dx, dy = end[0] - start[0], end[1] - start[1]
     xmin, ymin, xmax, ymax = box_bounds
+    if xmin > xmax or ymin > ymax:
+        raise ValueError()
     if _np.abs(dx) < 1e-10:
         if not ( xmin <= start[0] and start[0] <= xmax ):
             return None
@@ -270,6 +272,15 @@ def intersect_line_box(start, end, box_bounds):
             else:
                 c, d = d / dy, c / dy
             return max(0, c), min(1, d)
+    elif _np.abs(dy) < 1e-10:
+        if not ( ymin <= start[1] and start[1] <= ymax ):
+            return None
+        a, b = xmin - start[0], xmax - start[0]
+        if dx > 0:
+            a, b = a / dx, b / dx
+        else:
+            a, b = b / dx, a / dx
+        return max(0, a), min(1, b)
     else:
         a, b = xmin - start[0], xmax - start[0]
         if dx > 0:
@@ -281,11 +292,12 @@ def intersect_line_box(start, end, box_bounds):
             c, d = c / dy, d / dy
         else:
             c, d = d / dy, c / dy
-        if a <= c and c <= b:
-            return max(0, c), min(1, b)
-        if c <= a and a <= d:
-            return max(0, a), min(1, d)
+        tmin = max(a, c, 0)
+        tmax = min(b, d, 1)
+        if tmin < tmax:
+            return (tmin, tmax)
         return None
+    
 
 try:
     import rtree as _rtree

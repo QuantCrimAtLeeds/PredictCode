@@ -3,6 +3,7 @@ import pytest
 import open_cp.evaluation as evaluation
 import open_cp.predictors
 import open_cp.data
+import open_cp.network
 import numpy as np
 
 def test_top_slice():
@@ -85,7 +86,7 @@ def test_top_slice_masked():
 @pytest.fixture
 def prediction():
     matrix = np.array([[1,2,3,4], [5,6,7,8]])
-    return open_cp.predictors.GridPredictionArray(10, 20, matrix, 2, 3)
+    return open_cp.predictors.GridPredictionArray(xsize=10, ysize=20,matrix=matrix, xoffset=2, yoffset=3)
 
 def test_hit_rate(prediction):
     t = [np.datetime64("2017-01-01")] * 8
@@ -109,3 +110,55 @@ def test_hit_rate_out_of_range(prediction):
     out = evaluation.hit_rates(prediction, tp, {1, 5, 100})
     assert set(out.values()) == {0}
     
+def test_grid_risk_to_graph(prediction):
+    b = open_cp.network.PlanarGraphBuilder()
+    b.add_vertex(35,30)
+    b.add_vertex(40,40)
+    b.add_edge(0, 1)
+    b.add_vertex(25,30)
+    b.add_vertex(30,40)
+    b.add_edge(2, 3)
+    graph = b.build()
+    
+    g = evaluation.grid_risk_to_graph(prediction, graph, 12)
+    assert g.number_edges == 0
+
+    # 1 cell.  Cells are x=[2,12,22,32,42], y=[3,23,43]
+    g = evaluation.grid_risk_to_graph(prediction, graph, 13)
+    assert g.number_edges == 1
+    assert g.edges[0] == (0, 1)
+
+    g = evaluation.grid_risk_to_graph(prediction, graph, 25)
+    assert g.number_edges == 2
+    assert set(g.edges) == {(0,1), (2,3)}
+
+def test_grid_risk_to_graph_cutoff(prediction):
+    b = open_cp.network.PlanarGraphBuilder()
+    b.add_vertex(30,30)
+    b.add_vertex(34,30)
+    b.add_edge(0, 1)
+    graph = b.build()
+
+    # 1 cell.  Cells are x=[2,12,22,32,42], y=[3,23,43]
+    g = evaluation.grid_risk_to_graph(prediction, graph, 13, 0.6)
+    assert g.number_edges == 0
+    
+    g = evaluation.grid_risk_to_graph(prediction, graph, 13, 0.5)
+    assert g.number_edges == 1
+    assert g.edges[0] == (0, 1)
+
+@pytest.fixture
+def network_points():
+    times = [np.datetime64("2017-01-01")] * 3
+    locations = [ ((0,1), 0.5), ((2,1), 0.2), ((4,5), 0.1)]
+    return open_cp.network.TimedNetworkPoints(times, locations)
+
+def test_network_hit_rate(network_points):
+    graph = open_cp.network.PlanarGraph([(0,0,0), (1,1,1), (2,2,2), (3,3,3), (4,4,4)], [(0,1), (1,2), (3,4)])
+    assert evaluation.network_hit_rate(graph, network_points) == pytest.approx(2/3)
+    
+    evaluation.network_hit_rate(graph, network_points, graph)
+    
+    with pytest.raises(ValueError):
+        graph1 = open_cp.network.PlanarGraph([(0,0,0), (1,1,1), (2,2,2), (3,3,3), (4,4,3), (5,5,5)], [])
+        evaluation.network_hit_rate(graph, network_points, graph1)

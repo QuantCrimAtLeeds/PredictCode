@@ -24,6 +24,16 @@ def test_PlanarGraphBuilder():
     # Check haven't mutated g
     assert g.vertices == {0:(0.2,0.5), 5:(1,2)}
     assert g.edges == [(0,5)]
+    
+def test_PlanarGraphBuilder_remove_unused_vertices():
+    b = network.PlanarGraphBuilder()
+    b.add_vertex(0.2, 0.5)
+    b.add_vertex(0.6, 0.4)
+    b.set_vertex(5, 1, 2) 
+    b.add_edge(0, 5)
+    assert len(b.vertices) == 3
+    b.remove_unused_vertices()
+    assert len(b.vertices) == 2
 
 @pytest.fixture
 def planar_graph_geo_builder():
@@ -44,6 +54,7 @@ def test_PlanarGraphGeoBuilder_builds(planar_graph_geo_builder):
 
     assert g.vertices == {0:(0,0), 1:(1,1), 2:(5.1,1.2), 3:(2,0), 4:(1,1), 5:(0,5)}        
     assert g.edges == [(0,1), (1,2), (3,4), (4,5), (5,2), (0,5)]
+    assert g.number_edges == 6
 
 @pytest.fixture
 def planar_graph_node_builder():
@@ -369,3 +380,76 @@ def test_TimedNetworkPoints_from_projection():
     np.testing.assert_allclose(tnp.end_keys, [2, 2])
     np.testing.assert_allclose(tnp.distances, [0.3, 0.3])
     graph.project_point_to_graph.call_args_list == [mock.call(1.2, 4.5), mock.call(2.3, 6.7)]
+
+def test_GraphBuilder():
+    b = network.GraphBuilder()
+    b.add_edge(0,1)
+    b.add_edge(1,2)
+    b.add_edge(3,4)
+    g = b.build()
+    assert g.number_edges == 3
+    assert g.vertices == {0,1,2,3,4}
+    assert g.edges == [(0,1), (1,2), (3,4)]
+    
+    b.lengths = [1,2,5]
+    g = b.build()
+    assert g.number_edges == 3
+    assert g.vertices == {0,1,2,3,4}
+    assert g.edges == [(0,1), (1,2), (3,4)]
+    assert g.length(0) == 1
+    assert g.length(1) == 2
+    assert g.length(2) == 5
+    
+    b.lengths = [1,2]
+    with pytest.raises(ValueError):
+        b.build()
+        
+    b.vertices.add(7)
+    b.remove_unused_vertices()
+    assert b.vertices == {4,3,2,1,0}
+    
+    assert list(g.paths_between(0, 2)) == [[0,1,2]]
+    
+@pytest.fixture
+def graph3():
+    b = network.GraphBuilder()
+    b.add_edge(0,1).add_edge(1,2).add_edge(2,3).add_edge(3,4).add_edge(4,5)
+    b.add_edge(3,5).add_edge(5,6).add_edge(6,7).add_edge(7,1)
+    return b.build()
+
+def test_Graph_partition_by_segments(graph3):
+    segs = set(graph3.partition_by_segments())
+    # Bad test: no reason (1,2,3) couldn't be (3,2,1)
+    assert segs == {(0,1), (1,2,3), (3,5), (3,4,5), (5,6,7,1)}
+    
+def test_reduce_graph(graph3):
+    g, rem = network.reduce_graph(graph3)
+    assert g.number_edges == 6
+    assert len(g.vertices) == 5
+    assert g.vertices == {0,1,3,4,5}
+    assert g.lengths is None
+    removed = { frozenset(e) : r for e, r in zip(g.edges, rem)}
+    assert removed[frozenset((0,1))] == (0,1)
+    assert removed[frozenset((3,5))] == (3,5)
+    assert removed[frozenset((3,4))] == (3,4)
+    assert removed[frozenset((5,4))] == (4,5)
+    # Could be (3,2,1)
+    assert removed[frozenset((1,3))] == (1,2,3)
+    assert removed[frozenset((5,1))] == (5,6,7,1)
+    
+def test_reduce_graph_with_lengths(graph3):
+    b = network.GraphBuilder(graph3)
+    b.lengths = [1, 2, 1, 3, 2, 4, 2, 3, 4]
+    graph = b.build()
+    
+    g, rem = network.reduce_graph(graph)
+    assert g.number_edges == 6
+    assert len(g.vertices) == 5
+    assert g.vertices == {0,1,3,4,5}
+    lens = { frozenset(e) : l for e, l in zip(g.edges, g.lengths)}
+    assert lens[frozenset((0,1))] == 1
+    assert lens[frozenset((3,1))] == 3
+    assert lens[frozenset((3,4))] == 3
+    assert lens[frozenset((3,5))] == 4
+    assert lens[frozenset((4,5))] == 2
+    assert lens[frozenset((5,1))] == 9

@@ -17,6 +17,9 @@ from . import predictors
 from . import network
 import math as _math
 import numpy as _np
+import logging as _logging
+
+_logger = _logging.getLogger(__name__)
 
 class Trainer(predictors.DataTrainer):
     """Handles "data preparation" tasks:
@@ -104,6 +107,9 @@ class ExponentialTimeKernel(_kde.ExponentialTimeKernel):
     def __call__(self, x):
         return _np.exp( - _np.asarray(x) / self._scale ) / self._scale
 
+    def __repr__(self):
+        return "ExponentialTimeKernel({})".format(self._scale)
+
 
 class QuadDecayTimeKernel(_kde.QuadDecayTimeKernel):
     """A quadratically decaying kernel, :math:`f(x) = \frac{2}{\pi\beta}
@@ -115,6 +121,9 @@ class QuadDecayTimeKernel(_kde.QuadDecayTimeKernel):
     def __call__(self, x):
         y = _kde.QuadDecayTimeKernel.__call__(self, x)
         return 2 * y / (_np.pi * self._scale)
+
+    def __repr__(self):
+        return "QuadDecayTimeKernel({})".format(self._scale)
 
 
 class NetworkKernel():
@@ -164,6 +173,9 @@ class TriangleKernel(NetworkKernel):
     @property
     def cutoff(self):
         return self._h
+    
+    def __repr__(self):
+        return "TriangleKernel({})".format(self._h)
 
 
 class Predictor():
@@ -173,6 +185,8 @@ class Predictor():
     def __init__(self, network_timed_points, graph):
         self._network_timed_points = network_timed_points
         self._graph = graph
+        self.time_kernel_unit = _np.timedelta64(1, "D")
+        self._cache = dict()
 
     @property
     def network_timed_points(self):
@@ -190,6 +204,18 @@ class Predictor():
     @time_kernel.setter
     def time_kernel(self, v):
         self._time_kernel = v
+        self._cache = dict()
+
+    @property
+    def time_kernel_unit(self):
+        """The time-unit, instance of :class:`numpy.timedelta64` in use.
+        Think hard before changing!"""
+        return self._time_unit
+    
+    @time_kernel_unit.setter
+    def time_kernel_unit(self, v):
+        self._time_unit = v
+        self._cache = dict()
 
     @property
     def kernel(self):
@@ -199,27 +225,20 @@ class Predictor():
     @kernel.setter
     def kernel(self, v):
         self._kernel = v
-    
-    def add(self, risks, edge, orient, offset):
-        """Internal use: add to the risks all paths.
-
-        :param risks: Array of risks to add to.
-        :param edge: Index of the edge we are starting at
-        :param orient: 1 or -1 for which way to initially walk to edge
-        :param offset: How far along the edge we are
-        """
+        self._cache = dict()
+        
+    def _search(self, edge, orient):
         key1, key2 = self.graph.edges[edge]
-        initial_dist = self.graph.length(edge) * (1.0 - offset)
         if orient == 1:
-            todo = ([edge], [key2], 0, initial_dist, 1)
+            todo = ([edge], [key2], 0, 0, 1)
         else:
-            todo = ([edge], [key1], 0, initial_dist, 1)
+            todo = ([edge], [key1], 0, 0, 1)
         todo = [todo]
         while len(todo) > 0:
             current_path, current_vertices, old_length, current_length, cumulative_degree = todo.pop()
             if old_length >= self.kernel.cutoff:
                 continue
-            risks[current_path[-1]] += self.kernel.integrate(old_length, current_length) * cumulative_degree
+            yield current_path, old_length, current_length, cumulative_degree
             for e in self.graph.neighbourhood_edges(current_vertices[-1]):
                 if e == edge:
                     continue
@@ -233,6 +252,30 @@ class Predictor():
                 new_length = current_length + self.graph.length(e)
                 new_degree = cumulative_degree / (self.graph.degree(current_vertices[-1]) - 1)
                 todo.append((path, vertices, current_length, new_length, new_degree))
+        
+    def search(self, edge, orient):
+        key = (edge, orient)
+        if key not in self._cache:
+            self._cache[key] = list(self._search(edge, orient))
+            _logger.debug("Added %s,%s -> %s", edge, orient, len(self._cache[key]))
+        return self._cache[key]
+
+    def add(self, risks, edge, orient, offset, time_weight=1):
+        """Internal use: add to the risks all paths.
+
+        :param risks: Array of risks to add to.
+        :param edge: Index of the edge we are starting at
+        :param orient: 1 or -1 for which way to initially walk to edge
+        :param offset: How far along the edge we are
+        :param time_weight: How much to scale by
+        """
+        initial_dist = self.graph.length(edge) * (1.0 - offset)
+        for current_path, old_length, current_length, cumulative_degree in self.search(edge, orient):
+            if current_length > 0:
+                old_length += initial_dist
+            if old_length >= self.kernel.cutoff:
+                continue
+            risks[current_path[-1]] += self.kernel.integrate(old_length, current_length + initial_dist) * cumulative_degree * time_weight
 
     def predict(self, predict_time=None, cutoff_time=None):
         """Make a prediction.
@@ -251,16 +294,17 @@ class Predictor():
         mask = ( (self.network_timed_points.timestamps >= cutoff_time) &
             (self.network_timed_points.timestamps <= predict_time) )
         data = self.network_timed_points[mask]
-        
+        times = (predict_time - data.timestamps) / self.time_kernel_unit
+        time_weights = self.time_kernel(times)
         risks = _np.zeros(len(self.graph.edges))
-        time_weights = self.time_kernel(data.timestamps)
+        _logger.debug("Making prediction with %s events using %s/%s", len(times), self.kernel, self.time_kernel)
         for tw, key1, key2, dist in zip(time_weights, data.start_keys,
                 data.end_keys, data.distances):
             edge_index, orient = self.graph.find_edge(key1, key2)
             if orient == -1:
                 key1, key2, dist = key2, key1, 1.0 - dist
-            self.add(risks, edge_index, 1, dist)
-            self.add(risks, edge_index, -1, 1.0 - dist)
+            self.add(risks, edge_index, 1, dist, tw)
+            self.add(risks, edge_index, -1, 1.0 - dist, tw)
 
         return Result(self.graph, risks)
 
@@ -274,7 +318,7 @@ class Result():
     """
     def __init__(self, graph, risks):
         self._graph = graph
-        self._risks = risks
+        self._risks = _np.asarray(risks)
 
     @property
     def graph(self):
@@ -283,3 +327,28 @@ class Result():
     @property
     def risks(self):
         return self._risks
+    
+    def coverage(self, percentage):
+        """Return a new instance with only the edges forming the top
+        `percentage` of edges, by total length, weighted by the risk.
+        
+        :param percentage: Between 0 and 100.
+        
+        :return: New instance of :class:`Result`.
+        """
+        total_length = sum(self._graph.length(i) for i in range(self._graph.number_edges))
+        target_length = total_length * percentage / 100
+        length = 0.0
+        risks = []
+        builder = network.PlanarGraphBuilder()
+        builder.vertices.update(self._graph.vertices)
+        for index in _np.argsort(-self._risks):
+            risks.append( self._risks[index] )
+            builder.edges.append( self._graph.edges[index] )
+            length += self._graph.length(index)
+            if length >= target_length:
+                break
+        builder.remove_unused_vertices()
+        return Result(builder.build(), risks)
+
+
