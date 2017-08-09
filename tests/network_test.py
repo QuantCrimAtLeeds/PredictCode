@@ -351,6 +351,46 @@ def test_PlanarGraph_walk_from(graph2):
     with pytest.raises(StopIteration):
         search.send(False)
 
+def test_Graph_walk_with_degrees(graph2):
+    paths = list(graph2.walk_with_degrees(0, 1, 1000, 1000))
+    assert paths == [(None,0,0,1)]
+
+    paths = list(graph2.walk_with_degrees(0, None, 1000, 1000))
+    assert paths[0] == (None, 0, 0, 1)
+    assert paths[1] == (0, 0, pytest.approx(1), 1)
+    assert paths[2] == (4, 1, pytest.approx(1+np.sqrt(2)), 2)
+    assert paths[3] == (7, pytest.approx(1+np.sqrt(2)), pytest.approx(3+np.sqrt(2)), 4)
+    assert paths[4] == (2, pytest.approx(3+np.sqrt(2)), pytest.approx(4+np.sqrt(2)), 8)
+    assert paths[5] == (3, pytest.approx(4+np.sqrt(2)), pytest.approx(4+2*np.sqrt(2)), 8)
+    assert paths[6] == (8, pytest.approx(4+2*np.sqrt(2)), pytest.approx(5+2*np.sqrt(2)), 16)
+    assert paths[7] == (6, pytest.approx(4+2*np.sqrt(2)), pytest.approx(4+3*np.sqrt(2)), 16)
+    assert paths[8] == (5, pytest.approx(1+np.sqrt(2)), pytest.approx(2+np.sqrt(2)), 4)
+    # ...
+    assert len(paths) == 24
+
+    paths = list(graph2.walk_with_degrees(0, None, 1.1, 1000))
+    assert paths == [(None,0,0,1), (0, 0, pytest.approx(1), 1),
+                     (4, 1, pytest.approx(1+np.sqrt(2)), 2),
+                     (1, 1, pytest.approx(1+np.sqrt(2)), 2) ]
+
+    paths = list(graph2.walk_with_degrees(0, None, 1, 1000))
+    assert paths == [(None,0,0,1), (0, 0, pytest.approx(1), 1)]
+
+    paths = list(graph2.walk_with_degrees(0, None, 3, 1000))
+    assert len(paths) == 8
+    
+    paths = list(graph2.walk_with_degrees(1, None, 1.1, 1000))
+    assert paths == [(None,0,0,1),
+                     (4, 0, pytest.approx(np.sqrt(2)), 2),
+                     (1, 0, pytest.approx(np.sqrt(2)), 2),
+                     (0, 0, pytest.approx(1), 2)]
+
+    paths = list(graph2.walk_with_degrees(1, None, 1000, 2))
+    assert paths == [(None,0,0,1),
+                     (4, 0, pytest.approx(np.sqrt(2)), 2),
+                     (1, 0, pytest.approx(np.sqrt(2)), 2),
+                     (0, 0, pytest.approx(1), 2)]
+
 def test_TimedNetworkPoints():
     times = [datetime.datetime(2017,8,7,12,30), datetime.datetime(2017,8,7,13,45)]
     locations = [((1,2), 0.4), ((3,4), 0.1)]

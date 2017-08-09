@@ -573,6 +573,65 @@ class Graph():
                 if k2 not in partial_path:
                     todo.append((partial_path + [k2], new_length))
 
+    def walk_with_degrees(self, start_key, initial_avoid_key, max_length, max_degree):
+        """Find all paths which start at `start_key`, do _not_ immediately
+        go to `initial_avoid_key` (but they may later visit that vertex),
+        do not self-intersect, and are of maximum length.
+        
+        Yields `(current_edge_index, previous_length, current_length,
+        total_degree)` where `current_edge_index` is the edge we have just
+        walked,
+        `previous_length, current_length` gives the length of the walk up to
+        the previous vertex, and up to the current vertex (i.e. the difference
+        is the length of the edge we just walked) and total_degree is the
+        product of (1 - degree) of all the previous vertices.
+        
+        Initially yields `(None, 0, 0, 1)`.
+        
+        Will never yield a path where `previous_length >= max_length` but will
+        yield paths with `previous_length < max_length` and
+        `current_length >= max_length`.
+        
+        We will never yield a path where `total_degree > max_degree`.
+        """
+        yield (None, 0, 0, 1)
+        
+        todo = []
+        for i in self.neighbourhood_edges(start_key):
+            k1, k2 = self.edges[i]
+            if k2 == start_key:
+                k1, k2 = k2, k1
+            if k2 == initial_avoid_key:
+                continue
+            todo.append((start_key, i, 0, 1, {start_key}))
+        
+        while len(todo) > 0:
+            old_vertex, edge_index, old_length, total_degree, vertices_in_path = todo.pop()
+            k1, k2 = self.edges[edge_index]
+            if k2 == old_vertex:
+                k1, k2 = k2, k1
+            new_vertex = k2
+            new_length = old_length + self.length(edge_index)
+            fact = self.degree(old_vertex) - 1
+            new_total_degree = total_degree
+            if fact > 0:
+                new_total_degree *= fact
+            new_vertices_in_path = set(vertices_in_path)
+            new_vertices_in_path.add(new_vertex)
+            if new_total_degree > max_degree:
+                continue
+            yield edge_index, old_length, new_length, new_total_degree
+            if new_length >= max_length:
+                continue
+            for i in self.neighbourhood_edges(new_vertex):
+                k1, k2 = self.edges[i]
+                if k2 == new_vertex:
+                    k1, k2 = k2, k1
+                if k2 in new_vertices_in_path:
+                    continue
+                todo.append((new_vertex, i, new_length, new_total_degree, new_vertices_in_path))
+            
+            
     def partition_by_segments(self):
         """A "segment" is a maximal path `(k1,k2,...,kn)` where the degree of
         every vertex excepting `k1, kn` is 2.  This is well-defined, for if
@@ -958,112 +1017,3 @@ def simple_reduce_graph(graph):
             builder.add_edge(key, x)
             neighbours[x].discard(key)
     return builder.build()
-
-
-
-def reduce_graph(graph):
-    """Build a new graph where we have deleted all vertices of degree 2, while
-    maintaining our condition that the graph has to be simple (so we do not
-    delete a degree 2 vertex if that would lead to a double edge).
-    
-    :return: `(graph, removed)` where `graph` is an instance of :class:`Graph`
-      with correctly aggregated lengths, if the source graph had lengths; and
-      `removed` is information about the removed vertices: a list the size of
-      `graph.edges` giving the total path in the original graph.
-    """
-    reduced = simple_reduce_graph(graph)
-    segments = list(graph.partition_by_segments)
-    builder = GraphBuilder()
-    for e in reduced.edges:
-        try:
-            i, _ = graph.find_edge(*e)
-            builder.add_edge(*graph.edges[i])
-        except KeyError:
-            # Find which segment it comes from...
-            pass
-
-
-def __reduce_graph(graph):
-    """Build a new graph where we have deleted all vertices of degree 2, while
-    maintaining our condition that the graph has to be simple (so we do not
-    delete a degree 2 vertex if that would lead to a double edge).
-    
-    :return: `(graph, removed)` where `graph` is an instance of :class:`Graph`
-      with correctly aggregated lengths, if the source graph had lengths; and
-      `removed` is information about the removed vertices: a list the size of
-      `graph.edges` giving the total path in the original graph.
-    """
-    segments = list(graph.partition_by_segments())
-    segments.sort(key = lambda x : len(x))
-    builder = GraphBuilder()
-    edges = set()
-    removed = []
-    for seg in segments:
-        if len(seg) == 2:
-            builder.add_edge(*seg)
-            removed.append(seg)
-            edges.add( frozenset(seg) )
-        elif seg[0] != seg[-1]:
-            e = (seg[0], seg[-1])
-            if frozenset(e) not in edges:
-                edges.add(frozenset(e))
-                builder.add_edge(*e)
-                removed.append(seg)
-            else:
-                for i in range(len(seg)-1):
-                    e = (seg[i], seg[i+1])
-                    builder.add_edge(*e)
-                    removed.append(e)
-
-    if graph.lengths is not None:
-        builder.lengths = []
-        for seg in removed:
-            length = 0
-            for i in range(len(seg)-1):
-                index = graph.find_edge(seg[i], seg[i+1])[0]
-                length += graph.length(index)
-            builder.lengths.append(length)
-    return builder.build(), removed
-
-def _reduce_graph(graph):
-    """Build a new graph where we have deleted all vertices of degree 2, while
-    maintaining our condition that the graph has to be simple (so we do not
-    delete a degree 2 vertex if that would lead to a double edge).
-    
-    :return: `(graph, removed)` where `graph` is an instance of :class:`Graph`
-      with correctly aggregated lengths, if the source graph had lengths; and
-      `removed` is information about the removed vertices: a list the size of
-      `graph.edges` giving the total path in the original graph.
-    """
-    neighbours = _collections.defaultdict(set)
-    for k1, k2 in graph.edges:
-        neighbours[k1].add(k2)
-        neighbours[k2].add(k1)
-    if graph.lengths is not None:
-        lengths = { frozenset(e) : l for e,l in zip(graph.edges, graph.lengths) }
-    else:
-        lengths = { frozenset(e) : 0 for e in graph.edges }
-    for key in list(neighbours.keys()):
-        nhood = list(neighbours[key])
-        if len(nhood) == 2 and nhood[1] not in neighbours[nhood[0]]:
-            del neighbours[key]
-            neighbours[nhood[0]].remove(key)
-            neighbours[nhood[0]].add(nhood[1])
-            neighbours[nhood[1]].remove(key)
-            neighbours[nhood[1]].add(nhood[0])
-            s1, s2 = frozenset((key, nhood[0])), frozenset((key, nhood[1]))
-            lengths[ frozenset((nhood[0], nhood[1])) ] = lengths[s1] + lengths[s2]
-            del lengths[s1]
-            del lengths[s2]
-    
-    vertices = set(neighbours.keys())
-    edges, lens = [], []
-    for key in vertices:
-        nhood = neighbours[key]
-        for x in nhood:
-            edges.append( (key,x) )
-            neighbours[x].remove(key)
-            lens.append( lengths[frozenset((key,x))] )
-    if graph.lengths is None:
-        return Graph(vertices, edges)
-    return Graph(vertices, edges, lens)
