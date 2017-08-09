@@ -676,11 +676,35 @@ class Graph():
         `vertex_key` to all other vertices.  If we have no lengths, then each
         edge has length 1.
         
-        :return: Dictionary from key to length.
+        :return: Dictionary from key to length.  A length of -1 means that the
+          vertex is not connected to `vertex_key`.
         """
         shortest_length = { k : -1 for k in self.vertices }
         shortest_length[vertex_key] = 0
-        
+        candidates = {vertex_key}
+        done = set()
+        while len(candidates) > 0:
+            next_vertex, min_dist = None, -1
+            for v in candidates:
+                dist = shortest_length[v]
+                if min_dist == -1 or dist < min_dist:
+                    min_dist = dist
+                    next_vertex = v
+            candidates.discard(next_vertex)
+            done.add(next_vertex)
+
+            for v in self.neighbours(next_vertex):
+                edge_index, _ = self.find_edge(next_vertex, v)
+                dist = min_dist + self.length(edge_index)
+                current_dist = shortest_length[v]
+                if current_dist == -1 or current_dist > dist:
+                    shortest_length[v] = dist
+                if v not in done:
+                    candidates.add(v)
+
+        return shortest_length
+
+    # TODO: Make derived graph with lengths.
 
 
 class PlanarGraph(Graph):

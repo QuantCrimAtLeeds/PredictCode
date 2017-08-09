@@ -137,6 +137,16 @@ def graph1():
     b.add_path([(0,1), (5,5), (9,1)])
     return b.build()
 
+def test_Graph_shortest_paths(graph1):
+    dists = graph1.shortest_paths(0)
+    assert dists == {0:0, 1:10, 2:-1, 3:-1, 4:-1}
+    dists = graph1.shortest_paths(1)
+    assert dists == {0:10, 1:0, 2:-1, 3:-1, 4:-1}
+    dists = graph1.shortest_paths(2)
+    assert dists == {0:-1, 1:-1, 2:0,
+        3:pytest.approx(np.sqrt(25+16)),
+        4:pytest.approx(np.sqrt(25+16)+np.sqrt(32))}
+
 def test_PlanarGraph_lengths(graph1):
     assert graph1.length(0) == pytest.approx(10)
     assert graph1.length(1) == pytest.approx(np.sqrt(25+16))
@@ -207,6 +217,15 @@ def test_graph2(graph2):
     assert graph2.vertices == {0:(0,10), 1:(1,10), 2:(2,11), 3:(3,11), 4:(4,10),
                                5:(2,9), 6:(3,9), 7:(5,10)}
     assert graph2.edges == [(0,1), (1,2), (2,3), (3,4), (1,5), (5,6), (6,4), (5,2), (4,7)]
+
+def test_Graph_shortest_paths2(graph2):
+    assert graph2.shortest_paths(0) == {0:0, 1:1, 2:pytest.approx(1+np.sqrt(2)),
+        3:pytest.approx(2+np.sqrt(2)), 4:pytest.approx(2+2*np.sqrt(2)),
+        5:pytest.approx(1+np.sqrt(2)), 6:pytest.approx(2+np.sqrt(2)),
+        7:pytest.approx(3+2*np.sqrt(2))}
+    assert graph2.shortest_paths(2) == {0:pytest.approx(1+np.sqrt(2)),
+        1:pytest.approx(np.sqrt(2)), 2:0, 3:1, 5:2,
+        6:3, 4:pytest.approx(1+np.sqrt(2)), 7:pytest.approx(2+np.sqrt(2))}
 
 def test_PlanarGraph_find_edge(graph2):
     assert graph2.find_edge(0,1) == (0, 1)
