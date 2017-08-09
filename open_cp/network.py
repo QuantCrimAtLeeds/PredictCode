@@ -640,7 +640,10 @@ class PlanarGraph(Graph):
         super().__init__(verts.keys(), edges)
         self._vertices = verts
         quads = self.as_quads().T
-        self._lengths = _np.sqrt((quads[0] - quads[2])**2 + (quads[1] - quads[3])**2)
+        if len(quads) == 0:
+            self._lengths = []
+        else:
+            self._lengths = _np.sqrt((quads[0] - quads[2])**2 + (quads[1] - quads[3])**2)
             
     def dump_bytes(self):
         """Write data to a `bytes` object.  The vertices are saved using the
