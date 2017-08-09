@@ -631,7 +631,6 @@ class Graph():
                     continue
                 todo.append((new_vertex, i, new_length, new_total_degree, new_vertices_in_path))
             
-            
     def partition_by_segments(self):
         """A "segment" is a maximal path `(k1,k2,...,kn)` where the degree of
         every vertex excepting `k1, kn` is 2.  This is well-defined, for if
@@ -671,6 +670,17 @@ class Graph():
                 else:
                     yield segment
                     segment = None
+                    
+    def shortest_paths(self, vertex_key):
+        """Uses Dijkstra's algorithm to find the shortest path from
+        `vertex_key` to all other vertices.  If we have no lengths, then each
+        edge has length 1.
+        
+        :return: Dictionary from key to length.
+        """
+        shortest_length = { k : -1 for k in self.vertices }
+        shortest_length[vertex_key] = 0
+        
 
 
 class PlanarGraph(Graph):

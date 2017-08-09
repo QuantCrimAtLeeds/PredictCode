@@ -84,6 +84,29 @@ def test_QuadDecayTimeKernel():
     assert tk(1) == pytest.approx(1/(1+0.25) / np.pi)
     assert tk(3) == pytest.approx(1/(1+2.25) / np.pi)
 
+def test_NetworkKernel():
+    class TestNetworkKernel(network_hotspot.NetworkKernel):
+        def __call__(self, x):
+            x = np.asarray(x)
+            if len(x.shape) == 0:
+                if x <= 1:
+                    return 1
+                return 0
+            mask = (x <= 1)
+            return mask.astype(np.float)
+        
+    kernel = TestNetworkKernel()
+    assert kernel(0.5) == 1
+    assert kernel(1.0) == 1
+    assert kernel(1.1) == 0
+    np.testing.assert_allclose(kernel([0.5,1.0,1.1]), [1,1,0])
+    
+    assert kernel.integrate(0.2, 0.5) == pytest.approx(0.3)
+    assert kernel.integrate(0, 1) == pytest.approx(1)
+    assert kernel.integrate(0, 2) == pytest.approx(2)
+    assert kernel.integrate(0, 3) == pytest.approx(0)
+    np.testing.assert_allclose(kernel.integrate([0.2, 0, 0, 0], [0.5, 1, 2, 3]), [0.3, 1, 2, 0])
+
 def test_TriangleKernel():
     kernel = network_hotspot.TriangleKernel(1)
     assert kernel.cutoff == pytest.approx(1)
@@ -105,6 +128,9 @@ def test_TriangleKernel():
     assert kernel.integrate(0, 6) == pytest.approx(0.5)
     assert kernel.integrate(1, 2) == pytest.approx(7/50)
     assert kernel.integrate(5, 10) == pytest.approx(0)
+    
+    np.testing.assert_allclose(kernel.integrate([0], [5]), [0.5])
+    np.testing.assert_allclose(kernel.integrate([0,0,1,5], [5,6,2,10]), [0.5,0.5,7/50,0])
 
 @pytest.fixture
 def netpoints():
@@ -150,6 +176,17 @@ def test_Predictor_with_time_kernel(graph, netpoints):
     assert result.risks[0] == pytest.approx(1 * np.exp(-1/24))
     assert result.risks[1] == pytest.approx(1)
 
+def test_FastPredictor(graph, netpoints):
+    pred = network_hotspot.Predictor(netpoints, graph)
+    pred.kernel = network_hotspot.TriangleKernel(0.2)
+    pred.time_kernel = network_hotspot.ExponentialTimeKernel(1)
+    fast_pred = network_hotspot.FastPredictor(pred, 100)
+    result = fast_pred.predict()
+    
+    assert result.graph is pred.graph
+    assert result.risks[0] == pytest.approx(1 * np.exp(-1/24))
+    assert result.risks[1] == pytest.approx(1)
+
 @pytest.fixture
 def graph2():
     b = open_cp.network.PlanarGraphGeoBuilder()
@@ -165,6 +202,21 @@ def test_Predictor_add_split(graph2):
     pred.kernel = mock.Mock()
     pred.kernel.integrate.return_value = 1.0
     pred.kernel.cutoff = 3
+
+    risks = np.zeros(9)
+    pred.add(risks, 0, 1, 0)
+    np.testing.assert_allclose(risks, [1, 0.5, 0.25, 0, 0.5, 0.25, 0, 0.5, 0])
+
+    risks = np.zeros(9)
+    pred.add(risks, 7, -1, 0.5)
+    np.testing.assert_allclose(risks, [0.25, 0.25, 0, 0, 0.5, 0.5, 0.5, 1, 0])
+
+def test_FastPredictor_add_split(graph2):
+    pred = network_hotspot.Predictor(None, graph2)
+    pred.kernel = mock.Mock()
+    pred.kernel.integrate.return_value = 1.0
+    pred.kernel.cutoff = 3
+    pred = network_hotspot.FastPredictor(pred, 100)
 
     risks = np.zeros(9)
     pred.add(risks, 0, 1, 0)
