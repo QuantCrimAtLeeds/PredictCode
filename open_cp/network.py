@@ -676,13 +676,18 @@ class Graph():
         `vertex_key` to all other vertices.  If we have no lengths, then each
         edge has length 1.
         
-        :return: Dictionary from key to length.  A length of -1 means that the
-          vertex is not connected to `vertex_key`.
+        :return: `(lengths, prevs)` where `lengths` is a dictionary from key
+          to length.  A length of -1 means that the vertex is not connected to
+          `vertex_key`.  `prevs` is a dictionary from key to key, giving for
+          each vertex the previous vertex in the path from `vertex_key` to that
+          vertex.  Working backwards, you can hence construct all shortest
+          paths.
         """
         shortest_length = { k : -1 for k in self.vertices }
         shortest_length[vertex_key] = 0
         candidates = {vertex_key}
         done = set()
+        prevs = {vertex_key:vertex_key}
         while len(candidates) > 0:
             next_vertex, min_dist = None, -1
             for v in candidates:
@@ -699,12 +704,11 @@ class Graph():
                 current_dist = shortest_length[v]
                 if current_dist == -1 or current_dist > dist:
                     shortest_length[v] = dist
+                    prevs[v] = next_vertex
                 if v not in done:
                     candidates.add(v)
 
-        return shortest_length
-
-    # TODO: Make derived graph with lengths.
+        return shortest_length, prevs
 
 
 class PlanarGraph(Graph):
@@ -1050,4 +1054,40 @@ def simple_reduce_graph(graph):
         for x in neighbours[key]:
             builder.add_edge(key, x)
             neighbours[x].discard(key)
+    return builder.build()
+
+def to_derived_graph(graph, use_edge_indicies=False):
+    """Construct the "derived graph" of `graph`.  Each vertex is an edge from
+    the original graph, and two vertices are adjacent if the original edges
+    shared a vertex in the original graph.  If the original graph had lengths
+    then we calculate lengths in the new graph by computing the distance from
+    mid-points of original edges (i.e. take the average of the lengths of the
+    edges involved).
+
+    :param graph: Instance of :class:`Graph` or a subclass
+    :param use_edge_indicies: If `True` then label the old edges by their
+      index; default if `False` which is to label the old edges by the vertices
+      they are between.
+
+    :return: Instance of :class:`Graph`
+    """
+    builder = GraphBuilder()
+    if use_edge_indicies:
+        builder.vertices.update(range(len(graph.edges)))
+    else:
+        builder.vertices.update(graph.edges)
+    lengths = []
+    for i, edge1 in enumerate(graph.edges):
+        for key in edge1:
+            for j in graph.neighbourhood_edges(key):
+                if j > i:
+                    edge2 = graph.edges[j]
+                    if use_edge_indicies:
+                        builder.add_edge(i, j)
+                    else:
+                        builder.add_edge(edge1, edge2)
+                    if graph.lengths is not None:
+                        lengths.append((graph.lengths[i] + graph.lengths[j])/2)
+    if graph.lengths is not None:
+        builder.lengths = lengths
     return builder.build()

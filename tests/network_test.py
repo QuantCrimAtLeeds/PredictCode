@@ -137,15 +137,24 @@ def graph1():
     b.add_path([(0,1), (5,5), (9,1)])
     return b.build()
 
+def test_derived_graph1(graph1):
+    g = network.to_derived_graph(graph1)
+    assert g.vertices == { (0,1), (2,3), (3,4) }
+    assert g.edges == [((2,3), (3,4))]
+    assert g.lengths == [pytest.approx((np.sqrt(25+16)+np.sqrt(32))/2)]
+
 def test_Graph_shortest_paths(graph1):
-    dists = graph1.shortest_paths(0)
+    dists, prevs = graph1.shortest_paths(0)
     assert dists == {0:0, 1:10, 2:-1, 3:-1, 4:-1}
-    dists = graph1.shortest_paths(1)
+    assert prevs == {0:0, 1:0}
+    dists, prevs = graph1.shortest_paths(1)
+    assert prevs == {1:1, 0:1}
     assert dists == {0:10, 1:0, 2:-1, 3:-1, 4:-1}
-    dists = graph1.shortest_paths(2)
+    dists, prevs = graph1.shortest_paths(2)
     assert dists == {0:-1, 1:-1, 2:0,
         3:pytest.approx(np.sqrt(25+16)),
         4:pytest.approx(np.sqrt(25+16)+np.sqrt(32))}
+    assert prevs == {2:2, 3:2, 4:3}
 
 def test_PlanarGraph_lengths(graph1):
     assert graph1.length(0) == pytest.approx(10)
@@ -219,13 +228,17 @@ def test_graph2(graph2):
     assert graph2.edges == [(0,1), (1,2), (2,3), (3,4), (1,5), (5,6), (6,4), (5,2), (4,7)]
 
 def test_Graph_shortest_paths2(graph2):
-    assert graph2.shortest_paths(0) == {0:0, 1:1, 2:pytest.approx(1+np.sqrt(2)),
+    dists, prevs = graph2.shortest_paths(0)
+    assert dists == {0:0, 1:1, 2:pytest.approx(1+np.sqrt(2)),
         3:pytest.approx(2+np.sqrt(2)), 4:pytest.approx(2+2*np.sqrt(2)),
         5:pytest.approx(1+np.sqrt(2)), 6:pytest.approx(2+np.sqrt(2)),
         7:pytest.approx(3+2*np.sqrt(2))}
-    assert graph2.shortest_paths(2) == {0:pytest.approx(1+np.sqrt(2)),
+    assert prevs == {0:0, 1:0, 2:1, 5:1, 3:2, 6:5, 4:3, 7:4}
+    dists, prevs = graph2.shortest_paths(2)
+    assert dists == {0:pytest.approx(1+np.sqrt(2)),
         1:pytest.approx(np.sqrt(2)), 2:0, 3:1, 5:2,
         6:3, 4:pytest.approx(1+np.sqrt(2)), 7:pytest.approx(2+np.sqrt(2))}
+    assert prevs == {2:2, 3:2, 1:2, 5:2, 0:1, 4:3, 6:5, 7:4}
 
 def test_PlanarGraph_find_edge(graph2):
     assert graph2.find_edge(0,1) == (0, 1)
@@ -523,3 +536,14 @@ def test_simple_reduce_graph2(graph4):
     # Again, dodgy test...
     assert edges == {f((0,6)), f((0,7)), f((0,4)), f((4,5)), f((5,0))}
     
+def test_derived_graph2(graph2):
+    g = network.to_derived_graph(graph2)
+    assert g.vertices == {(0,1), (1,2), (2,3), (3,4), (4,7), (5,2), (1,5), (5,6), (6,4)}
+    assert g.edges[0] == ((0,1), (1,2))
+    assert g.lengths[0] == pytest.approx((1+np.sqrt(2))/2)
+
+def test_derived_graph4(graph4):
+    g = network.to_derived_graph(graph4, use_edge_indicies=True)
+    assert g.vertices == {0,1,2,3,4,5,6,7}
+    assert g.edges == [(0,5), (0,6), (0,7), (0,1), (1,2), (2,3), (3,4), (4,5), (5,6), (5,7), (6,7)]
+    assert g.lengths is None

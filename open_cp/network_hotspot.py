@@ -291,6 +291,7 @@ class Predictor():
                 dist = 1.0 - dist
             self.add(risks, edge_index, 1, dist, tw)
             self.add(risks, edge_index, -1, 1.0 - dist, tw)
+        risks /= self.graph.lengths
 
         return Result(self.graph, risks)
 
