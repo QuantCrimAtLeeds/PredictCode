@@ -243,4 +243,45 @@ def test_Result_coverage(graph2):
     assert r2.graph.edges[2] == (5,6)
     np.testing.assert_allclose(r2.risks, [8,7,6])
     
+def test_ApproxPredictor(graph):
+    pred = network_hotspot.Predictor(None, graph)
+    pred.kernel = mock.Mock()
+    pred.kernel.return_value = 1.0
+    pred = network_hotspot.ApproxPredictor(pred)
+
+    risks = np.asarray([0,0,0,0], dtype=np.float)
+    pred.add_edge(risks, 0, None, 1)
+    np.testing.assert_allclose(risks, [1,1,1,1])
+    assert pred.kernel.call_args_list == [mock.call(0), mock.call(1.0), mock.call(2.0), mock.call(1.0)]
+
+def test_ApproxPredictorCaching(graph):
+    pred = network_hotspot.Predictor(None, graph)
+    pred.kernel = mock.Mock()
+    pred.kernel.return_value = 1.0
+    pred = network_hotspot.ApproxPredictorCaching(pred)
+
+    risks = np.asarray([0,0,0,0], dtype=np.float)
+    pred.add_edge(risks, 0, None, 1)
+    np.testing.assert_allclose(risks, [1,1,1,1])
+
+def test_ApproxPredictor2(graph2):
+    sq2 = np.sqrt(2)
+    pred = network_hotspot.Predictor(None, graph2)
+    pred.kernel = mock.Mock()
+    pred.kernel.return_value = 1.0
+    pred = network_hotspot.ApproxPredictor(pred)
     
+    risks = np.asarray([0]*9, dtype=np.float)
+    pred.add_edge(risks, 0, None, 1)
+    np.testing.assert_allclose(risks, [1, sq2/2, 1/4, sq2/4, sq2/2, 1/4, sq2/4, 2/4, 1/8])
+
+def test_ApproxPredictorCaching2(graph2):
+    sq2 = np.sqrt(2)
+    pred = network_hotspot.Predictor(None, graph2)
+    pred.kernel = mock.Mock()
+    pred.kernel.return_value = 1.0
+    pred = network_hotspot.ApproxPredictorCaching(pred)
+    
+    risks = np.asarray([0]*9, dtype=np.float)
+    pred.add_edge(risks, 0, None, 1)
+    np.testing.assert_allclose(risks, [1, sq2/2, 1/4, sq2/4, sq2/2, 1/4, sq2/4, 2/4, 1/8])

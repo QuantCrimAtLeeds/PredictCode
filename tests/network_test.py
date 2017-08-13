@@ -143,14 +143,23 @@ def test_derived_graph1(graph1):
     assert g.edges == [((2,3), (3,4))]
     assert g.lengths == [pytest.approx((np.sqrt(25+16)+np.sqrt(32))/2)]
 
-def test_Graph_shortest_paths(graph1):
-    dists, prevs = graph1.shortest_paths(0)
+def test_shortest_edge_paths(graph1):
+    dists, prevs = network.shortest_edge_paths(graph1, 0)
+    assert dists == {0:5, 1:5}
+    assert prevs == {0:0, 1:1}
+
+    dists, prevs = network.shortest_edge_paths(graph1, 0, 0.1)
+    assert dists == {0:1, 1:9}
+    assert prevs == {0:0, 1:1}
+
+def test_shortest_paths(graph1):
+    dists, prevs = network.shortest_paths(graph1, 0)
     assert dists == {0:0, 1:10, 2:-1, 3:-1, 4:-1}
     assert prevs == {0:0, 1:0}
-    dists, prevs = graph1.shortest_paths(1)
+    dists, prevs = network.shortest_paths(graph1, 1)
     assert prevs == {1:1, 0:1}
     assert dists == {0:10, 1:0, 2:-1, 3:-1, 4:-1}
-    dists, prevs = graph1.shortest_paths(2)
+    dists, prevs = network.shortest_paths(graph1, 2)
     assert dists == {0:-1, 1:-1, 2:0,
         3:pytest.approx(np.sqrt(25+16)),
         4:pytest.approx(np.sqrt(25+16)+np.sqrt(32))}
@@ -227,18 +236,33 @@ def test_graph2(graph2):
                                5:(2,9), 6:(3,9), 7:(5,10)}
     assert graph2.edges == [(0,1), (1,2), (2,3), (3,4), (1,5), (5,6), (6,4), (5,2), (4,7)]
 
-def test_Graph_shortest_paths2(graph2):
-    dists, prevs = graph2.shortest_paths(0)
+def test_shortest_paths2(graph2):
+    dists, prevs = network.shortest_paths(graph2, 0)
     assert dists == {0:0, 1:1, 2:pytest.approx(1+np.sqrt(2)),
         3:pytest.approx(2+np.sqrt(2)), 4:pytest.approx(2+2*np.sqrt(2)),
         5:pytest.approx(1+np.sqrt(2)), 6:pytest.approx(2+np.sqrt(2)),
         7:pytest.approx(3+2*np.sqrt(2))}
     assert prevs == {0:0, 1:0, 2:1, 5:1, 3:2, 6:5, 4:3, 7:4}
-    dists, prevs = graph2.shortest_paths(2)
+    dists, prevs = network.shortest_paths(graph2, 2)
     assert dists == {0:pytest.approx(1+np.sqrt(2)),
         1:pytest.approx(np.sqrt(2)), 2:0, 3:1, 5:2,
         6:3, 4:pytest.approx(1+np.sqrt(2)), 7:pytest.approx(2+np.sqrt(2))}
     assert prevs == {2:2, 3:2, 1:2, 5:2, 0:1, 4:3, 6:5, 7:4}
+
+def test_shortest_edge_paths2(graph2):
+    dists, prevs = network.shortest_edge_paths(graph2, 0)
+    assert dists == {0:0.5, 1:0.5, 2:pytest.approx(0.5+np.sqrt(2)),
+        3:pytest.approx(1.5+np.sqrt(2)), 4:pytest.approx(1.5+2*np.sqrt(2)),
+        5:pytest.approx(0.5+np.sqrt(2)), 6:pytest.approx(1.5+np.sqrt(2)),
+        7:pytest.approx(2.5+2*np.sqrt(2))}
+    assert prevs == {0:0, 1:1, 2:1, 5:1, 3:2, 6:5, 4:3, 7:4}
+
+    dists, prevs = network.shortest_edge_paths(graph2, 2)
+    assert dists == {2:0.5, 3:0.5, 5:2.5, 1:pytest.approx(np.sqrt(2)+0.5),
+        4:pytest.approx(np.sqrt(2)+0.5), 0:pytest.approx(np.sqrt(2)+1.5),
+        6:pytest.approx(np.sqrt(2)*2+0.5),
+        7:pytest.approx(np.sqrt(2)+1.5)}
+    assert prevs == {2:2,3:3,1:2,4:3,6:4,7:4,5:2,0:1}
 
 def test_PlanarGraph_find_edge(graph2):
     assert graph2.find_edge(0,1) == (0, 1)
@@ -547,3 +571,20 @@ def test_derived_graph4(graph4):
     assert g.vertices == {0,1,2,3,4,5,6,7}
     assert g.edges == [(0,5), (0,6), (0,7), (0,1), (1,2), (2,3), (3,4), (4,5), (5,6), (5,7), (6,7)]
     assert g.lengths is None
+
+def test_shortest_edge_paths_with_degrees(graph1):
+    dists, degrees = network.shortest_edge_paths_with_degrees(graph1, 0)
+    np.testing.assert_allclose(dists, [0, -1, -1])
+    np.testing.assert_allclose(degrees, [1, 0, 0])
+
+def test_shortest_edge_paths_with_degrees(graph2):
+    dists, degrees = network.shortest_edge_paths_with_degrees(graph2, 0)
+    sq2 = np.sqrt(2)
+    np.testing.assert_allclose(dists, [0, (1+sq2)/2, 1+sq2, 1.5+sq2+sq2/2, (1+sq2)/2,
+            1+sq2, 1.5+sq2+sq2/2, 1.5 + sq2, sq2*2+2])
+    np.testing.assert_allclose(degrees, [1, 2, 4, 4, 2, 4, 4, 4, 8])
+
+    dists, degrees = network.shortest_edge_paths_with_degrees(graph2, 2)
+    np.testing.assert_allclose(dists, [1+sq2, (1+sq2)/2, 0, (1+sq2)/2,
+        0.5+sq2+sq2/2, 3, 0.5+sq2+sq2/2, 1.5, 1+sq2])
+    np.testing.assert_allclose(degrees, [4, 2, 1, 1, 4, 4, 2, 2, 2])

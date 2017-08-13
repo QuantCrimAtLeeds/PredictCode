@@ -263,6 +263,17 @@ class Predictor():
                 continue
             risks[index] += self.kernel.integrate(a, b) * time_weight / degree
 
+    def add_edge(self, risks, edge_index, dist, tw):
+        """Internal use.  Add both contributions to an edge.
+
+        :param risks: Array of risks to add to.
+        :param edge_index: Index of the edge we are starting at
+        :param dist: How far along the edge we are (between 0 and 1)
+        :param tw: How much to scale by
+        """
+        self.add(risks, edge_index, 1, dist, tw)
+        self.add(risks, edge_index, -1, 1.0 - dist, tw)
+
     def predict(self, predict_time=None, cutoff_time=None):
         """Make a prediction.
 
@@ -289,8 +300,7 @@ class Predictor():
             edge_index, orient = self.graph.find_edge(key1, key2)
             if orient == -1:
                 dist = 1.0 - dist
-            self.add(risks, edge_index, 1, dist, tw)
-            self.add(risks, edge_index, -1, 1.0 - dist, tw)
+            self.add_edge(risks, edge_index, dist, tw)
         risks /= self.graph.lengths
 
         return Result(self.graph, risks)
@@ -378,6 +388,92 @@ class FastPredictor(Predictor):
     def kernel(self, v):
         self._add_cache = dict()
         self._kernel = v
+
+
+class ApproxPredictor(Predictor):
+    """Uses an approximation to the KDE method: we compute the minimal distance
+    between the edge of the event and the edge we're interested in, compute
+    the kernel, and then weight by the degrees of the vertices in the path.
+
+    This is definitely an approximation; but it seems fairly accurate in
+    real-world networks.
+
+    :param predictor: An :class:`Predictor` to initialise from.
+    """
+    def __init__(self, predictor):
+        super().__init__(predictor.network_timed_points, predictor.graph)
+        self.time_kernel_unit = predictor.time_kernel_unit
+        self.time_kernel = predictor.time_kernel
+        self.kernel = predictor.kernel
+
+    def add_edge(self, risks, edge_index, dist, tw):
+        """Internal use.  Add both contributions to an edge.
+
+        :param risks: Array of risks to add to.
+        :param edge_index: Index of the edge we are starting at
+        :param dist: How far along the edge we are (between 0 and 1).
+          We ignore and set to 0.5
+        :param tw: How much to scale by
+        """
+        dists, prevs = network.shortest_edge_paths(self.graph, edge_index, 0.5)
+        to_add = _np.zeros(self.graph.number_edges, dtype=_np.float)
+        for i in range(self.graph.number_edges):
+            if i == edge_index:
+                to_add[i] = self.kernel(0)
+                continue
+            k1, k2 = self.graph.edges[i]
+            le = self.graph.length(i) * 0.5
+            if k1 not in dists:
+                continue
+            le1, le2 = dists[k1], dists[k2]
+            if le1 < le2:
+                target = k1
+                weight = self.kernel(le1 + le)
+            else:
+                target = k2
+                weight = self.kernel(le2 + le)
+            if weight == 0:
+                continue
+            cum_deg = max(1, self.graph.degree(target) - 1)
+            while True:
+                next_target = prevs[target]
+                if next_target == target:
+                    break
+                target = next_target
+                cum_deg *= max(1, self.graph.degree(target) - 1)
+            to_add[i] = weight / cum_deg
+
+        risks += to_add * self.graph.lengths * tw
+
+
+class ApproxPredictorCaching(ApproxPredictor):
+    """As :class:`ApproxPredictor` but caches data.
+
+    :param predictor: An :class:`Predictor` to initialise from.
+    """
+    def __init__(self, predictor):
+        super().__init__(predictor)
+        self._cache = dict()
+
+    def _get_data(self, edge_index):
+        _logger.debug("ApproxPredictorCaching: Calculating for %s", edge_index)
+        return network.shortest_edge_paths_with_degrees(self.graph, edge_index)
+
+    def add_edge(self, risks, edge_index, dist, tw):
+        """Internal use.  Add both contributions to an edge.
+
+        :param risks: Array of risks to add to.
+        :param edge_index: Index of the edge we are starting at
+        :param dist: How far along the edge we are (between 0 and 1).
+          We ignore and set to 0.5
+        :param tw: How much to scale by
+        """
+        if edge_index not in self._cache:
+            self._cache[edge_index] = self._get_data(edge_index)
+        kernel_dists, cumulative_degrees = self._cache[edge_index]
+        mask = kernel_dists > -1
+        to_add = self.kernel(kernel_dists[mask]) / cumulative_degrees[mask]
+        risks[mask] += to_add * self.graph.lengths[mask] * tw
 
 
 class Result():

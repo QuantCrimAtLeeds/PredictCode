@@ -671,45 +671,6 @@ class Graph():
                     yield segment
                     segment = None
                     
-    def shortest_paths(self, vertex_key):
-        """Uses Dijkstra's algorithm to find the shortest path from
-        `vertex_key` to all other vertices.  If we have no lengths, then each
-        edge has length 1.
-        
-        :return: `(lengths, prevs)` where `lengths` is a dictionary from key
-          to length.  A length of -1 means that the vertex is not connected to
-          `vertex_key`.  `prevs` is a dictionary from key to key, giving for
-          each vertex the previous vertex in the path from `vertex_key` to that
-          vertex.  Working backwards, you can hence construct all shortest
-          paths.
-        """
-        shortest_length = { k : -1 for k in self.vertices }
-        shortest_length[vertex_key] = 0
-        candidates = {vertex_key}
-        done = set()
-        prevs = {vertex_key:vertex_key}
-        while len(candidates) > 0:
-            next_vertex, min_dist = None, -1
-            for v in candidates:
-                dist = shortest_length[v]
-                if min_dist == -1 or dist < min_dist:
-                    min_dist = dist
-                    next_vertex = v
-            candidates.discard(next_vertex)
-            done.add(next_vertex)
-
-            for v in self.neighbours(next_vertex):
-                edge_index, _ = self.find_edge(next_vertex, v)
-                dist = min_dist + self.length(edge_index)
-                current_dist = shortest_length[v]
-                if current_dist == -1 or current_dist > dist:
-                    shortest_length[v] = dist
-                    prevs[v] = next_vertex
-                if v not in done:
-                    candidates.add(v)
-
-        return shortest_length, prevs
-
 
 class PlanarGraph(Graph):
     """A simple graph class.
@@ -738,7 +699,7 @@ class PlanarGraph(Graph):
         self._vertices = verts
         quads = self.as_quads().T
         if len(quads) == 0:
-            self._lengths = []
+            self._lengths = _np.asarray([])
         else:
             self._lengths = _np.sqrt((quads[0] - quads[2])**2 + (quads[1] - quads[3])**2)
             
@@ -1091,3 +1052,152 @@ def to_derived_graph(graph, use_edge_indicies=False):
     if graph.lengths is not None:
         builder.lengths = lengths
     return builder.build()
+
+def shortest_paths(graph, vertex_key):
+    """Uses Dijkstra's algorithm to find the shortest path from
+    `vertex_key` to all other vertices.  If we have no lengths, then each
+    edge has length 1.
+    
+    :return: `(lengths, prevs)` where `lengths` is a dictionary from key
+        to length.  A length of -1 means that the vertex is not connected to
+        `vertex_key`.  `prevs` is a dictionary from key to key, giving for
+        each vertex the previous vertex in the path from `vertex_key` to that
+        vertex.  Working backwards, you can hence construct all shortest
+        paths.
+    """
+    shortest_length = { k : -1 for k in graph.vertices }
+    shortest_length[vertex_key] = 0
+    candidates = {vertex_key}
+    done = set()
+    prevs = {vertex_key:vertex_key}
+    while len(candidates) > 0:
+        next_vertex, min_dist = None, -1
+        for v in candidates:
+            dist = shortest_length[v]
+            if min_dist == -1 or dist < min_dist:
+                min_dist = dist
+                next_vertex = v
+        candidates.discard(next_vertex)
+        done.add(next_vertex)
+
+        for v in graph.neighbours(next_vertex):
+            edge_index, _ = graph.find_edge(next_vertex, v)
+            dist = min_dist + graph.length(edge_index)
+            current_dist = shortest_length[v]
+            if current_dist == -1 or current_dist > dist:
+                shortest_length[v] = dist
+                prevs[v] = next_vertex
+            if v not in done:
+                candidates.add(v)
+
+    return shortest_length, prevs
+
+def shortest_edge_paths(graph, edge_index, position=0.5):
+    """Find the shortest path from the edge given
+    by `edge_index`.  If we have no lengths, then each edge has length 1.
+    This could be achieved by using the "derived graph", but our use will also
+    require knowing the _vertex_ degree of the path.
+
+    We use a simple modification of Dijkstra's algorithm whereby the initial
+    distance to 
+    
+    :param graph: :class:`Graph` to use
+    :param edge_index: The edge to start on
+    :param position: `0 <= t <= 1` along the edge to start at.  Defaults
+      to the midpoint.
+
+    :return: `(lengths, prevs)` where `lengths` is a dictionary from key
+        to length.  If a key is not present, it means that vertex is not
+        connected to `vertex_key`.  `prevs` is a dictionary from key to key,
+        giving for each vertex the previous vertex in the path from
+        `vertex_key` to that vertex.  Working backwards, you can hence
+        construct all shortest paths.  These paths will end at either vertex
+        of the initial edge.
+    """
+    shortest_length = dict()
+    v1, v2 = graph.edges[edge_index]
+    shortest_length[v1] = graph.length(edge_index) * position
+    shortest_length[v2] = graph.length(edge_index) * (1 - position)
+    candidates = {v1, v2}
+    done = set()
+    prevs = {v1:v1, v2:v2}
+    while len(candidates) > 0:
+        next_vertex, min_dist = None, -1
+        for v in candidates:
+            dist = shortest_length[v]
+            if min_dist == -1 or dist < min_dist:
+                min_dist = dist
+                next_vertex = v
+        candidates.discard(next_vertex)
+        done.add(next_vertex)
+
+        for v in graph.neighbours(next_vertex):
+            edge_index, _ = graph.find_edge(next_vertex, v)
+            dist = min_dist + graph.length(edge_index)
+            if v not in shortest_length or shortest_length[v] > dist:
+                shortest_length[v] = dist
+                prevs[v] = next_vertex
+            if v not in done:
+                candidates.add(v)
+
+    return shortest_length, prevs
+
+def shortest_edge_paths_with_degrees(graph, edge_index):
+    """Find the shortest paths between the middle of the `edge_index` to each
+    other edge.  Also computes the "cumulative degree" of each path: that is,
+    the product of `max(1, degree - 1)` over each vertex in the path.
+
+    :return: `(distances, degrees)` where `distances` is an array corresponding
+      to `graph.edges`, as is `degrees`.  Edges which are disconnected from
+      `edge_index` will have `degress == 1` and `distances == -1`.
+    """
+    shortest_length = dict()
+    v1, v2 = graph.edges[edge_index]
+    shortest_length[v1] = graph.length(edge_index) * 0.5
+    shortest_length[v2] = shortest_length[v1]
+    candidates = {v1, v2}
+    done = set()
+    degrees = dict()
+    degrees[v1] = max(1, graph.degree(v1) - 1)
+    degrees[v2] = max(1, graph.degree(v2) - 1)
+    while len(candidates) > 0:
+        next_vertex, min_dist = None, -1
+        for v in candidates:
+            dist = shortest_length[v]
+            if min_dist == -1 or dist < min_dist:
+                min_dist = dist
+                next_vertex = v
+        candidates.discard(next_vertex)
+        done.add(next_vertex)
+
+        for v in graph.neighbours(next_vertex):
+            i, _ = graph.find_edge(next_vertex, v)
+            dist = min_dist + graph.length(i)
+            if v not in shortest_length or shortest_length[v] > dist:
+                shortest_length[v] = dist
+                degrees[v] = degrees[next_vertex] * max(1, graph.degree(v) - 1)
+            if v not in done:
+                candidates.add(v)
+
+    distances = _np.empty(graph.number_edges)
+    cum_degrees = _np.empty(graph.number_edges)
+    for i in range(graph.number_edges):
+        if i == edge_index:
+            distances[i] = 0
+            cum_degrees[i] = 1
+            continue
+        k1, k2 = graph.edges[i]
+        le = graph.length(i) * 0.5
+        if k1 not in shortest_length:
+            distances[i] = -1
+            cum_degrees[i] = 1
+            continue
+        le1, le2 = shortest_length[k1], shortest_length[k2]
+        if le1 < le2:
+            distances[i] = le1 + le
+            cum_degrees[i] = degrees[k1]
+        else:
+            target = k2
+            distances[i] = le2 + le
+            cum_degrees[i] = degrees[k2]
+    return distances, cum_degrees
