@@ -10,6 +10,7 @@ Currently, few modules log.  Logging is always under the `__name__` of the modul
 
 import logging as _logging
 import sys as _sys
+import datetime as _datetime
 
 
 class _OurHandler(_logging.StreamHandler):
@@ -50,3 +51,54 @@ def log_to_true_stdout():
     notebook) itself.
     """
     _log_to(_sys.__stdout__)
+
+
+class ProgressLogger():
+    """A simple way to report progress of a long-running task.
+    
+    :param target: The total number of "events" to count.
+    :param report_interval: `timedelta` object giving the ideal report period.
+    """
+    def __init__(self, target, report_interval, logger=None):
+        self._target = target
+        self._report_interval = report_interval
+        self._count = 0
+        self._start = _datetime.datetime.now()
+        self._last_log_time = None
+        self.logger = logger
+        
+    def increase_count(self):
+        """Increase the count, and if appropriate, log.  If the logger is set
+        then debug log.
+        
+        :return: `None` if no log needed, or :attr:`logger` is not set.
+          Otherwise `(count, target, time_left)`.
+        """
+        self._count += 1
+        now = _datetime.datetime.now()
+        out = None
+        if self._last_log_time is None or now - self._last_log_time >= self._report_interval:
+            expected_time = (now - self._start) / self._count * self._target
+            expected_end = self._start + expected_time
+            expected_time_left = expected_end - now
+            out = (self._count, self._target, expected_time_left)
+            self._last_log_time = now
+        if out is not None and self.logger is not None:
+            self.logger.debug("Completed %s out of %s, time left: %s", *out)
+        else:
+            return out
+        
+    @property
+    def count(self):
+        """The number of counts logged."""
+        return self._count
+        
+    @property
+    def logger(self):
+        """The logger to output to, or `None`."""
+        return self._logger
+    
+    @logger.setter
+    def logger(self, v):
+        self._logger = v
+    

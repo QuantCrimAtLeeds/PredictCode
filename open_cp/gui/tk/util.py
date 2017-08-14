@@ -306,7 +306,6 @@ class ModalWindow(tk.Toplevel):
         self.protocol("WM_DELETE_WINDOW", self.cancel)
         self.bind("<Button-1>", self._flash)
         # This cannot go later for it work to on linux
-        import datetime
         if no_border:
             self.wm_overrideredirect(True)
         self.add_widgets()

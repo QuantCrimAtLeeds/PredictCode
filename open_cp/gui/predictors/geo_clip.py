@@ -18,6 +18,8 @@ geometry.
 
 Required `geopandas` but fails gracefully...
 
+While this is written as a :class:`comparitor.Comparitor` we use it more widely
+e.g. in the `load_network` code.
 """
 
 from . import comparitor
@@ -44,7 +46,7 @@ try:
     import shapely.ops
 except Exception as ex:
     gpd = None
-    _logger.error("descartes not loaded because {}/{}".format(type(ex), ex))
+    _logger.error("descartes/shapely not loaded because {}/{}".format(type(ex), ex))
 
 
 _text = {

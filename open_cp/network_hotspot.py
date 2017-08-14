@@ -15,10 +15,12 @@ perform a "network retrospective hotspot".
 
 from . import predictors
 from . import network
+from . import logger as _logger_mod
 import math as _math
 import numpy as _np
 from scipy import ndimage as _ndimage
 import logging as _logging
+import datetime as _datetime
 
 _logger = _logging.getLogger(__name__)
 
@@ -63,7 +65,9 @@ class Trainer(predictors.DataTrainer):
         if self.maximum_edge_length is None:
             graph = self.graph
         else:
+            _logger.debug("Mutating the graph so that maximum edge length is %s", self.maximum_edge_length)
             graph = _GraphSplitter(self.graph, self.maximum_edge_length).split()
+        _logger.debug("Projecting %s events to the network", self.data.number_data_points)
         tnp = network.TimedNetworkPoints.project_timed_points(self.data, graph)
         return Predictor(tnp, graph)
 
@@ -295,12 +299,14 @@ class Predictor():
         time_weights = self.time_kernel(times)
         risks = _np.zeros(len(self.graph.edges))
         _logger.debug("Making prediction with %s events using %s/%s", len(times), self.kernel, self.time_kernel)
+        progress = _logger_mod.ProgressLogger(len(times), _datetime.timedelta(minutes=2), _logger)
         for tw, key1, key2, dist in zip(time_weights, data.start_keys,
                 data.end_keys, data.distances):
             edge_index, orient = self.graph.find_edge(key1, key2)
             if orient == -1:
                 dist = 1.0 - dist
             self.add_edge(risks, edge_index, dist, tw)
+            progress.increase_count()
         risks /= self.graph.lengths
 
         return Result(self.graph, risks)

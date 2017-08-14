@@ -33,8 +33,12 @@ _text = {
     "timerange" : "Time range of events: ",
     "timerange1" : " to ",
     "coord_type" : "Coordinates are ",
+    "add_network" : "Add network geometry",
+    "add_network_tt" : "Load a network data, if you wish to perform network based predictions.",
     "new_input" : "Select a new input file",
+    "new_input_tt" : "Load a new CSV file using the same data format.",
     "with_basemap" : "Plot with base map",
+    "with_basemap_tt" : "Visualise the event points over a map; useful for checking the projection.",
     "save" : "Save session",
     "back" : "Back to main menu",
     "askquit" : "Quit to main menu?",
@@ -180,10 +184,22 @@ class AnalysisView(tk.Frame):
     def _data_buttons(self, parent):
         frame = ttk.Frame(parent)
         util.stretchy_columns(frame, [0,1])
-        ttk.Button(frame, text=_text["new_input"], command=self._new_input_file
-                ).grid(row=0, column=0, sticky=tk.NSEW, padx=5, pady=2)
-        ttk.Button(frame, text=_text["with_basemap"]).grid(row=0, column=1, sticky=tk.NSEW, padx=5, pady=2)
+        b = ttk.Button(frame, text=_text["add_network"], command=self._load_network)
+        b.grid(row=0, column=0, sticky=tk.NSEW, padx=5, pady=2)
+        tooltips.ToolTipYellow(b, _text["add_network_tt"])
+        b = ttk.Button(frame, text=_text["new_input"], command=self._new_input_file)
+        b.grid(row=0, column=1, sticky=tk.NSEW, padx=5, pady=2)
+        tooltips.ToolTipYellow(b, _text["new_input_tt"])
+        b = ttk.Button(frame, text=_text["with_basemap"], command=self._with_basemap)
+        b.grid(row=0, column=2, sticky=tk.NSEW, padx=5, pady=2)
+        tooltips.ToolTipYellow(b, _text["with_basemap_tt"])
         return frame
+    
+    def _load_network(self):
+        self._controller.load_network()
+    
+    def _with_basemap(self):
+        self._controller.with_basemap()
 
     def _new_input_file(self):
         if tkinter.messagebox.askokcancel(_text["loadnew"], _text["ln_msg"], default=tkinter.messagebox.CANCEL):
@@ -251,13 +267,13 @@ class AnalysisView(tk.Frame):
         return frame
 
     def update_comparitors_list(self):
-        row = self._update_list(self._comparison_frame,
+        self._update_list(self._comparison_frame,
             self._model.comparison_model.objects,
             [_text["del_comp"], _text["edit_comp"], _text["add_comp"]],
             self._controller.comparison_controller )
 
     def update_predictors_list(self):
-        row = self._update_list(self._prediction_frame,
+        self._update_list(self._prediction_frame,
             self._model.analysis_tools_model.objects,
             [_text["del_pred"], _text["edit_pred"], _text["add_pred"]],
             self._controller.tools_controller )

@@ -23,6 +23,8 @@ import open_cp.gui.browse_analysis as browse_analysis
 import open_cp.gui.browse_comparison as browse_comparison
 import open_cp.gui.locator as locator
 import open_cp.gui.session as session
+import open_cp.gui.load_network as load_network
+import open_cp.gui.load_network_model as load_network_model
 
 class Analysis():
     def __init__(self, model, root, settings_data=None):
@@ -103,6 +105,12 @@ class Analysis():
         self.model = Model.init_from_process_file_model(filename, pf.model)
         self.view.new_model(self.model)
         self._init()
+
+    def load_network(self):
+        load_network.LoadNetwork(self._root, self).run()
+    
+    def with_basemap(self):
+        pass
 
     def notify_training_start(self):
         self._update_times()
@@ -459,6 +467,7 @@ class Model(DataModel):
         self._analysis_runs = []
         self._loaded_from_dict = None
         self.session_filename = None
+        self._network_model = load_network_model.NetworkModel(self)
         
     class AnalysisRunHolder():
         def __init__(self, result, filename=None):
@@ -554,6 +563,7 @@ class Model(DataModel):
             }
         data["selected_crime_types"] = [ self.unique_crime_types[index] for index in self.selected_crime_types]
         data["saved_analysis_runs"] = [ res.filename for res in self._analysis_runs if res.filename is not None ]
+        data["network_model"] = self.network_model.to_dict()
         return data
 
     @property
@@ -609,6 +619,16 @@ class Model(DataModel):
         self._load_analysis_tools_from_dict(data)
         self._load_comparison_tools_from_dict(data)
         self._load_saved_runs_from_dict(data)
+        self._load_network_model(data)
+        
+    def _load_network_model(self, data):
+        if "network_model" in data:
+            try:
+                self._network_model.from_dict(data["network_model"])
+            except ValueError as ex:
+                self._errors.append(str(ex))
+        else:
+            self._logger.warn("Didn't find key 'network_model': Is this an old input file?")
 
     def _load_analysis_tools_from_dict(self, data):
         if "analysis_tools" in data:
@@ -659,6 +679,10 @@ class Model(DataModel):
     @num_error_rows.setter
     def num_error_rows(self, value):
         self._error_rows = value
+
+    @property
+    def network_model(self):
+        return self._network_model
 
 
 ## Bases classes for the predictors / comparitors ########################

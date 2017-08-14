@@ -19,6 +19,7 @@ try:
     import pyproj
 except:
     pyproj = None
+import tilemapbase
 import sys
 
 _text = {
@@ -36,6 +37,8 @@ _text = {
     "gpd" : "GeoPandas version: {}\n",
     "gpd_none" : "GeoPandas could not be loaded\n",
     "pyproj" : "Pyproj version: {}\n",
+    "tilemapbase" : "TileMapBase version: {}\n",
+    "tilemapbase_none" : "TileMapBase could not be loaded\n",
     "pyproj_none" : "Pyproj could not be loaded\n",
     "okay": "Okay",
     "cancel": "Cancel",
@@ -99,6 +102,10 @@ class ConfigView(tk.Frame):
             self._text.add_text(_text["pyproj"].format(pyproj.__version__))
         else:
             self._text.add_text(_text["pyproj_none"])
+        if tilemapbase is not None:
+            self._text.add_text(_text["tilemapbase"].format(tilemapbase.__version__))
+        else:
+            self._text.add_text(_text["tilemapbase_none"])
         
     def _add_config_box(self, frame):
         label = ttk.Label(frame, text=_text["ttk"])
