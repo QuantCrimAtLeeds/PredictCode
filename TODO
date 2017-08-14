@@ -6,6 +6,7 @@
      perhaps why other authors haven't addressed it.
 
 - Start work on network based framework.
+  - Have the base code working fairly well, though it needs polishing
 
 
 # GUI
@@ -13,6 +14,18 @@
 - Awaiting input from colleagues on "evaluation" techniques before I do too much work which
   might not be useful.
 
+- Network support:
+  - Allowing importing of geometry
+    - Add a "remove geometry" button
+    - Add in the cropping option (from `geo_crop`)
+    - Modify `geo_crop` to allow using the global settings
+    - Need a preview with the data points as well
+
+- Base map support:
+  - Start integrating `tilemapbase` and add configuration options
+
+
+- On work LINUX machine, I am now seeing a separate "Toplevel" window.  Can I replicate on Ubunutu??
 
 
 

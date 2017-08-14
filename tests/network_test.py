@@ -55,6 +55,7 @@ def test_PlanarGraphGeoBuilder_builds(planar_graph_geo_builder):
     assert g.vertices == {0:(0,0), 1:(1,1), 2:(5.1,1.2), 3:(2,0), 4:(1,1), 5:(0,5)}        
     assert g.edges == [(0,1), (1,2), (3,4), (4,5), (5,2), (0,5)]
     assert g.number_edges == 6
+    assert g.bounds == (0, 0, 5.1, 5)
 
 @pytest.fixture
 def planar_graph_node_builder():

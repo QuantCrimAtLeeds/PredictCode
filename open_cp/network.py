@@ -776,6 +776,13 @@ class PlanarGraph(Graph):
         """
         return self._vertices
 
+    @property
+    def bounds(self):
+        """A bounding box of vertex locations, as `(xmin, ymin, xmax, ymax)`"""
+        xcs = [x for x, _ in self._vertices.values()]
+        ycs = [y for _, y in self._vertices.values()]
+        return min(xcs), min(ycs), max(xcs), max(ycs)
+
     def as_quads(self):
         """Returns a numpy array of shape `(N,4)` where `N` is the number of
         edges in the graph.  Each entry is `(x1,y1,x2,y1)` giving the
