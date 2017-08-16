@@ -65,7 +65,7 @@ def test_serialise(comp):
     helper.serialise(comp)
 
 def test_run_no_settings(comp):
-    assert comp.run(None) is None
+    assert comp.projected_geometry() is None
 
 def test_load(comp, geojson_filename):
     comp.load(geojson_filename)
@@ -103,7 +103,6 @@ def test_dataset_coords(comp):
     np.testing.assert_almost_equal(ycs, [1,0,-1])
     
 def test_projector(comp, geojson_filename):
-    assert comp.chosen_projector() is None
     comp.load(geojson_filename)
 
     geo = comp.projected_geometry()

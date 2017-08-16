@@ -99,6 +99,8 @@ class GeoFrameProjector(ProjectionFinder):
     @frame.setter
     def frame(self, v):
         self._frame = v
+        if v is None:
+            return
         if len(self._frame.crs) == 0:
             self._guessed = True
             self._frame.crs = {"init": "epsg:4326"}
@@ -109,6 +111,13 @@ class GeoFrameProjector(ProjectionFinder):
     def guessed_crs(self):
         """True/False: Did we guess that the input was longitude / latitude?"""
         return self._guessed
+
+    @property
+    def crs(self):
+        """If we have a frame, then the "crs" dictionary; otherwise `None`"""
+        if self._frame is None:
+            return None
+        return self._frame.crs
 
     def projected_frame(self):
         """Return the frame.  If an epsg code is set, project the frame

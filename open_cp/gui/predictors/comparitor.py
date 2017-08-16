@@ -40,7 +40,7 @@ class AdjustTask():
     """An `adjust` type of comparator should return one or more of these tasks."""
     
     def __call__(self, projector, grid_prediction):
-        """Process the grid based prediction is some way.  For efficiency,
+        """Process the grid based prediction in some way.  For efficiency,
         should also allow passing of a list of predictions.
         
         :param projector: The projector task used in to make this prediction.

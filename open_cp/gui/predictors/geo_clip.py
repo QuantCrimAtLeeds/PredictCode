@@ -20,6 +20,25 @@ Required `geopandas` but fails gracefully...
 
 While this is written as a :class:`comparitor.Comparitor` we use it more widely
 e.g. in the `load_network` code.
+
+There are two situations we face:
+    
+1. The input data is already projected.  In this case, we need to project the
+  geometry in the same way, which must use some data from the user.  To this
+  end, we allow setting an EPSG code to transform to.
+2. The input data is in longitude/latitude format.  The user has then selected
+  one or more projection methods in the "predictors" list.  We should project
+  the input geometry back to lon/lat and then use whatever projection method
+  the user wants.
+3. We allow (2) but with a hard-coded EPSG code which always over-rides the
+  user chosen projector.  This will likely be wrong, but the preview should be
+  obviously incorrect...
+  
+A further complication is that due to input file type, or mis-configured
+`GDAL` package, it is posible to geoPandas to not know the input projection.
+In this case we assume lon/lat and display a warning.  Currently we do _not_
+allow any correction if this is wrong.
+
 """
 
 from . import comparitor
@@ -33,6 +52,7 @@ import open_cp.gui.funcs as funcs
 import open_cp.gui.tk.mtp as mtp
 import open_cp.geometry
 import open_cp.data
+import open_cp.gui.projectors as projectors
 
 _logger = logging.getLogger(__name__)
 
@@ -52,6 +72,16 @@ except Exception as ex:
 _text = {
     "main" : ("Crop to Geometry\n\n"
               + "Allows loading of geometry, previewing, and clipping any predictions to the geometry."
+              + "\n\n"
+              + "Check that both the 'preview' looks correct, and that the plot with input events looks correct.\n"
+              + "- If the input data is in longitude / latitude format, then we will use the first selected "
+              + "projection method in the Predictors list.  That is, all should work automatically.  If it looks "
+              + "wrong, then check that the 'Input crs' looks plausible.  It is possible that whatever tool "
+              + "generated the geometry file has wrongly set the projection information.\n"
+              + "- If the input data is already projected, then you must manually specify the appropriate "
+              + "EPSG code to project the geometry in the same way as the input data.  If the geometry file "
+              + "was already generated with the same projection as in the input file, no further adjustments "
+              + "should be needed."
         ),
     "nogpd" : "Could not load geopandas, so no geometry loading will be supported.",
     "load" : "Load Geometry",
@@ -84,9 +114,7 @@ class CropToGeometry(comparitor.Comparitor):
     def __init__(self, model):
         super().__init__(model)
         self._filename = None
-        self._epsg = None
-
-        self._frame = None
+        self._projector = projectors.GeoFrameProjector(model)
         self._error = None
     
     @staticmethod
@@ -110,8 +138,8 @@ class CropToGeometry(comparitor.Comparitor):
         if self._filename is None:
             return "No geometry"
         out = "Geometry file: " + funcs.string_ellipse(self._filename, 40)
-        if self._epsg is not None:
-            out += " @ " + str(self._epsg)
+        if self.epsg is not None:
+            out += " @ " + str(self.epsg)
         return out
 
     def config(self):
@@ -119,30 +147,16 @@ class CropToGeometry(comparitor.Comparitor):
 
     def to_dict(self):
         return {"filename" : self._filename,
-            "epsg" : self._epsg}
+            "epsg" : self.epsg}
 
     def from_dict(self, data):
         filename = data["filename"]
         if filename is not None:
             self.load(filename)
             if data["epsg"] is not None:
-                self._epsg = int(data["epsg"])
+                self.epsg = int(data["epsg"])
             else:
-                self._epsg = None
-
-    def run(self, projector):
-        """Returns a geometry object (typically from `shapely`).
-
-        :param projector: Optional `predictors._TYPE_COORD_PROJ` task to use
-          to project the geometry, if an explicit EPSG code has not been set.
-
-        :return: None if no geometry.
-        """
-        if self.epsg is not None:
-            return self.geometry(self.epsg)
-        if projector is not None:
-            return self._proj_geo(projector)
-        return self.geometry()
+                self.epsg = None
 
     def make_tasks(self):
         return [self.Task(self)]
@@ -170,7 +184,7 @@ class CropToGeometry(comparitor.Comparitor):
                 return [grids]
 
         def __call__(self, projector, grid_prediction):
-            geo = self._parent.run(projector)
+            geo = self._parent.projected_geometry(projector)
             if geo is None:
                 return grid_prediction
             grid_prediction = self.to_list(grid_prediction)
@@ -188,17 +202,6 @@ class CropToGeometry(comparitor.Comparitor):
                 return out[0]
             return out
 
-    def _proj_geo(self, proj):
-        if self._frame is not None:
-            try:
-                # Project back to lon/lat
-                frame = self._frame.to_crs({"init": "epsg:4326"})
-                geo = frame.unary_union
-                return shapely.ops.transform(lambda x,y,z=None : proj(x,y), geo)
-            except:
-                _logger.exception("While trying to return merged geometry")
-        return None
-
     @property
     def filename(self):
         """The filename of the geometry."""
@@ -207,26 +210,21 @@ class CropToGeometry(comparitor.Comparitor):
     @property
     def epsg(self):
         """The selected output epsg code, or None."""
-        return self._epsg
+        return self._projector.epsg
 
     @epsg.setter
     def epsg(self, value):
-        self._epsg = value
+        self._projector.epsg = value
 
     @property
     def crs(self):
         """The CRS dictionary, or `None`"""
-        if self._frame is None:
-            return None
-        crs = self._frame.crs
-        if crs is None or len(crs) == 0:
-            return None
-        return crs
+        return self._projector.crs
 
     @property
     def guessed_crs(self):
         """True/False: Did we guess that the input was longitude / latitude?"""
-        return self._guessed
+        return self._projector.guessed_crs
 
     @property
     def error(self):
@@ -236,58 +234,54 @@ class CropToGeometry(comparitor.Comparitor):
     def load(self, filename):
         _logger.debug("Attempting to load geometry file '%s'", filename)
         self._filename = filename
-        self._frame = None
         self._error = None
         try:
-            self._frame = gpd.read_file(filename)
-            _logger.debug("Loaded successfully.  crs is '%s'", self._frame.crs)
-            if len(self._frame.crs) == 0:
-                self._guessed = True
-                self._frame.crs = {"init": "epsg:4326"}
-            else:
-                self._guessed = False
+            frame = gpd.read_file(filename)
+            _logger.debug("Loaded successfully.  crs is '%s'", frame.crs)
+            self._projector.frame = frame
         except Exception as ex:
             self._error = _text["fail"].format(type(ex), ex)
             self._filename = None
-            self._frame = None
+            self._projector.frame = None
 
-    def geometry(self, epsg=None):
-        """The geometry, or `None`
-        
-        :param epsg: If not `None` then first transform to this EPSG
-          projection.
-        """
-        if self._frame is not None:
-            try:
-                if epsg is not None:
-                    frame = self._frame.to_crs({"init": "epsg:{}".format(epsg)})
-                else:
-                    frame = self._frame
-                return frame.unary_union
-            except:
-                _logger.exception("While trying to return merged geometry")
+    def geometry(self):
+        """The geometry, as loaded, or `None`."""
+        try:
+            return self._projector.frame.unary_union
+        except:
+            _logger.exception("While trying to return merged geometry")
         return None
 
-    def dataset_coords(self):
-        """If possible, the x/y coordinates of the input data.  Or `None`"""
-        return self._model.analysis_tools_model.projected_coords()
-
-    def chosen_projector(self):
-        """Using the main model, finds the 1st selected projector (if possible)
-        and returns a function object which sends pairs `(x,y)` to their
-        projection."""
-        proj = self._model.analysis_tools_model.coordinate_projector()
-        if proj is None:
-            return None
-        return proj.make_tasks()[0]
-
-    def projected_geometry(self):
+    def projected_geometry(self, projector=None):
         """Return the geometry projected in the best way we can:
           - If an EPSG code is set, us it
           - If there is a "projector task" set in the main model, use it.
           - Return the unprojected geometry.
+          
+        :param projector: Set to override projector if epsg code is not set.
         """
-        return self.run(self.chosen_projector())
+        if self.epsg is not None:
+            frame = self._projector.projected_frame() 
+            if frame is None:
+                return self.geometry()
+            return frame.unary_union
+        if projector is None:
+            projector = self._projector.chosen_projector()
+        if projector is None:
+            return self.geometry()
+            
+        try:
+            # Project back to lon/lat
+            frame = self._projector.frame.to_crs({"init": "epsg:4326"})
+            geo = frame.unary_union
+            return shapely.ops.transform(lambda x,y,z=None : projector(x,y), geo)
+        except:
+            _logger.exception("While trying to return merged geometry")
+        return None
+
+    def dataset_coords(self):
+        """If possible, the x/y coordinates of the input data.  Or `None`"""
+        return self._projector.projected_dataset_coords()
 
 
 class CropToGeometryView(tk.Frame):

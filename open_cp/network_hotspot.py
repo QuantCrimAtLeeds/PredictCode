@@ -450,13 +450,15 @@ class ApproxPredictor(Predictor):
 
 
 class ApproxPredictorCaching(ApproxPredictor):
-    """As :class:`ApproxPredictor` but caches data.
+    """As :class:`ApproxPredictor` but caches data.  Uses the same strategy
+    as :class:`FastPredictor` and also caches spatial kernel data.
 
     :param predictor: An :class:`Predictor` to initialise from.
     """
     def __init__(self, predictor):
         super().__init__(predictor)
         self._cache = dict()
+        self._add_cache = dict()
 
     def _get_data(self, edge_index):
         _logger.debug("ApproxPredictorCaching: Calculating for %s", edge_index)
@@ -471,12 +473,23 @@ class ApproxPredictorCaching(ApproxPredictor):
           We ignore and set to 0.5
         :param tw: How much to scale by
         """
-        if edge_index not in self._cache:
-            self._cache[edge_index] = self._get_data(edge_index)
-        kernel_dists, cumulative_degrees = self._cache[edge_index]
-        mask = kernel_dists > -1
-        to_add = self.kernel(kernel_dists[mask]) / cumulative_degrees[mask]
-        risks[mask] += to_add * self.graph.lengths[mask] * tw
+        if edge_index not in self._add_cache:
+            if edge_index not in self._cache:
+                self._cache[edge_index] = self._get_data(edge_index)
+            kernel_dists, cumulative_degrees = self._cache[edge_index]
+            mask = kernel_dists > -1
+            self._add_cache[edge_index] = self.kernel(kernel_dists[mask]) / cumulative_degrees[mask] * self.graph.lengths[mask]
+        risks[mask] += self._add_cache[edge_index] * tw
+
+    @property
+    def kernel(self):
+        """The spatial / network kernel"""
+        return self._kernel
+
+    @kernel.setter
+    def kernel(self, v):
+        self._add_cache = dict()
+        self._kernel = v
 
 
 class Result():
