@@ -22,8 +22,7 @@ class NetworkModel():
         self._crop_to_geometry = geo_clip.CropToGeometry(analysis_model)
         self.filename = None
         self.network_type = self.NetworkType.ORDNANCE
-        self._error = None
-        self._graph = None
+        self._reset()
         self.backup(False)
         
     @property
@@ -70,21 +69,35 @@ class NetworkModel():
         self._graph = graph
         self._filename = filename
     
+    def _reset(self):
+        self.filename = None
+        self._graph = None
+        self._frame = None
+    
     def _load_network(self):
+        if self.filename is None:
+            self._graph = None
+            return
         try:
             _logger.debug("Attempting to load network file %s", self.filename)
-            frame = gpd.GeoDataFrame.from_file(self.filename)
+            self._frame = gpd.GeoDataFrame.from_file(self.filename)
+            self.reload()
+        except Exception as ex:
+            self._error = "{}/{}".format(type(ex), ex)
+            self._reset()
+
+    def reload(self):
+        try:
             if self.network_type == self.NetworkType.ORDNANCE:
-                self._graph = self._load_OS_style(frame)
+                self._graph = self._load_OS_style(self._frame)
             elif self.network_type == self.NetworkType.TIGER_LINES:
-                self._graph = self._load_tiger_style(frame)
+                self._graph = self._load_tiger_style(self._frame)
             else:
                 raise NotImplementedError()
             _logger.debug("Built graph with %s vertices and %s edges", len(self.graph.vertices), len(self.graph.edges))
         except Exception as ex:
             self._error = "{}/{}".format(type(ex), ex)
-            self.filename = None
-            self._graph = None
+            self._reset()
 
     @staticmethod
     def _load_OS_style(frame):
@@ -118,8 +131,7 @@ class NetworkModel():
     @filename.setter
     def filename(self, v):
         self._filename = v
-        if v is not None:
-            self._load_network()
+        self._load_network()
         
     class NetworkType(enum.Enum):
         ORDNANCE = 0
@@ -133,6 +145,12 @@ class NetworkModel():
     @network_type.setter
     def network_type(self, v):
         self._network_type = v
+    
+    @property
+    def input_crs(self):
+        if self._frame is None:
+            return None
+        return self._frame.crs
     
     @property
     def graph(self):

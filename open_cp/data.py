@@ -179,9 +179,9 @@ class Grid():
         :return: `(gridx, gridy)` coordinates in the grid where this point
           falls.
         """
-        xx = x - self.xoffset
-        yy = y - self.yoffset
-        return (_np.floor(xx / self.xsize), _np.floor(yy / self.ysize))
+        xx = _np.asarray(x) - self.xoffset
+        yy = _np.asarray(y) - self.yoffset
+        return (_np.floor(xx / self.xsize).astype(_np.int), _np.floor(yy / self.ysize).astype(_np.int))
 
     def bounding_box_of_cell(self, gx, gy):
         """Return the bounding box of the cell.

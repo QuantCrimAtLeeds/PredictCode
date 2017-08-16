@@ -46,4 +46,10 @@ class LoadNetwork():
         if error is not None:
             load_network_view.alert(error)
         self.view.refresh()
-        
+
+    def reload(self):
+        self.model.reload()
+
+    def remove(self):
+        self.model.filename = None
+        self.view.refresh()

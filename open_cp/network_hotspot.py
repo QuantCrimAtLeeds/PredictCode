@@ -173,8 +173,7 @@ class TriangleKernel(NetworkKernel):
                 return 0
             return y
         else:
-            y[x >= self._h] = 0
-            return y
+            return _np.maximum(0, y)
 
     def integrate(self, a, b):
         a, b = _np.asarray(a), _np.asarray(b)
@@ -378,8 +377,6 @@ class FastPredictor(Predictor):
             mask = start < self.kernel.cutoff
             index, start, end, degree = index[mask], start[mask], end[mask], degree[mask]
             to_add = self.kernel.integrate(start, end) * degree
-            #for i, x in zip(index, to_add):
-            #    risks[i] += x
             if len(self._idx_cache) != len(risks):
                 self._idx_cache = _np.arange(len(risks))
             self._add_cache[key] = _ndimage.sum(to_add, labels=index, index=self._idx_cache)

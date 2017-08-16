@@ -9,6 +9,8 @@ import tkinter.ttk as ttk
 import tkinter.messagebox 
 from . import util
 from .. import funcs
+import open_cp.gui.resources as resources
+import PIL.ImageTk as ImageTk
 from . import mtp
 from . import tooltips
 from .. import load_network_model
@@ -36,6 +38,8 @@ _text = {
             + "segment are very close, they are merged.  This might lead us to identify over/under "
             + "passes, for example, but it correctly detects road junctions etc. in this dataset." ),
     "loading" : "Loading network...",
+    "remove_tt" : "Remove current network",
+    "input_crs" : "Input crs: {}",
     
 }
 
@@ -67,15 +71,26 @@ class LoadNetworkView(util.ModalWindow):
         return self.controller.model
         
     def add_widgets(self):
+        self._close_icon = ImageTk.PhotoImage(resources.close_icon)
+
         ttk.Label(self, text=_text["what"]).grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
         
         frame = ttk.LabelFrame(self, text=_text["net"])
         frame.grid(row=10, column=0, sticky=tk.NSEW, padx=2, pady=2)
         subframe = ttk.Frame(frame)
-        subframe.grid(row=0, column=0, sticky=tk.W)
-        ttk.Button(subframe, text=_text["load_file"], command=self._load_file).grid(row=0, column=0, padx=2, pady=2)
-        self._filename_label = ttk.Label(subframe)
-        self._filename_label.grid(row=0, column=1, padx=2, pady=2)
+        subframe.grid(row=0, column=0, sticky=tk.NSEW)
+        subsubframe = ttk.Frame(subframe)
+        subsubframe.grid(row=0, column=0, sticky=tk.W)
+        ttk.Button(subsubframe, text=_text["load_file"], command=self._load_file).grid(row=0, column=0, padx=2, pady=2)
+        b = ttk.Button(subsubframe, image=self._close_icon, command=self._remove_file)
+        b.grid(row=0, column=1, padx=2, pady=2)
+        tooltips.ToolTipYellow(b, _text["remove_tt"])
+        self._filename_label = ttk.Label(subsubframe)
+        self._filename_label.grid(row=0, column=2, padx=2, pady=2)
+        subsubframe = ttk.Frame(subframe)
+        subsubframe.grid(row=1, column=0, sticky=tk.W)
+        self._input_crs_label = ttk.Label(subsubframe)
+        self._input_crs_label.grid(row=0, column=0, padx=2, pady=2)
         
         subframe = ttk.Frame(frame)
         subframe.grid(row=1, column=0, sticky=tk.NSEW)
@@ -109,14 +124,18 @@ class LoadNetworkView(util.ModalWindow):
         else:
             name = _text["none"]
         self._filename_label["text"] = _text["current_file"].format(name)
-        self._network_type = self.model.network_type.value
+        self._network_type.set(self.model.network_type.value)
         self._plot_preview()
+        self._input_crs_label["text"] = _text["input_crs"].format(self.model.input_crs)
         
     def _load_file(self):
         filename = util.ask_open_filename(filetypes=[("Shape file", "*.shp"),
                 ("GeoJSON", "*.geojson"), ("Any file", "*.*")])
         if filename is not None:
             self.controller.load(filename)
+        
+    def _remove_file(self):
+        self.controller.remove()
         
     def _plot_preview(self):
         if self.model.graph is None:
@@ -137,8 +156,9 @@ class LoadNetworkView(util.ModalWindow):
             self._preview_canvas.set_figure_task(task)
         
     def _new_network_type(self):
-        # TODO
-        pass
+        choice = NetworkType( int(self._network_type.get()) )
+        self.model.network_type = choice
+        self.controller.reload()
     
     def okay_pressed(self):
         self.okay = True
