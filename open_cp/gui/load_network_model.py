@@ -7,6 +7,7 @@ import open_cp.gui.predictors.geo_clip as geo_clip
 import open_cp.network
 import enum as enum
 import logging
+import open_cp.gui.projectors as projectors
 
 try:
     import geopandas as gpd
@@ -22,7 +23,9 @@ class NetworkModel():
         self._crop_to_geometry = geo_clip.CropToGeometry(analysis_model)
         self.filename = None
         self.network_type = self.NetworkType.ORDNANCE
+        self._error = None
         self._reset()
+        self._frame = projectors.GeoFrameProjector(analysis_model)
         self.backup(False)
         
     @property
@@ -34,7 +37,8 @@ class NetworkModel():
     
     def to_dict(self):
         data = { "geo_clip" : self.crop_to_geometry.to_dict(),
-            "type" : self.network_type.name
+            "type" : self.network_type.name,
+            "epsg" : self.geoframe_projector.epsg
             }
         if self.filename is not None:
             data["filename"] = self.filename
@@ -43,6 +47,7 @@ class NetworkModel():
     def from_dict(self, data):
         self.crop_to_geometry.from_dict(data["geo_clip"])
         self.network_type = self.NetworkType[data["type"]]
+        self.geoframe_projector.epsg = data["epsg"]
         if "filename" in data:
             self.filename = data["filename"]
         else:
@@ -54,7 +59,7 @@ class NetworkModel():
         `from_dict`."""
         if make_new:
             data = self.to_dict()
-            self._backup = (data, self.filename, self.graph)
+            self._backup = (data, self.filename, self.graph, self.geoframe_projector.frame)
         else:
             self._backup = None
         
@@ -62,17 +67,17 @@ class NetworkModel():
         """Partner of :meth:`backup`."""
         if self._backup is None:
             return
-        data, filename, graph = self._backup
+        data, filename, graph, frame = self._backup
         if "filename" in data:
             del data["filename"]
         self.from_dict(data)
+        self.geoframe_projector.frame = frame
         self._graph = graph
         self._filename = filename
     
     def _reset(self):
         self.filename = None
         self._graph = None
-        self._frame = None
     
     def _load_network(self):
         if self.filename is None:
@@ -80,7 +85,8 @@ class NetworkModel():
             return
         try:
             _logger.debug("Attempting to load network file %s", self.filename)
-            self._frame = gpd.GeoDataFrame.from_file(self.filename)
+            frame = gpd.GeoDataFrame.from_file(self.filename)
+            self.geoframe_projector.frame = frame
             self.reload()
         except Exception as ex:
             self._error = "{}/{}".format(type(ex), ex)
@@ -89,9 +95,9 @@ class NetworkModel():
     def reload(self):
         try:
             if self.network_type == self.NetworkType.ORDNANCE:
-                self._graph = self._load_OS_style(self._frame)
+                self._graph = self._load_OS_style(self.geoframe_projector.frame)
             elif self.network_type == self.NetworkType.TIGER_LINES:
-                self._graph = self._load_tiger_style(self._frame)
+                self._graph = self._load_tiger_style(self.geoframe_projector.frame)
             else:
                 raise NotImplementedError()
             _logger.debug("Built graph with %s vertices and %s edges", len(self.graph.vertices), len(self.graph.edges))
@@ -124,6 +130,10 @@ class NetworkModel():
         return b.build()
     
     @property
+    def geoframe_projector(self):
+        return self._frame
+    
+    @property
     def filename(self):
         """The filename of the geometry data giving the network.  Or `None`"""
         return self._filename
@@ -145,12 +155,6 @@ class NetworkModel():
     @network_type.setter
     def network_type(self, v):
         self._network_type = v
-    
-    @property
-    def input_crs(self):
-        if self._frame is None:
-            return None
-        return self._frame.crs
     
     @property
     def graph(self):

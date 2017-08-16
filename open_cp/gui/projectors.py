@@ -90,6 +90,7 @@ class GeoFrameProjector(ProjectionFinder):
     def __init__(self, analysis_model):
         super().__init__(analysis_model)
         self._frame = None
+        self._guessed = False
 
     @property
     def frame(self):

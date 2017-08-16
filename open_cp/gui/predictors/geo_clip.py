@@ -53,6 +53,7 @@ import open_cp.gui.tk.mtp as mtp
 import open_cp.geometry
 import open_cp.data
 import open_cp.gui.projectors as projectors
+import open_cp.gui.tk.projectors_view as projectors_view
 
 _logger = logging.getLogger(__name__)
 
@@ -86,17 +87,6 @@ _text = {
     "nogpd" : "Could not load geopandas, so no geometry loading will be supported.",
     "load" : "Load Geometry",
     "filett" : "Filename of the loaded geometry",
-    "icrs" : "Input crs: {}",
-    "icrstt" : ("The input Coordinate Reference System (CRS) detected for the geometry.  Specifies "
-            + "how the geometry related to the real world.  The code 'epsg:4326' indicates that "
-            + "the data is in Longitude/Latitude format; this is also often the default choice."),
-    "icrstt1" : "No input projection information found, so we assumed the coordinates are longitude / latitude.",
-    "newcrs" : "Transform to epsg:",
-    "epsg_url" : "http://spatialreference.org/ref/epsg/",
-    "epsg_url_text" : "(Click for a list)",
-    "newcrstt" : ("The EPSG code to transform the geometry to.  "
-            + "This should be the same as the projection used for the input data.  "
-            + "If left blank, we make a best guess, which is likely the best choice if the events are given as Longitude/Latitude."),
     "preview" : "Preview of the geometry",
     "fail" : "Failed to load: {}/{}",
     "guesscrs" : "Assumed Longitude/Latitude",
@@ -304,21 +294,8 @@ class CropToGeometryView(tk.Frame):
         self._filename_label.grid(row=0, column=1, padx=2)
         tooltips.ToolTipYellow(self._filename_label, _text["filett"])
 
-        subframe = ttk.Frame(self)
-        subframe.grid(row=2, column=0, padx=2, pady=3, sticky=tk.NW)
-        self._input_crs_label = ttk.Label(subframe, text=_text["icrs"].format(""))
-        self._input_crs_label.grid(row=0, column=0, padx=2)
-        self._input_crs_lavel_tt=tooltips.ToolTipYellow(self._input_crs_label, _text["icrstt"])
-        label = ttk.Label(subframe, text=_text["newcrs"])
-        label.grid(row=0, column=1, padx=2)
-        self._output_crs_entry_var = tk.StringVar()
-        self._output_crs_entry = ttk.Entry(subframe, textvariable=self._output_crs_entry_var)
-        self._output_crs_entry.grid(row=0, column=2, padx=2)
-        util.IntValidator(self._output_crs_entry, self._output_crs_entry_var, callback=self._new_epsg, allow_empty=True)
-        tooltips.ToolTipYellow(label, _text["newcrstt"])
-        href = util.HREF(subframe, text=_text["epsg_url_text"], url=_text["epsg_url"])
-        href.grid(row=0, column=3, padx=2)
-        tooltips.ToolTipYellow(href, _text["epsg_url"])
+        self._projectors_widget = projectors_view.GeoFrameProjectorWidget(self, self._model._projector, self._update)
+        self._projectors_widget.grid(row=2, column=0, padx=2, pady=3, sticky=tk.NW)
 
         subframe = ttk.Frame(self)
         subframe.grid(row=3, column=0, padx=2, pady=3, sticky=tk.NSEW)
@@ -349,27 +326,14 @@ class CropToGeometryView(tk.Frame):
         else:
             self._filename_label["text"] = ""
 
-        self._set_input_crs("")
         self._preview_canvas.set_blank()
         self._with_coords_canvas.set_blank()
-        self._input_crs_lavel_tt.text = _text["icrstt"]
-        self._output_crs_entry_var.set("")
         self._preview_frame_tt.text = _text["previewnonett"]
         self._with_coords_frame_tt.text = _text["previewnonett"]
+        self._projectors_widget.update()
 
     def _loaded(self):
-        self._input_crs_lavel_tt.text = _text["icrstt"]
-        crs = self._model.crs
-        if self._model.guessed_crs:
-            crs = _text["guesscrs"]
-            self._input_crs_lavel_tt.text = _text["icrstt1"]
-        self._set_input_crs(crs)
-
-        if self._model.epsg is None:
-            self._output_crs_entry_var.set("")
-        else:
-            self._output_crs_entry_var.set(self._model.epsg)
-
+        self._projectors_widget.update()
         self._plot_preview()
         self._plot_with_points()
 
@@ -423,17 +387,6 @@ class CropToGeometryView(tk.Frame):
         if filename is not None:
             self._model.load(filename)
             self._update()
-
-    def _set_input_crs(self, value):
-        self._input_crs_label["text"] = _text["icrs"].format(value)
-
-    def _new_epsg(self):
-        epsg = self._output_crs_entry_var.get()
-        if epsg is None or epsg == "":
-            self._model.epsg = None
-        else:
-            self._model.epsg = int(epsg)
-        self._update()
 
     def _error_case(self):
         self._text.add_text(_text["nogpd"])

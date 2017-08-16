@@ -30,7 +30,9 @@ _text = {
 
 
 class GeoFrameProjectorWidget(tk.Frame):
-    """
+    """A :class:`tkinter.Frame` which contains details of the input CRS,
+    and an entry box to specify a new EPSG code, together with a hyperlink to
+    a list of codes.
     
     :param parent: The `tkinter` parent widget.
     :param model: Instance of :class:`projectors.GeoFrameProjector`
@@ -59,7 +61,7 @@ class GeoFrameProjectorWidget(tk.Frame):
         tooltips.ToolTipYellow(href, _text["epsg_url"])
 
     def update(self):
-        """TODO"""
+        """Update the view from the model."""
         self._input_crs_lavel_tt.text = _text["icrstt"]
         crs = self._model.crs
         if self._model.guessed_crs:

@@ -16,10 +16,11 @@
 
 - Network support:
   - Allowing importing of geometry
-    - Add a "remove geometry" button
     - Add in the cropping option (from `geo_crop`)
     - Modify `geo_crop` to allow using the global settings
     - Need a preview with the data points as well
+    - Check that the EPSG code is serialised correctly...
+    - Use the EPSG code
 
 - Base map support:
   - Start integrating `tilemapbase` and add configuration options

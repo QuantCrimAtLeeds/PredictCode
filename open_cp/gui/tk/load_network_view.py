@@ -10,6 +10,7 @@ import tkinter.messagebox
 from . import util
 from .. import funcs
 import open_cp.gui.resources as resources
+import open_cp.gui.tk.projectors_view as projectors_view
 import PIL.ImageTk as ImageTk
 from . import mtp
 from . import tooltips
@@ -39,7 +40,6 @@ _text = {
             + "passes, for example, but it correctly detects road junctions etc. in this dataset." ),
     "loading" : "Loading network...",
     "remove_tt" : "Remove current network",
-    "input_crs" : "Input crs: {}",
     
 }
 
@@ -59,9 +59,9 @@ class FurtherWait(util.ModalWaitWindow):
     
 class LoadNetworkView(util.ModalWindow):
     def __init__(self, parent, controller):
-        super().__init__(parent, title=_text["title"], resize="hw")
         self._parent = parent
         self.controller = controller
+        super().__init__(parent, title=_text["title"], resize="hw")
         util.centre_window_percentage(self, 75, 66)
         util.stretchy_rows_cols(self, [10], [0])
         self.refresh()
@@ -87,10 +87,8 @@ class LoadNetworkView(util.ModalWindow):
         tooltips.ToolTipYellow(b, _text["remove_tt"])
         self._filename_label = ttk.Label(subsubframe)
         self._filename_label.grid(row=0, column=2, padx=2, pady=2)
-        subsubframe = ttk.Frame(subframe)
-        subsubframe.grid(row=1, column=0, sticky=tk.W)
-        self._input_crs_label = ttk.Label(subsubframe)
-        self._input_crs_label.grid(row=0, column=0, padx=2, pady=2)
+        self._projector_widget = projectors_view.GeoFrameProjectorWidget(subframe, self.model.geoframe_projector, self._new_epsg)
+        self._projector_widget.grid(row=1, column=0, sticky=tk.W)
         
         subframe = ttk.Frame(frame)
         subframe.grid(row=1, column=0, sticky=tk.NSEW)
@@ -126,7 +124,11 @@ class LoadNetworkView(util.ModalWindow):
         self._filename_label["text"] = _text["current_file"].format(name)
         self._network_type.set(self.model.network_type.value)
         self._plot_preview()
-        self._input_crs_label["text"] = _text["input_crs"].format(self.model.input_crs)
+        self._projector_widget.update()
+        
+    def _new_epsg(self):
+        pass
+        # TOOD!!!!!!!!!!
         
     def _load_file(self):
         filename = util.ask_open_filename(filetypes=[("Shape file", "*.shp"),
