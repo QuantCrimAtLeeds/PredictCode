@@ -37,7 +37,7 @@ def _top_slice_one_dim(risk, fraction):
             if have == n:
                 return mask
     raise Exception("Failed to sufficient cells")
-    
+
 def top_slice(risk, fraction):
     """Returns a boolean array of the same shape as `risk` where there are
     exactly `n` True entries.  If `risk` has `N` entries, `n` is the greatest
@@ -64,14 +64,14 @@ def top_slice(risk, fraction):
     mask = _top_slice_one_dim(risk.ravel(), fraction)
     return _np.reshape(mask, risk.shape)
 
-def grid_risk_to_graph(grid_pred, graph, percentage_coverage, intersection_cutoff=None):
+def grid_risk_coverage_to_graph(grid_pred, graph, percentage_coverage, intersection_cutoff=None):
     """Find the given coverage for the grid prediction, and then intersect with
     the graph.
     
     :param grid_pred: An instance of :class:`GridPrediction` to give a
       prediction.
     :param graph: An instance of :class:`network.PlanarGraph`
-    :param percentage_coverage: An iterable of percentage coverages to test.
+    :param percentage_coverage: The percentage coverage to apply.
     :param intersection_cutoff: If `None` then return any edge in the graph
       which intersects a grid cell.  Otherwise a value between 0 and 1
       specifying the minimum intersection amount (based on length).
@@ -97,6 +97,34 @@ def _add_intersections(bbox, graph, builder, intersection_cutoff):
         if tt is not None:
             if intersection_cutoff is None or tt[1] - tt[0] >= intersection_cutoff:
                 builder.edges.append(edge)
+
+def grid_risk_to_graph(grid_pred, graph, strategy="most"):
+    """Transfer the grid_prediction to a graph risk prediction.  For each grid
+    cell, assigns the risk in the cell to each edge of the network which
+    intersects that cell.  The parameter `strategy` determines exactly how this
+    is done:
+    
+    - "most" means that for each network edge, find the cell which most
+      overlaps it, and use that cell's risk
+    - "subdivide" means that we should generate a new graph by chopping each
+      edge into parts so that every edge in the new graph intersects exactly
+      one grid cell
+
+    :param grid_pred: An instance of :class:`GridPrediction` to give a
+      prediction.
+    :param graph: An instance of :class:`network.PlanarGraph`
+    :param strategy: "most" or "subdivide"
+    
+    :return: `(graph, risks)` where `graph` is a possible new graph, and
+      `risks` is an array of risks, correpsonding to the edges in the graph.
+    """
+    if strategy == "most":
+        return _grid_risk_to_graph_most(grid_pred, graph)
+    else:
+        raise NotImplementedError()
+        
+def _grid_risk_to_graph_most(grid_pred, graph):
+    pass
 
 def network_hit_rate(graph, timed_network_points, source_graph=None):
     """Computes the "hit rate" for the given prediction for the passed

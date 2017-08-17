@@ -110,7 +110,7 @@ def test_hit_rate_out_of_range(prediction):
     out = evaluation.hit_rates(prediction, tp, {1, 5, 100})
     assert set(out.values()) == {0}
     
-def test_grid_risk_to_graph(prediction):
+def test_grid_risk_coverage_to_graph(prediction):
     b = open_cp.network.PlanarGraphBuilder()
     b.add_vertex(35,30)
     b.add_vertex(40,40)
@@ -120,19 +120,19 @@ def test_grid_risk_to_graph(prediction):
     b.add_edge(2, 3)
     graph = b.build()
     
-    g = evaluation.grid_risk_to_graph(prediction, graph, 12)
+    g = evaluation.grid_risk_coverage_to_graph(prediction, graph, 12)
     assert g.number_edges == 0
 
     # 1 cell.  Cells are x=[2,12,22,32,42], y=[3,23,43]
-    g = evaluation.grid_risk_to_graph(prediction, graph, 13)
+    g = evaluation.grid_risk_coverage_to_graph(prediction, graph, 13)
     assert g.number_edges == 1
     assert g.edges[0] == (0, 1)
 
-    g = evaluation.grid_risk_to_graph(prediction, graph, 25)
+    g = evaluation.grid_risk_coverage_to_graph(prediction, graph, 25)
     assert g.number_edges == 2
     assert set(g.edges) == {(0,1), (2,3)}
 
-def test_grid_risk_to_graph_cutoff(prediction):
+def test_grid_risk_coverage_to_graph_cutoff(prediction):
     b = open_cp.network.PlanarGraphBuilder()
     b.add_vertex(30,30)
     b.add_vertex(34,30)
@@ -140,10 +140,10 @@ def test_grid_risk_to_graph_cutoff(prediction):
     graph = b.build()
 
     # 1 cell.  Cells are x=[2,12,22,32,42], y=[3,23,43]
-    g = evaluation.grid_risk_to_graph(prediction, graph, 13, 0.6)
+    g = evaluation.grid_risk_coverage_to_graph(prediction, graph, 13, 0.6)
     assert g.number_edges == 0
     
-    g = evaluation.grid_risk_to_graph(prediction, graph, 13, 0.5)
+    g = evaluation.grid_risk_coverage_to_graph(prediction, graph, 13, 0.5)
     assert g.number_edges == 1
     assert g.edges[0] == (0, 1)
 
