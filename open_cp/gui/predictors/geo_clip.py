@@ -64,7 +64,6 @@ except Exception as ex:
     _logger.error("geopandas not loaded because {}/{}".format(type(ex), ex))
 try:
     import descartes
-    import shapely.ops
 except Exception as ex:
     gpd = None
     _logger.error("descartes/shapely not loaded because {}/{}".format(type(ex), ex))
@@ -115,8 +114,8 @@ class CropToGeometry(comparitor.Comparitor):
     def order():
         return comparitor.TYPE_ADJUST
 
-    def make_view(self, parent):
-        self._view = CropToGeometryView(parent, self)
+    def make_view(self, parent, style="normal"):
+        self._view = CropToGeometryView(parent, self, style)
         return self._view
 
     @property
@@ -237,7 +236,8 @@ class CropToGeometry(comparitor.Comparitor):
     def geometry(self):
         """The geometry, as loaded, or `None`."""
         try:
-            return self._projector.frame.unary_union
+            if self._projector.frame is not None:
+                return self._projector.frame.unary_union
         except:
             _logger.exception("While trying to return merged geometry")
         return None
@@ -250,24 +250,13 @@ class CropToGeometry(comparitor.Comparitor):
           
         :param projector: Set to override projector if epsg code is not set.
         """
-        if self.epsg is not None:
-            frame = self._projector.projected_frame() 
-            if frame is None:
-                return self.geometry()
-            return frame.unary_union
-        if projector is None:
-            projector = self._projector.chosen_projector()
-        if projector is None:
-            return self.geometry()
-            
-        try:
-            # Project back to lon/lat
-            frame = self._projector.frame.to_crs({"init": "epsg:4326"})
-            geo = frame.unary_union
-            return shapely.ops.transform(lambda x,y,z=None : projector(x,y), geo)
-        except:
-            _logger.exception("While trying to return merged geometry")
-        return None
+        frame = self._projector.fully_projected_frame(projector)
+        if frame is not None:
+            try:
+                return frame.unary_union
+            except:
+                _logger.exception("While trying to return merged geometry")
+        return None            
 
     def dataset_coords(self):
         """If possible, the x/y coordinates of the input data.  Or `None`"""
@@ -275,17 +264,17 @@ class CropToGeometry(comparitor.Comparitor):
 
 
 class CropToGeometryView(tk.Frame):
-    def __init__(self, parent, model):
+    def __init__(self, parent, model, style):
         super().__init__(parent)
         self._model = model
         util.stretchy_rows_cols(self, [3], [0])
-        self._text = richtext.RichText(self, height=12, scroll="v")
-        self._text.grid(sticky=tk.NSEW, row=0, column=0)
-        if gpd is None:
-            self._error_case()
-            return
-
-        self._text.add_text(_text["main"])
+        if style == "normal":
+            self._text = richtext.RichText(self, height=12, scroll="v")
+            self._text.grid(sticky=tk.NSEW, row=0, column=0)
+            if gpd is None:
+                self._error_case()
+                return
+            self._text.add_text(_text["main"])
         
         subframe = ttk.Frame(self)
         subframe.grid(row=1, column=0, padx=2, pady=3, sticky=tk.NW)

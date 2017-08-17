@@ -14,13 +14,14 @@
 - Awaiting input from colleagues on "evaluation" techniques before I do too much work which
   might not be useful.
 
-- Network support:
-  - Allowing importing of geometry
-    - Add in the cropping option (from `geo_crop`)
-    - Modify `geo_crop` to allow using the global settings
-    - Need a preview with the data points as well
-    - Check that the EPSG code is serialised correctly...
-    - Use the EPSG code
+- Network support.  Need to same "pipeline" as for grid predictions:
+  - A "network hotspot" prediction method needs making
+  - And behind-the-scene support in "predictors.py"
+  - Use the crop to geometry to adjust the network
+  - Think carefully about re-using cached data (shouldn't spawn lots of "predictor" classes, but just re-use one)
+  - Visualisation code of the prediction
+  - (Eventually) convert a grid prediction to a network prediction for comparison purposes
+
 
 - Base map support:
   - Start integrating `tilemapbase` and add configuration options
@@ -30,6 +31,18 @@
 
 
 
+
 ## Very low priority
 
 - See comments in `run_comparison.py` about memory usage
+
+
+# Parked ideas
+
+## Clipping the input network
+
+I had originally planned to reuse the `geo-clip` code to allow loading a shape file to clip the network to.
+
+- But on thinking again, perhaps the _same_ clipping should be done to the network and the grid
+- Also loading and previewing networks is _extremely_ slow, and so it seems more sensible to ask
+  the user to prepare network geometry externally.

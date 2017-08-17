@@ -12,9 +12,10 @@ _logger = logging.getLogger(__name__)
 
 try:
     import geopandas as gpd
+    import shapely.ops
 except Exception as ex:
     gpd = None
-    _logger.error("geopandas not loaded because {}/{}".format(type(ex), ex))
+    _logger.error("geopandas/shapely not loaded because {}/{}".format(type(ex), ex))
 try:
     import pyproj
 except Exception as ex:
@@ -133,3 +134,33 @@ class GeoFrameProjector(ProjectionFinder):
         except:
             _logger.exception("While trying to project frame")
         return None
+
+    def fully_projected_frame(self, projector=None):
+        """Return the frame, projected using:
+            
+        - If an EPSG code is set, use it
+        - If `projector` is not None, use it
+        - Use the projector obtained from the base class
+        - In the event of error, the unprojected frame
+        - `None` if no frame
+        """
+        if self._frame is None:
+            return None
+        
+        if self.epsg is not None:
+            frame = self.projected_frame()
+            if frame is None:
+                return self._frame
+            return frame
+        
+        if projector is None:
+            projector = self.projector()
+        if projector is None:
+            return self._frame
+        
+        # Project back to lon/lat
+        frame = self._frame.copy().to_crs({"init": "epsg:4326"})
+        def proj(geo):
+            return shapely.ops.transform(lambda x,y,z=None : projector(x,y), geo)
+        frame.geometry = frame.geometry.map(proj)
+        return frame

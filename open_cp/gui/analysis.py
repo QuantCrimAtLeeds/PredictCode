@@ -64,6 +64,7 @@ class Analysis():
         self.recalc_total_count()
         self._tools.update()
         self._comparisons.update()
+        self.view.update_network_info()
 
     def _crime_types_model_to_view(self):
         if self.model.num_crime_type_levels == 0:
@@ -108,6 +109,7 @@ class Analysis():
 
     def load_network(self):
         load_network.LoadNetwork(self._root, self).run()
+        self.view.update_network_info()
     
     def with_basemap(self):
         pass

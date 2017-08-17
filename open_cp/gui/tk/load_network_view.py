@@ -11,6 +11,7 @@ from . import util
 from .. import funcs
 import open_cp.gui.resources as resources
 import open_cp.gui.tk.projectors_view as projectors_view
+import open_cp.gui.predictors.geo_clip as geo_clip
 import PIL.ImageTk as ImageTk
 from . import mtp
 from . import tooltips
@@ -28,6 +29,11 @@ _text = {
     "current_file" : "Current file: {}",
     "none" :  "None loaded",
     "preview" : "Network preview",
+    "preview_tt" : "A preview of the graph as constructed directly from the loaded geometry.",
+    "preview_proj" : "Projected Network preview",
+    "preview_proj_tt" : ("A preview of the graph as constructed from the projected geometry, using either "
+            + "the explicitly set EPSG code, or the (first) projection task chosen from the collection of "
+            + "'Predictors'.  Overlayed with the actual data.  Check that these agree!"),
     "os_type" : "Ordnance Survey style",
     "os_type_tt" : ("Assume the network geometry is similar to the UK Ordnance Survey OpenRoads data.  "
             + "This assumes that paths intersect only at their end-points.  This allows for accurate "
@@ -40,6 +46,7 @@ _text = {
             + "passes, for example, but it correctly detects road junctions etc. in this dataset." ),
     "loading" : "Loading network...",
     "remove_tt" : "Remove current network",
+    "crop" : "Crop network to an area",
     
 }
 
@@ -104,12 +111,23 @@ class LoadNetworkView(util.ModalWindow):
         rb.grid(row=1, column=0, sticky=tk.W)
         tooltips.ToolTipYellow(rb, _text["tl_type_tt"])
         
-        self._preview_frame = ttk.LabelFrame(subframe, text=_text["preview"])
-        self._preview_frame.grid(row=0, column=1, sticky=tk.NSEW)
-        util.stretchy_rows_cols(subframe, [0], [1])
-        self._preview_canvas = mtp.CanvasFigure(self._preview_frame)
+        preview_frame = ttk.LabelFrame(subframe, text=_text["preview"])
+        preview_frame.grid(row=0, column=1, sticky=tk.NSEW)
+        util.stretchy_rows_cols(preview_frame, [0], [0])
+        util.stretchy_rows_cols(subframe, [0], [1, 2])
+        self._preview_canvas = mtp.CanvasFigure(preview_frame)
         self._preview_canvas.grid(sticky=tk.NSEW, padx=1, pady=1)
-        util.stretchy_rows_cols(self._preview_frame, [0], [0])
+        tooltips.ToolTipYellow(self._preview_canvas, _text["preview_tt"])
+        preview_frame = ttk.LabelFrame(subframe, text=_text["preview_proj"])
+        preview_frame.grid(row=0, column=2, sticky=tk.NSEW)
+        util.stretchy_rows_cols(preview_frame, [0], [0])
+        self._preview_projected_canvas = mtp.CanvasFigure(preview_frame)
+        self._preview_projected_canvas.grid(sticky=tk.NSEW, padx=1, pady=1)
+        tooltips.ToolTipYellow(self._preview_projected_canvas, _text["preview_proj_tt"])
+
+        #frame = ttk.LabelFrame(self, text=_text["crop"])
+        #frame.grid(row=20, column=0, sticky=tk.NSEW, padx=2, pady=2)
+        #self.model.crop_to_geometry.make_view(frame, "inline").grid(sticky=tk.NSEW)
 
         frame = ttk.Frame(self)
         frame.grid(row=100, column=0, sticky=tk.EW, pady=2)
@@ -125,10 +143,27 @@ class LoadNetworkView(util.ModalWindow):
         self._network_type.set(self.model.network_type.value)
         self._plot_preview()
         self._projector_widget.update()
+        self.refresh_projected()
         
+    def refresh_projected(self):
+        coords = self.model.geoframe_projector.projected_dataset_coords()
+        if self.model.projected_graph is None or coords is None:
+            self._preview_projected_canvas.set_blank()
+        else:
+            def task():
+                fig = mtp.new_figure(size=(8,8))
+                ax = fig.add_subplot(1,1,1)
+                lc = mtp.matplotlib.collections.LineCollection(self.model.projected_graph.as_lines(),
+                        color="black", linewidth=0.5, zorder=1)
+                ax.add_collection(lc)
+                ax.scatter(coords[0], coords[1], marker="+", color="blue", alpha=0.5, zorder=2)
+                ax.set_aspect(1)
+                fig.set_tight_layout("tight")
+                return fig
+            self._preview_projected_canvas.set_figure_task(task)
+
     def _new_epsg(self):
-        pass
-        # TOOD!!!!!!!!!!
+        self.controller.new_epsg()
         
     def _load_file(self):
         filename = util.ask_open_filename(filetypes=[("Shape file", "*.shp"),

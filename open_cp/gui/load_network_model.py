@@ -32,6 +32,8 @@ class NetworkModel():
     def crop_to_geometry(self):
         """Instances of :class:`geo_clip.CropToGeometry` which gives clipping
         information.
+        
+        Currently UNUSED
         """
         return self._crop_to_geometry
     
@@ -56,10 +58,14 @@ class NetworkModel():
     def backup(self, make_new=True):
         """Internally store old state, so we can quickly recover if we decide
         we don't like changed.  Much faster than calling `to_dict` and then
-        `from_dict`."""
+        `from_dict`.
+        
+        :param make_new: If `True`, capture settings.  If `False` then release
+          memory.
+        """
         if make_new:
             data = self.to_dict()
-            self._backup = (data, self.filename, self.graph, self.geoframe_projector.frame)
+            self._backup = (data, self.filename, self.graph, self.geoframe_projector.frame, self.projected_graph)
         else:
             self._backup = None
         
@@ -67,17 +73,22 @@ class NetworkModel():
         """Partner of :meth:`backup`."""
         if self._backup is None:
             return
-        data, filename, graph, frame = self._backup
+        data, filename, graph, frame, pgraph = self._backup
         if "filename" in data:
             del data["filename"]
         self.from_dict(data)
         self.geoframe_projector.frame = frame
         self._graph = graph
+        self._graph_projected = pgraph
         self._filename = filename
     
     def _reset(self):
         self.filename = None
+        self._reset_graphs()
+        
+    def _reset_graphs(self):
         self._graph = None
+        self._graph_projected = None
     
     def _load_network(self):
         if self.filename is None:
@@ -89,21 +100,34 @@ class NetworkModel():
             self.geoframe_projector.frame = frame
             self.reload()
         except Exception as ex:
+            _logger.exception("Trying to load geometry into geopandas")
             self._error = "{}/{}".format(type(ex), ex)
             self._reset()
 
     def reload(self):
         try:
-            if self.network_type == self.NetworkType.ORDNANCE:
-                self._graph = self._load_OS_style(self.geoframe_projector.frame)
-            elif self.network_type == self.NetworkType.TIGER_LINES:
-                self._graph = self._load_tiger_style(self.geoframe_projector.frame)
-            else:
-                raise NotImplementedError()
-            _logger.debug("Built graph with %s vertices and %s edges", len(self.graph.vertices), len(self.graph.edges))
+            self._graph = self._frame_to_graph(self.geoframe_projector.frame)
         except Exception as ex:
+            _logger.exception("Trying to convert geometry to graph")
             self._error = "{}/{}".format(type(ex), ex)
-            self._reset()
+            self._reset_graphs()
+        try:
+            self._graph_projected = self._frame_to_graph(self.geoframe_projector.fully_projected_frame())
+        except Exception as ex:
+            _logger.exception("Trying to convert geometry to projected graph")
+            self._error = "{}/{}".format(type(ex), ex)
+            self._graph_projected = None
+
+    def _frame_to_graph(self, frame):
+        """May throw..."""
+        if self.network_type == self.NetworkType.ORDNANCE:
+            graph = self._load_OS_style(frame)
+        elif self.network_type == self.NetworkType.TIGER_LINES:
+            graph = self._load_tiger_style(frame)
+        else:
+            raise NotImplementedError()
+        _logger.debug("Built graph with %s vertices and %s edges", len(graph.vertices), len(graph.edges))
+        return graph
 
     @staticmethod
     def _load_OS_style(frame):
@@ -120,8 +144,13 @@ class NetworkModel():
         for geo in frame.geometry:
             for pt in geo.coords:
                 all_nodes.append(pt)
+
+        xcs = [x for (x, y, *z) in all_nodes]
+        ycs = [y for (x, y, *z) in all_nodes]
+        raange = min(max(xcs) - min(xcs), max(ycs) - min(ycs))
+        tolerance = raange * 1e-7
                 
-        b = open_cp.network.PlanarGraphNodeOneShot(all_nodes)
+        b = open_cp.network.PlanarGraphNodeOneShot(all_nodes, tolerance)
         for geo in frame.geometry:
             path = list(geo.coords)
             b.add_path(path)
@@ -159,6 +188,10 @@ class NetworkModel():
     @property
     def graph(self):
         return self._graph
+    
+    @property
+    def projected_graph(self):
+        return self._graph_projected
 
     def consume_recent_error(self):
         e = self._error

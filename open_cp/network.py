@@ -154,12 +154,12 @@ class PlanarGraphNodeOneShot():
         self._edges.append((key1, key2))
 
     def remove_duplicate_edges(self):
-        """A neccessary evil."""
+        """A neccessary evil.  Also removes loops."""
         edges = set()
         index = 0
         while index < len(self._edges):
             edge = frozenset(self._edges[index])
-            if edge in edges:
+            if edge in edges or len(edge)==1:
                 del self._edges[index]
             else:
                 edges.add(edge)

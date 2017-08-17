@@ -107,6 +107,7 @@ def test_PlanarGraphNodeOneShot_remove_duplicates():
     
     b.add_path([(0,0),(1,1),(5.1,1.2)])
     b.add_edge(0.1,0.01,2,2)
+    b.add_edge(1,1,1,1)
     b.add_edge(0.1,0.01,2,2)
 
     with pytest.raises(ValueError):

@@ -37,19 +37,32 @@ class LoadNetwork():
     def model(self):
         return self._analysis_controller.model.network_model
 
+    def _display_error_if_needed(self):
+        error = self.model.consume_recent_error()
+        if error is not None:
+            load_network_view.alert(error)
+
     def load(self, filename):
         def task():
             self.model.filename = filename
         view = load_network_view.FurtherWait(self._parent)
         view.run(task)
-        error = self.model.consume_recent_error()
-        if error is not None:
-            load_network_view.alert(error)
+        self._display_error_if_needed()
         self.view.refresh()
 
     def reload(self):
-        self.model.reload()
+        view = load_network_view.FurtherWait(self._parent)
+        view.run(lambda : self.model.reload())
+        self._display_error_if_needed()
+        self.view.refresh()
 
     def remove(self):
         self.model.filename = None
         self.view.refresh()
+
+    def new_epsg(self):
+        """Use has entered a new epsg number."""
+        view = load_network_view.FurtherWait(self._parent)
+        view.run(lambda : self.model.reload())
+        self._display_error_if_needed()
+        self.view.refresh_projected()

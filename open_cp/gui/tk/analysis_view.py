@@ -35,6 +35,8 @@ _text = {
     "coord_type" : "Coordinates are ",
     "add_network" : "Add network geometry",
     "add_network_tt" : "Load a network data, if you wish to perform network based predictions.",
+    "none" : "None loaded",
+    
     "new_input" : "Select a new input file",
     "new_input_tt" : "Load a new CSV file using the same data format.",
     "with_basemap" : "Plot with base map",
@@ -165,6 +167,19 @@ class AnalysisView(tk.Frame):
         text += CoordType._translation[self._model.coord_type]
         ttk.Label(self._info_frame, text=text).grid(row=3, column=0, sticky=tk.W, padx=3, pady=1)
         return self._info_frame
+
+    def update_network_info(self):
+        epsg = ""
+        ty = ""
+        if self._model.network_model.filename is None:
+            fn = _text["none"]
+        else:
+            fn = funcs.string_ellipse(self._model.network_model.filename, 40)
+            if self._model.network_model.geoframe_projector.epsg is not None:
+                epsg = "@ {}".format(self._model.network_model.geoframe_projector.epsg)
+            ty = str(self._model.network_model.network_type)
+        text = "Network data: {} {} {}".format(fn, epsg, ty)
+        ttk.Label(self._info_frame, text=text).grid(row=4, column=0, sticky=tk.W, padx=3, pady=1)
 
     def update_session_name(self):
         if self._model.session_filename is None:
