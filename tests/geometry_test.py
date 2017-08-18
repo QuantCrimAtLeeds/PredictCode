@@ -165,16 +165,14 @@ def test_project_point_to_lines_compare(lines):
 def test_intersect_line_box():
     assert geometry.intersect_line_box((0.5, -1), (0.5, 2), (0,0,2,1)) == pytest.approx((1/3, 2/3))
     assert geometry.intersect_line_box((0, -1), (0, 2), (0,0,2,1)) == pytest.approx((1/3, 2/3))
-    assert geometry.intersect_line_box((2, -1), (2, 2), (0,0,2,1)) == pytest.approx((1/3, 2/3))
-    assert geometry.intersect_line_box((2, 2), (2, -1), (0,0,2,1)) == pytest.approx((1/3, 2/3))
+    assert geometry.intersect_line_box((2, -1), (2, 2), (0,0,2,1)) is None
     assert geometry.intersect_line_box((-.1, -1), (-.1, 2), (0,0,2,1)) is None
     assert geometry.intersect_line_box((2.1, -1), (2.1, 2), (0,0,2,1)) is None
     assert geometry.intersect_line_box((1,0.2), (1,0.8), (0,0,2,1)) == pytest.approx((0, 1))
     
     assert geometry.intersect_line_box((-1,0.5), (3,0.5), (0,0,2,1)) == pytest.approx((0.25, 0.75))
     assert geometry.intersect_line_box((-1,0), (3,0), (0,0,2,1)) == pytest.approx((0.25, 0.75))
-    assert geometry.intersect_line_box((-1,1), (3,1), (0,0,2,1)) == pytest.approx((0.25, 0.75))
-    assert geometry.intersect_line_box((3,1), (-1,1), (0,0,2,1)) == pytest.approx((0.25, 0.75))
+    assert geometry.intersect_line_box((-1,1), (3,1), (0,0,2,1)) is None
     assert geometry.intersect_line_box((-1,-0.1), (3,-0.1), (0,0,2,1)) is None
     assert geometry.intersect_line_box((-1,1.1), (3,1.1), (0,0,2,1)) is None
     assert geometry.intersect_line_box((0.2,0.5), (1,0.5), (0,0,2,1)) == pytest.approx((0,1))
@@ -192,4 +190,61 @@ def test_intersect_line_box():
     assert geometry.intersect_line_box((-1,-1), (-0.2,-0.2), (0,0,2,1)) is None
     assert geometry.intersect_line_box((-1,-1), (0,0), (0,0,2,1)) is None
     assert geometry.intersect_line_box((-1,1), (1,-1), (0,0,2,1)) is None
+    
+def test_intersect_line_grid():
+    grid = open_cp.data.Grid(xsize=10, ysize=10, xoffset=0, yoffset=0)
+    line = ( (2, 2), (7, 7) )
+    out = geometry.intersect_line_grid(line, grid)
+    assert out == [ line ]
+
+    grid = open_cp.data.Grid(xsize=10, ysize=10, xoffset=3, yoffset=3)
+    line = ( (2, 2), (7, 7) )
+    out = geometry.intersect_line_grid(line, grid)
+    assert out == [ ((2,2), (3,3)), ((3,3), (7,7)) ]
+    
+    grid = open_cp.data.Grid(xsize=10, ysize=10, xoffset=3, yoffset=4)
+    line = ( (2, 3), (7, 8) )
+    out = geometry.intersect_line_grid(line, grid)
+    assert out == [ ((2,3), (3,4)), ((3,4), (7,8)) ]
+    
+    grid = open_cp.data.Grid(xsize=10, ysize=1, xoffset=0, yoffset=0)
+    line = ( (0,0.5), (20, 0.5) )
+    out = geometry.intersect_line_grid(line, grid)
+    assert out == [ ((0,0.5), (10,0.5)), ((10,0.5), (20,0.5)) ]
+
+    grid = open_cp.data.Grid(xsize=10, ysize=1, xoffset=0, yoffset=0.5)
+    line = ( (0,0.5), (20, 0.5) )
+    out = geometry.intersect_line_grid(line, grid)
+    assert out == [ ((0,0.5), (10,0.5)), ((10,0.5), (20,0.5)) ]
+
+    grid = open_cp.data.Grid(xsize=10, ysize=4, xoffset=1, yoffset=1.5)
+    for _ in range(100):
+        a,b,c,d = np.random.random(size=4) * 100
+        line = ( (a,b), (c,d) )
+        out = geometry.intersect_line_grid(line, grid)
+        assert out[0][0] == pytest.approx((a, b))
+        assert out[-1][1] == pytest.approx((c, d))
+        for i in range(0, len(out)-1):
+            assert out[i][1] == pytest.approx(out[i+1][0])
+        for (s, e) in out:
+            t = 0.001
+            ss = s[0] * (1-t) + e[0] * t, s[1] * (1-t) + e[1] * t
+            ee = s[0] * t + e[0] * (1-t), s[1] * t + e[1] * (1-t)
+            gx, gy = grid.grid_coord(*ss)
+            bbox = grid.bounding_box_of_cell(gx, gy)
+            tt = geometry.intersect_line_box(ss, ee, bbox)
+            assert tt == pytest.approx((0, 1))
+
+def test_intersect_line_grid_most():
+    grid = open_cp.data.Grid(xsize=10, ysize=10, xoffset=0, yoffset=0)
+    line = ( (2, 2), (7, 7) )
+    assert geometry.intersect_line_grid_most(line, grid) == (0,0)
+    line = ( (2, 2), (11, 11) )
+    assert geometry.intersect_line_grid_most(line, grid) == (0,0)
+    line = ( (2, 2), (18, 18) )
+    assert geometry.intersect_line_grid_most(line, grid) == (0,0)
+    line = ( (2, 2), (19, 19) )
+    assert geometry.intersect_line_grid_most(line, grid) == (1,1)
+    line = ( (2, 2), (30, 30) )
+    assert geometry.intersect_line_grid_most(line, grid) == (1,1)
     

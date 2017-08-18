@@ -6,6 +6,7 @@ Methods to help with geometry work.  Uses `shapely`.
 """
 
 import numpy as _np
+import math as _math
 from . import data as _data
 import logging as _logging
 
@@ -245,26 +246,32 @@ def project_point_to_lines_shapely(point, lines):
     return project_point_to_line(point, line.coords)
 
 def intersect_line_box(start, end, box_bounds):
-    """Intersect a line with a rectangular box.
+    """Intersect a line with a rectangular box.  The box is "half-open", so
+    only the top and left boundary edges are considered part of the box.  If
+    the line only intersects the box in a point, we consider this a no
+    intersection.
 
     :param start: Pair `(x,y)` of the start of the line segment
     :param end: Pair `(x,y)` of the end of the line segment
-    :param box_bounds: `(xmin, ymin, xmax, ymax)` of the box
+    :param box_bounds: `(xmin, ymin, xmax, ymax)` of the box.  Formally, the
+      box is those `(x,y)` with `xmin <= x < xmax` and `ymin <= y < ymax`.
 
     :return: `None` or `(t1, t2)` where `start * (1-t) + end * t` is
       in the box for `t1 < t < t2`.
     """
     dx, dy = end[0] - start[0], end[1] - start[1]
-    xmin, ymin, xmax, ymax = box_bounds
-    if xmin > xmax or ymin > ymax:
-        raise ValueError()
+    xmin, ymin, xmax, ymax = tuple(box_bounds)
+    if xmin >= xmax or ymin >= ymax:
+        raise ValueError("Not a valid box")
     if _np.abs(dx) < 1e-10:
-        if not ( xmin <= start[0] and start[0] <= xmax ):
+        # Vertical line
+        if not ( xmin <= start[0] and start[0] < xmax ):
             return None
         if _np.abs(dy) < 1e-10:
-            if not ( ymin <= start[1] and start[1] <= ymax ):
+            # Must be point
+            if not ( ymin <= start[1] and start[1] < ymax ):
                 return None
-            return 0, 1
+            return (0, 1)
         else:
             c, d = ymin - start[1], ymax - start[1]
             if dy > 0:
@@ -273,7 +280,8 @@ def intersect_line_box(start, end, box_bounds):
                 c, d = d / dy, c / dy
             return max(0, c), min(1, d)
     elif _np.abs(dy) < 1e-10:
-        if not ( ymin <= start[1] and start[1] <= ymax ):
+        # (Proper) Horizontal line
+        if not ( ymin <= start[1] and start[1] < ymax ):
             return None
         a, b = xmin - start[0], xmax - start[0]
         if dx > 0:
@@ -282,6 +290,7 @@ def intersect_line_box(start, end, box_bounds):
             a, b = b / dx, a / dx
         return max(0, a), min(1, b)
     else:
+        # Line in general position
         a, b = xmin - start[0], xmax - start[0]
         if dx > 0:
             a, b = a / dx, b / dx
@@ -297,6 +306,78 @@ def intersect_line_box(start, end, box_bounds):
         if tmin < tmax:
             return (tmin, tmax)
         return None
+
+def intersect_line_grid_most(line, grid):
+    """Intersect a line with a grid.  Finds the grid cell which contains the
+    largest fraction of the line (which might be an _arbitrary_ choice between
+    more than one grid cell).
+    
+    :param line: `((x1,y1), (x2,y2))`
+    :param grid: Instance of :class:`data.Grid` or same interface.
+    
+    :return: The grid cell `(gx, gy)` which contains most of the line.
+    """
+    _, intervals = full_intersect_line_grid(line, grid)
+    best, length = None, None
+    for (gx, gy, t1, t2) in intervals:
+        t = t2 - t1
+        if length is None or t > length:
+            best, length = (gx, gy), t
+    return best
+
+def intersect_line_grid(line, grid):
+    """Intersect a line with a grid, returning the smallest set of new lines
+    which cover the original line and such that each new line segment lies
+    entirely within one grid cell.
+    
+    :param line: `((x1,y1), (x2,y2))`
+    :param grid: Instance of :class:`data.Grid` or same interface.
+    
+    :return: List of line segments.
+    """
+    segments, _ = full_intersect_line_grid(line, grid)
+    return segments
+
+def full_intersect_line_grid(line, grid):
+    """Intersect a line with a grid, returning the smallest set of new lines
+    which cover the original line and such that each new line segment lies
+    entirely within one grid cell.
+    
+    :param line: `((x1,y1), (x2,y2))`
+    :param grid: Instance of :class:`data.Grid` or same interface.
+    
+    :return: `(segments, intervals)` where `segments` is as
+      :meth:`intersect_line_grid_most` and `intervals` is a list of tuples
+      `(gx, gy, t1, t2)` telling that the line segment from (line coordinates)
+      `t1` to `t2` is in grid cell `gx, gy`.  The ordering as the same as
+      `segments`.
+    """
+    gx, gy = grid.grid_coord(*line[0])
+    if grid.grid_coord(*line[1]) == (gx, gy):
+        return [line], [(gx, gy, 0, 1)]
+    
+    segments, intervals = [], []
+    
+    start = (line[0][0] - grid.xoffset, line[0][1] - grid.yoffset)
+    end = (line[1][0] - grid.xoffset, line[1][1] - grid.yoffset)
+    search = start
+    delta = 1e-8
+
+    while True:
+        gx, gy = _math.floor(search[0] / grid.xsize), _math.floor(search[1] / grid.ysize)
+        bbox = (gx * grid.xsize, gy * grid.ysize, (gx+1) * grid.xsize, (gy+1) * grid.ysize)
+        t1, t2 = intersect_line_box(start, end, bbox)
+        segments.append((
+                (start[0]*(1-t1) + end[0]*t1 + grid.xoffset, start[1]*(1-t1) + end[1]*t1 + grid.yoffset),
+                (start[0]*(1-t2) + end[0]*t2 + grid.xoffset, start[1]*(1-t2) + end[1]*t2 + grid.yoffset)
+                ))
+        intervals.append((gx, gy, t1, t2))
+        t2 += delta
+        if t2 >= 1:
+            break
+        search = (start[0]*(1-t2) + end[0]*t2, start[1]*(1-t2) + end[1]*t2)
+    
+    return segments, intervals
     
 
 try:

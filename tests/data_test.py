@@ -92,6 +92,10 @@ def test_RectangluarRegion_add():
     assert rr.ymin == 17
     assert rr.ymax == 21
 
+def test_RectangluarRegion_to_tuple():
+    r = RectangularRegion(xmin=5, ymin=8, xmax=10, ymax=12)
+    assert tuple(r) == (5, 8, 10, 12)
+
 def test_RectangluarRegion_aspect():
     assert( RectangularRegion(xmin=5, xmax=5, ymin=1, ymax=10).aspect_ratio is np.nan )
     assert( RectangularRegion(xmin=5, xmax=10, ymin=1, ymax=10).aspect_ratio == pytest.approx(9/5) )

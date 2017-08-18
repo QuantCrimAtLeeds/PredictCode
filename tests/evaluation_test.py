@@ -86,7 +86,7 @@ def test_top_slice_masked():
 @pytest.fixture
 def prediction():
     matrix = np.array([[1,2,3,4], [5,6,7,8]])
-    return open_cp.predictors.GridPredictionArray(xsize=10, ysize=20,matrix=matrix, xoffset=2, yoffset=3)
+    return open_cp.predictors.GridPredictionArray(xsize=10, ysize=20, matrix=matrix, xoffset=2, yoffset=3)
 
 def test_hit_rate(prediction):
     t = [np.datetime64("2017-01-01")] * 8
@@ -162,3 +162,53 @@ def test_network_hit_rate(network_points):
     with pytest.raises(ValueError):
         graph1 = open_cp.network.PlanarGraph([(0,0,0), (1,1,1), (2,2,2), (3,3,3), (4,4,3), (5,5,5)], [])
         evaluation.network_hit_rate(graph, network_points, graph1)
+
+@pytest.fixture
+def graph():
+    b = open_cp.network.PlanarGraphBuilder()
+    b.add_vertex(2, 3)
+    b.add_vertex(2.5, 3.8)
+    b.add_vertex(13, 5)
+    b.add_vertex(15, 7)
+    b.add_edge(0, 1)
+    b.add_edge(2, 3)
+    return b.build()
+
+def test_grid_risk_to_graph(prediction, graph):
+    g,_,risks = evaluation.grid_risk_to_graph(prediction, graph)
+    assert g is graph
+    np.testing.assert_allclose(risks, [1, 2])
+
+def test_grid_risk_to_graph_split(prediction, graph):
+    g, lookup, risks = evaluation.grid_risk_to_graph(prediction, graph, "subdivide")
+    assert open_cp.network.approximately_equal(g, graph)
+    np.testing.assert_allclose(risks, [1, 2])
+    assert lookup == {0:0, 1:1}
+
+@pytest.fixture
+def graph1():
+    b = open_cp.network.PlanarGraphBuilder()
+    b.add_vertex(10, 4)
+    b.add_vertex(14, 6)
+    b.add_edge(0, 1)
+    return b.build()
+
+def test_grid_risk_to_graph_split1(prediction, graph1):
+    g, lookup, risks = evaluation.grid_risk_to_graph(prediction, graph1, "subdivide")
+    np.testing.assert_allclose(risks, [1, 2])
+    assert lookup == {0:0, 1:0}
+    
+    b = open_cp.network.PlanarGraphBuilder()
+    b.add_vertex(10, 4)
+    b.add_vertex(12, 5)
+    b.add_vertex(14, 6)
+    b.add_edge(0, 1)
+    b.add_edge(1, 2)
+    assert open_cp.network.approximately_equal(g, b.build())
+
+def test_network_coverage(graph):
+    out = evaluation.network_coverage(graph, [3,5], 0.5)
+    np.testing.assert_allclose(out, [False, False])
+    out = evaluation.network_coverage(graph, [3,5], 0.99)
+    np.testing.assert_allclose(out, [False, True])
+    

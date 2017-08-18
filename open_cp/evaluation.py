@@ -115,16 +115,76 @@ def grid_risk_to_graph(grid_pred, graph, strategy="most"):
     :param graph: An instance of :class:`network.PlanarGraph`
     :param strategy: "most" or "subdivide"
     
-    :return: `(graph, risks)` where `graph` is a possible new graph, and
-      `risks` is an array of risks, correpsonding to the edges in the graph.
+    :return: `(graph, lookup, risks)` where `graph` is a possible new graph,
+      and `risks` is an array of risks, correpsonding to the edges in the
+      graph.  If we built a new graph, then `lookup` will be a dictionary from
+      edge index in the new graph to edge index in the old graph (in general a
+      one-to-many mapping).
     """
     if strategy == "most":
-        return _grid_risk_to_graph_most(grid_pred, graph)
+        return graph, None, _grid_risk_to_graph_most(grid_pred, graph)
+    elif strategy == "subdivide":
+        return _grid_risk_to_graph_subdivide(grid_pred, graph)
     else:
-        raise NotImplementedError()
+        raise ValueError()
+        
+def _grid_risk_to_graph_subdivide(grid_pred, graph):
+    risks = []
+    lookup = dict()
+    builder = _network.PlanarGraphBuilder()
+    builder.vertices.update(graph.vertices)
+    for edge_index, edge in enumerate(graph.edges):
+        line = (graph.vertices[edge[0]], graph.vertices[edge[1]])
+        segments, intervals = _geometry.full_intersect_line_grid(line, grid_pred)
+        
+        start_key = edge[0]
+        for i in range(len(segments) - 1):
+            key = builder.add_vertex(*segments[i][1])
+            lookup[ len(builder.edges) ] = edge_index
+            builder.add_edge(start_key, key)
+            start_key = key
+            gx, gy, _, _ = intervals[i]
+            risks.append(grid_pred.grid_risk(gx, gy))
+        lookup[ len(builder.edges) ] = edge_index
+        builder.add_edge(start_key, edge[1])
+        gx, gy, _, _ = intervals[-1]
+        risks.append(grid_pred.grid_risk(gx, gy))
+            
+    return builder.build(), lookup, _np.asarray(risks)
         
 def _grid_risk_to_graph_most(grid_pred, graph):
-    pass
+    risks = _np.empty(len(graph.edges))
+    for i, edge in enumerate(graph.edges):
+        line = (graph.vertices[edge[0]], graph.vertices[edge[1]])
+        gx, gy = _geometry.intersect_line_grid_most(line, grid_pred)
+        if grid_pred.is_valid(gx, gy):
+            risks[i] = grid_pred.grid_risk(gx, gy)
+        else:
+            risks[i] = 0
+    return risks
+
+def network_coverage(graph, risks, fraction):
+    """For the given graph and risks for each edge, find the top fraction
+    of the network by length.
+    
+    :param graph: An instance of :class:`network.PlanarGraph`
+    :param risks: Array of risks the same length as the number of edges in
+      `graph`.
+    :param fraction: Between 0 and 1.
+    
+    :return: Boolean array of length the same length as the number of edges in
+      `graph`, with `True` meaning that the edge should be included.
+    """
+    target_length = _np.sum(graph.lengths) * fraction
+    indices = _np.argsort(risks)
+    included = _np.zeros_like(indices, dtype=_np.bool)
+    length = 0.0
+    for index in indices[::-1]:
+        length += graph.length(index)
+        if length > target_length:
+            break
+        included[index] = True
+    return included
 
 def network_hit_rate(graph, timed_network_points, source_graph=None):
     """Computes the "hit rate" for the given prediction for the passed
@@ -218,6 +278,11 @@ def maximum_hit_rate(grid, timed_points, percentage_coverage):
         pass
     return hit_rates(risk, timed_points, percentage_coverage)
 
+
+
+
+
+####  Below is some _tentative_ code...
 
 class PredictionProvider():
     def predict(self, time):
