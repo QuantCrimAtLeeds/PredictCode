@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 def find_version():
     import os
@@ -10,10 +10,10 @@ def find_version():
                 return line[start+1:][:end]
             
 long_description = ""
-            
+
 setup(
     name = 'opencp',
-    packages = ['open_cp'],
+    packages = find_packages(include=["open_cp*"]),
     version = find_version(),
     install_requires = [], # TODO
     python_requires = '>=3.5',
