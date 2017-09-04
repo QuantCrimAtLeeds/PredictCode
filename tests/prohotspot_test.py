@@ -5,6 +5,7 @@ import numpy as np
 from datetime import datetime, timedelta
 from unittest import mock
 import open_cp
+import open_cp.predictors
 
 def test_DistanceDiagonalsSame():
     distance = testmod.DistanceDiagonalsSame()
@@ -152,3 +153,19 @@ def test_ProspectiveHotSpotContinuous_vectorise():
     prediction = p.predict(datetime(2017,4,5), datetime(2017,4,5))
     expected = np.asarray([1, 1/2, 1/(1+np.sqrt(2))])
     np.testing.assert_allclose(prediction.risk([0,0,50], [50,0,0]), expected)
+
+def test_ProspectiveHotSpotContinuous_togrid():
+    p = testmod.ProspectiveHotSpotContinuous()
+    timestamps = [datetime(2017,4,5)]
+    xcoords = [0]
+    ycoords = [50]
+    p.data = open_cp.TimedPoints.from_coords(timestamps, xcoords, ycoords)
+    mat = np.zeros((5, 3))
+    grid = open_cp.predictors.GridPredictionArray(10, 5, mat, 2, 3)
+    prediction = p.grid_predict(datetime(2017,4,5), datetime(2017,4,5), datetime(2017,4,6), grid)
+    
+    assert prediction.xsize == 10
+    assert prediction.ysize == 5
+    assert prediction.xoffset == 2
+    assert prediction.yoffset == 3
+    assert prediction.intensity_matrix.shape == (5,3)

@@ -62,7 +62,6 @@ def test_GridPrediction_with_offset():
     test.want = (1, 2)
     test.risk(25 + 15, 30 + 20 + 8)
 
-
 def a_valid_grid_prediction_array():
     matrix = np.array([[1,2,3], [4,5,6]])
     return testmod.GridPredictionArray(10, 10, matrix)
@@ -220,4 +219,20 @@ def test_continuous_prediction_samples():
 
     cp = testmod.ContinuousPrediction(200, 100, 0, 0)
     assert cp.samples == 100
+    
+def test_GridPredictionArray_renormalise():
+    matrix = np.array([[1,2,3], [4,5,6]])
+    gpa = testmod.GridPredictionArray(10, 10, matrix, xoffset=2, yoffset=7)
+    gpa2 = gpa.renormalise()
+    np.testing.assert_allclose(np.array([[1,2,3], [4,5,6]]), gpa.intensity_matrix)
+    np.testing.assert_allclose(np.array([[1,2,3], [4,5,6]]) / 21, gpa2.intensity_matrix)
+    assert gpa2.xoffset == 2
+    assert gpa2.yoffset == 7
+    assert gpa2.xsize == 10
+    assert gpa2.ysize == 10
+    
+    mm = np.ma.masked_array(matrix, mask=[[True,False,False], [False,True,False]])
+    gpa = testmod.GridPredictionArray(10, 10, mm, xoffset=2, yoffset=7)
+    gpa2 = gpa.renormalise()
+    np.testing.assert_allclose(np.array([[1,2,3], [4,5,6]]) / 15, gpa2.intensity_matrix)
     

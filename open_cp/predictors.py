@@ -131,6 +131,14 @@ class GridPredictionArray(GridPrediction):
         return GridPredictionArray(xsize=self.xsize, ysize=self.ysize,
             xoffset=xoffset, yoffset=yoffset, matrix=new_matrix)
 
+    def renormalise(self):
+        """Return a new instance with the intensity matrix scaled so that it
+        sums to 1, taking account of any mask."""
+        norm = _np.ma.sum(self._matrix)
+        mat = _np.ma.array(self._matrix) / norm
+        return GridPredictionArray(xsize=self.xsize, ysize=self.ysize,
+            xoffset=self.xoffset, yoffset=self.yoffset, matrix=mat)        
+
     def grid_risk(self, gx, gy):
         """Find the risk in a grid cell.
 

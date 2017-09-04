@@ -203,11 +203,11 @@ class ProspectiveHotSpotContinuous(_predictors.DataTrainer):
             raise ValueError("Data cutoff point should be before prediction time")
         events = self.data.events_before(cutoff_time)
         time_deltas = (_np.datetime64(predict_time) - events.timestamps) / self.time_unit
-        coords = _np.array(events.coords)
 
         def kernel(points):
-            xdeltas = (points[0][:,None] - coords[0][None,:]) / self.grid
-            ydeltas = (points[1][:,None] - coords[1][None,:]) / self.grid
+            points = _np.asarray(points)
+            xdeltas = (points[0][:,None] - events.coords[0][None,:]) / self.grid
+            ydeltas = (points[1][:,None] - events.coords[1][None,:]) / self.grid
             distances = _np.sqrt(xdeltas**2 + ydeltas**2)
             times = time_deltas[None,:]
             r = _np.sum(self.weight(times, distances), axis=-1)
@@ -216,3 +216,42 @@ class ProspectiveHotSpotContinuous(_predictors.DataTrainer):
 
         return _predictors.KernelRiskPredictor(kernel, cell_width=self.grid,
                 cell_height=self.grid)
+        
+    def grid_predict(self, cutoff_time, start, end, grid):
+        """Directly calculate a grid prediction, by taking the mean value over
+        both time and space.  We also normalise the resulting grid prediction.
+        (But be aware that if you subsequently "mask" the grid, you will then
+        need to re-normalise).
+
+        :param cutoff_time: Ignore data with a timestamp after this time.
+        :param start: The start of the prediction time window.  Typically the
+          same as `cutoff_time`.
+        :param end: The end of the prediction window.  We will average the
+          kernel between `start` and `end`.
+        :param grid: An instance of :class:`data.BoundedGrid` to use as a basis
+          for the prediction.
+
+        :return: An instance of :class:`GridPredictionArray`.
+        """
+        if not cutoff_time <= start:
+            raise ValueError("Data cutoff point should be before prediction time")
+        events = self.data.events_before(cutoff_time)
+        start, end = _np.datetime64(start), _np.datetime64(end)
+        
+        # Rather than copy'n'paste a lot of code, we do this...
+        def kernel(points):
+            points = _np.asarray(points)
+            xdeltas = (points[0][:,None] - events.coords[0][None,:]) / self.grid
+            ydeltas = (points[1][:,None] - events.coords[1][None,:]) / self.grid
+            distances = _np.sqrt(xdeltas**2 + ydeltas**2)
+            num_points = points.shape[1] if len(points.shape) > 1 else 1
+            time_deltas = (end - start) * _np.random.random(num_points) + start
+            times = (time_deltas[:,None] - events.timestamps[None,:]) / self.time_unit
+            r = _np.sum(self.weight(times, distances), axis=-1)
+            # Return a scalar if input as scalar
+            return r[0] if len(r)==1 else r
+        
+        krp = _predictors.KernelRiskPredictor(kernel, cell_width=self.grid,
+                cell_height=self.grid)
+        
+        return _predictors.GridPredictionArray.from_continuous_prediction_grid(krp, grid)        
