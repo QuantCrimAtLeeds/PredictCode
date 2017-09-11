@@ -161,7 +161,7 @@ class KDE(_predictors.DataTrainer):
     def space_kernel(self, v):
         self._space_kernel = v
 
-    def predict(self, start_time=None, end_time=None):
+    def predict(self, start_time=None, end_time=None, samples=None):
         """Calculate a grid based prediction.
 
         :param start_time: Only use data after (and including) this time.  If
@@ -169,6 +169,7 @@ class KDE(_predictors.DataTrainer):
         :param end_time: Only use data before this time, and treat this as the
           time point to calculate the time kernel relative to.  If `None` then use
           to the end of the data, and use the final timestamp as the "end time".
+        :samples: As for :class:`ContinuousPrediction`.
 
         :return: An instance of :class:`GridPredictionArray`
         """
@@ -185,4 +186,5 @@ class KDE(_predictors.DataTrainer):
         kernel = self.space_kernel(data.coords)
         time_deltas = (end_time - data.timestamps) / self.time_unit
         kernel.weights = self.time_kernel(time_deltas)
-        return _predictors.grid_prediction_from_kernel(kernel, self.region, self.grid)
+        return _predictors.grid_prediction_from_kernel(kernel, self.region,
+                                self.grid, samples)

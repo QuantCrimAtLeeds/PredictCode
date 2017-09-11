@@ -4,8 +4,8 @@ hit_rate
 
 Compares the "hit rate" of a prediction against the reality.
 
-Remember: Running the test on a range of "coverages" is (much) more efficient
-than running a load of tests.
+Remember / TODO: Running the test on a range of "coverages" is (much) more
+efficient than running a load of tests.
 """
 
 from . import comparitor

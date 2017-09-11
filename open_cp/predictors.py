@@ -361,7 +361,7 @@ class KernelRiskPredictor(ContinuousPrediction):
         return self._kernel(_np.vstack([x,y]))
 
 
-def grid_prediction_from_kernel(kernel, region, grid_size):
+def grid_prediction_from_kernel(kernel, region, grid_size, samples=None):
     """Utility function to convert a space kernel into a grid based prediction.
     
     :param kernel: A kernel object taking an array of shape (2,N) of N lots
@@ -369,12 +369,14 @@ def grid_prediction_from_kernel(kernel, region, grid_size):
     :param region: An instance of :class RectangularRegion: giving the
       region to use.
     :param grid_size: The size of grid to use.
+    :param samples: As :class:`ContinuousPrediction`
     
     :return: An instance of :class GridPredictionArray:
     """
     width, height = region.grid_size(grid_size)
     cts_predictor = KernelRiskPredictor(kernel, xoffset=region.xmin,
-            yoffset=region.ymin, cell_width=grid_size, cell_height=grid_size)
+            yoffset=region.ymin, cell_width=grid_size, cell_height=grid_size,
+            samples=samples)
     return GridPredictionArray.from_continuous_prediction(cts_predictor,
             width, height)
 
