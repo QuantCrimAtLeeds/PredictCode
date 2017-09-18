@@ -274,12 +274,23 @@ class ContinuousPrediction():
         self.cell_height = cell_height
         self.xoffset = xoffset
         self.yoffset = yoffset
-        if samples is None:
-            # Use a fixed _density_
-            samples = int(cell_width * cell_height / 200)
-            if samples < 2:
-                samples = 2
         self.samples = samples
+    
+    @property
+    def samples(self):
+        """The number of samples to use per cell.  Set to null to use a _fixed
+        density_, currently 1 sample per 200 units of area."""
+        return self._samples
+    
+    @samples.setter
+    def samples(self, v):
+        self.__samples = v
+        if v is None:
+            # Use a fixed _density_
+            v = int(self.cell_width * self.cell_height / 200)
+            if v < 2:
+                v = 2
+        self._samples = v
     
     def grid_risk(self, gx, gy):
         """Return an estimate of the average risk in the grid cell"""
@@ -320,9 +331,11 @@ class ContinuousPrediction():
             return self.risk(point[0], point[1])
         return kernel
 
-    def rebase(self, cell_width, cell_height, xoffset, yoffset, samples=50):
+    def rebase(self, cell_width, cell_height, xoffset, yoffset, samples=None):
         """Returns a new instance using the same risk but with a different grid
         size and offset"""
+        if samples is None:
+            samples = self.__samples
         instance = ContinuousPrediction(cell_width, cell_height, xoffset,
             yoffset, samples)
         # Monkey-patch a delegation

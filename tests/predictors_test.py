@@ -185,6 +185,27 @@ def test_ContinuousPrediction_rebase(random_mock):
     expected = ( 16+17+19+24+36+37+39+44 ) / 4
     assert( test.grid_risk(1, 2) == pytest.approx(expected) )
 
+def test_ContinuousPrediction_rebase_number_samples():
+    class Test(testmod.ContinuousPrediction):
+        def risk(self, x, y):
+            return x + y
+
+    test = Test()
+    assert test.samples == 12
+    
+    test = test.rebase(10, 10, 5, 15)
+    assert test.samples == 2
+    assert test.cell_width == 10
+    assert test.cell_height == 10
+    assert test.xoffset == 5
+    assert test.yoffset == 15
+    
+    test = test.rebase(1000, 1000, 5, 15)
+    assert test.samples == 5000
+    
+    test.samples = 123
+    test = test.rebase(100, 100, 5, 15)
+    assert test.samples == 123
 
 @patch("numpy.random.random")
 def test_KernelRiskPredictor(random_mock):

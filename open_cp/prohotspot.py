@@ -217,7 +217,7 @@ class ProspectiveHotSpotContinuous(_predictors.DataTrainer):
         return _predictors.KernelRiskPredictor(kernel, cell_width=self.grid,
                 cell_height=self.grid)
         
-    def grid_predict(self, cutoff_time, start, end, grid):
+    def grid_predict(self, cutoff_time, start, end, grid, samples=None):
         """Directly calculate a grid prediction, by taking the mean value over
         both time and space.  We also normalise the resulting grid prediction.
         (But be aware that if you subsequently "mask" the grid, you will then
@@ -230,6 +230,7 @@ class ProspectiveHotSpotContinuous(_predictors.DataTrainer):
           kernel between `start` and `end`.
         :param grid: An instance of :class:`data.BoundedGrid` to use as a basis
           for the prediction.
+        :param samples: Number of samples to use, or `None` for auto-compute
 
         :return: An instance of :class:`GridPredictionArray`.
         """
@@ -252,6 +253,6 @@ class ProspectiveHotSpotContinuous(_predictors.DataTrainer):
             return r[0] if len(r)==1 else r
         
         krp = _predictors.KernelRiskPredictor(kernel, cell_width=self.grid,
-                cell_height=self.grid)
+                cell_height=self.grid, samples=samples)
         
         return _predictors.GridPredictionArray.from_continuous_prediction_grid(krp, grid)        
