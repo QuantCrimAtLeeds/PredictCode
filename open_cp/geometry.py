@@ -7,6 +7,7 @@ Methods to help with geometry work.  Uses `shapely`.
 
 import numpy as _np
 import math as _math
+import collections as _collections
 from . import data as _data
 import logging as _logging
 
@@ -431,3 +432,162 @@ class ProjectPointLinesRTree():
                 if distsq <= h*h:
                     return best
             h += h
+
+
+try:
+    import scipy.spatial as _spatial
+except Exception as ex:
+    _logger.error("Failed to import `scipy.spatial` because {}".format(ex))
+    _spatial = None
+
+class Voroni():
+    """A wrapper around the `scipy.spatial` voroni diagram finding routine.
+    
+    :param points: Array of shape `(N,n)` of `N` points in `n`-dimensional
+      space.
+    """
+    def __init__(self, points):
+        points = _np.asarray(points)
+        if len(points.shape) != 2 or points.shape[1] != 2:
+            raise ValueError("Need array of shape (N,2)")
+        self._v = _spatial.Voronoi(points)
+        self._infinity_directions = dict()
+        centre = _np.mean(self._v.points, axis=0)
+        for ((a,b),(aa,bb)) in zip(self._v.ridge_vertices, self._v.ridge_points):
+            if a == -1:
+                x, y = self.perp_direction(self._v.points, aa, bb, centre) 
+                self._infinity_directions[b] = x, y
+        
+    @property
+    def voroni(self):
+        """The `scipy.spatial.Voroni` class"""
+        return self._v
+    
+    def polygons(self, inf_dist=1):
+        """Return a list of polygons, one for each "region" of the voroni
+        diagram.
+        
+        :param inf_dist: The distance to make each line towards the "point at
+          infinity".
+        
+        :return: Iterator of "polygons".  Each "polygon" is a list of `(x,y)`
+          points specifying the vertices.
+        """
+        #region_to_points_lookup = _collections.defaultdict(list)
+        #for pt_index, region in enumerate(self._v.point_region):
+        #    region_to_points_lookup[region].append(pt_index)
+        #for region_index, region in enumerate(self._v.regions):
+        #    if len(region) == 0:
+        #        continue
+        done = set()    
+        for point_index in range(self._v.points.shape[0]):
+            region_index = self._v.point_region[point_index]
+            if region_index in done:
+                continue
+            done.add(region_index)
+            yield self._region_as_polygon(region_index, point_index, inf_dist)
+    
+    def polygon_for(self, point_index, inf_dist=1):
+        region_index = self._v.point_region[point_index]
+        return self._region_as_polygon(region_index, point_index, inf_dist)
+
+    def _region_as_polygon(self, region_index, point_index, inf_dist):
+        region = self._v.regions[region_index]    
+        #containing_points = set(region_to_points_lookup[region_index])
+        containing_points = {point_index}
+        poly = [self._v.vertices[k] for k in region]
+        if -1 in region:
+            inf_index = region.index(-1)
+            
+            after_vertex = region[(inf_index + 1) % len(region)]
+            choices = self._find_perp_line_to_infinity(after_vertex, containing_points)
+            a, b = choices[0]
+            dx, dy = self.perp_direction(self._v.points, a, b)
+            x, y = self._v.vertices[after_vertex]
+            poly[inf_index] = x + dx * inf_dist, y + dy * inf_dist
+            
+            before_vertex = region[(inf_index - 1) % len(region)]
+            if before_vertex == after_vertex:
+                a, b = choices[1]
+            else:
+                a, b = self._find_perp_line_to_infinity(before_vertex, containing_points)[0]
+            dx, dy = self.perp_direction(self._v.points, a, b)
+            x, y = self._v.vertices[before_vertex]
+            poly.insert(inf_index, (x + dx * inf_dist, y + dy * inf_dist))
+        return poly
+    
+    def _find_perp_line_to_infinity(self, vertex, containing_points):
+        out = []
+        for verts, between in zip(self._v.ridge_vertices, self._v.ridge_points):
+            if set(verts) == {-1, vertex}:
+                if len(set(between).intersection(containing_points)) > 0:
+                    out.append(between)
+        return out
+        
+    @property
+    def points(self):
+        """The input points"""
+        return self._v.points
+    
+    @property
+    def vertices(self):
+        """The voroni diagram vertices.  An array of shape `(M,2)`.
+        """
+        return self._v.vertices
+    
+    @property
+    def regions(self):
+        """A list of the regions of the diagram.  Each region is a list of
+        indicies into `vertices`, where `-1` means the point at infinity."""
+        return self._v.regions
+    
+    @property
+    def point_region(self):
+        """A list, ordered as `points`, giving which "region" each input
+        point is in."""
+        return self._v.point_region
+    
+    @property
+    def ridge_vertices(self):
+        """The "ridges" of the diagram are the lines forming the boundaries
+        between regions.  This gives a list of pairs of indicies into
+        `vertices`, where `-1` means the point at infinity."""
+        return self._v.ridge_vertices
+    
+    @property
+    def ridge_points(self):
+        """Each "ridge" is perpendicular to a line between two points in the
+        input data.  For each entry of `ridge_vertices` the perpendicular line
+        is given by the indicies of the corresponding entry in this list
+        """
+        return self._v.ridge_points
+    
+    @staticmethod
+    def perp_direction(points, a, b, centre=None):
+        """Find a vector perpendicular to the line specified, oriented away
+        from `centre`.
+        
+        :param points: Array of shape `(N,n)` of `N` points in `n`-dimensional
+          space.
+        :param a: Index into `points` of start of line.
+        :param b: Index into `points` of end of line.
+        :param centre: The location to orient from; if `None` then compute
+          as centroid of the `points`.
+        
+        :return: Tuple of size `n` giving a vector orthogonal to the line,
+          and oriented away from `centre`.
+        """
+        diff = points[b] - points[a]
+        norm = _np.sqrt(_np.sum(diff*diff))
+        diff = _np.asarray([diff[1]/norm, -diff[0]/norm])
+        if centre is None:
+            centre = _np.mean(points, axis=0)
+        else:
+            centre = _np.asarray(centre)
+        midpoint = (points[a] + points[b]) / 2
+        
+        if _np.dot(centre - midpoint, diff) <= 0:
+            return diff
+        else:
+            return -diff
+    

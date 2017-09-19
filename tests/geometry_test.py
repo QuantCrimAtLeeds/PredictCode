@@ -248,3 +248,29 @@ def test_intersect_line_grid_most():
     line = ( (2, 2), (30, 30) )
     assert geometry.intersect_line_grid_most(line, grid) == (1,1)
     
+def test_voroni_perp():
+    points = np.asarray([[1,2], [2,3], [3,4]])
+    x, y = geometry.Voroni.perp_direction(points, 0, 1, [0,0])
+    assert (x,y) == pytest.approx((-1/np.sqrt(2), 1/np.sqrt(2)))
+    x, y = geometry.Voroni.perp_direction(points, 0, 1, [0,3])
+    assert (x,y) == pytest.approx((1/np.sqrt(2), -1/np.sqrt(2)))
+    
+def test_voroni1():
+    points = np.asarray([[0,0], [1,0], [0,1], [1,1]])
+    voroni = geometry.Voroni(points)
+    
+    np.testing.assert_allclose(voroni.points, points)
+    np.testing.assert_allclose(voroni.vertices, [[0.5,0.5]])
+    x = list(voroni.polygons(1))
+    print("This might not be robust, due to re-ording issues...")
+    assert len(x) == 4
+    np.testing.assert_allclose(x[0], [[0.5, -0.5], [-0.5,0.5], [0.5,0.5]])
+    np.testing.assert_allclose(x[1], [[0.5, -0.5], [1.5,0.5], [0.5,0.5]])
+    np.testing.assert_allclose(x[2], [[-0.5, 0.5], [0.5,1.5], [0.5,0.5]])
+    np.testing.assert_allclose(x[3], [[1.5, 0.5], [0.5,1.5], [0.5,0.5]])
+
+def test_voroni_poly():
+    points = np.asarray([[0,0], [1,0], [0,1], [1,1]])
+    voroni = geometry.Voroni(points)
+    np.testing.assert_allclose(voroni.polygon_for(0, 2), [[0.5, -1.5], [-1.5,0.5], [0.5,0.5]])
+    np.testing.assert_allclose(voroni.polygon_for(3, 2), [[2.5, 0.5], [0.5,2.5], [0.5,0.5]])
