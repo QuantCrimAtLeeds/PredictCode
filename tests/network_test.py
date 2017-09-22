@@ -91,8 +91,10 @@ def test_PlanarGraphNodeOneShot():
     nodes = [(0,0), (1,1), (5.1,1.2), (0.1,0.01), (2,2)]
     b = network.PlanarGraphNodeOneShot(nodes, 0.2)
     
-    b.add_path([(0,0),(1,1),(5.1,1.2)])
-    b.add_edge(0.1,0.01,2,2)
+    r = b.add_path([(0,0),(1,1),(5.1,1.2)])
+    assert r == [(0,1), (1,2)]
+    r = b.add_edge(0.1,0.01,2,2)
+    assert r == (0,3)
     
     g = b.build()
     assert set(g.vertices.values()) == {(0,0), (1,1), (5.1,1.2), (2,2)}
@@ -574,12 +576,7 @@ def test_derived_graph4(graph4):
     assert g.edges == [(0,5), (0,6), (0,7), (0,1), (1,2), (2,3), (3,4), (4,5), (5,6), (5,7), (6,7)]
     assert g.lengths is None
 
-def test_shortest_edge_paths_with_degrees(graph1):
-    dists, degrees = network.shortest_edge_paths_with_degrees(graph1, 0)
-    np.testing.assert_allclose(dists, [0, -1, -1])
-    np.testing.assert_allclose(degrees, [1, 0, 0])
-
-def test_shortest_edge_paths_with_degrees(graph2):
+def test_shortest_edge_paths_with_degrees1(graph2):
     dists, degrees = network.shortest_edge_paths_with_degrees(graph2, 0)
     sq2 = np.sqrt(2)
     np.testing.assert_allclose(dists, [0, (1+sq2)/2, 1+sq2, 1.5+sq2+sq2/2, (1+sq2)/2,
@@ -590,3 +587,37 @@ def test_shortest_edge_paths_with_degrees(graph2):
     np.testing.assert_allclose(dists, [1+sq2, (1+sq2)/2, 0, (1+sq2)/2,
         0.5+sq2+sq2/2, 3, 0.5+sq2+sq2/2, 1.5, 1+sq2])
     np.testing.assert_allclose(degrees, [4, 2, 1, 1, 4, 4, 2, 2, 2])
+
+def test_segment_graph1(graph1):
+    got = set(frozenset(k) for k in network.segment_graph(graph1))
+    assert got == {frozenset({0}), frozenset({1,2})}
+
+def test_segment_graph3(graph3):
+    got = set(frozenset(k) for k in network.segment_graph(graph3))
+    assert got == {frozenset(k) for k in [{0}, {1,2}, {3, 4}, {5}, {6,7,8}]}
+
+def test_segment_graph4(graph4):
+    got = set(frozenset(k) for k in network.segment_graph(graph4))
+    assert got == {frozenset(k) for k in [{0,1,2,3,4,5}, {6}, {7}]}
+
+def test_ordered_segment_graph1(graph1):
+    got = set(tuple(x) for x in network.ordered_segment_graph(graph1))
+    print("Dodgy test, as having (1,0) instead of (0,1) would be fine.")
+    assert got == {(0,1), (2,3,4)}
+
+def test_ordered_segment_graph3(graph3):
+    got = set(tuple(x) for x in network.ordered_segment_graph(graph3))
+    print("Dodgy test...")
+    assert got == {(0,1), (1,2,3), (3,4,5), (3,5), (1,7,6,5)}
+
+def test_ordered_segment_graph4(graph4):
+    got = set(tuple(x) for x in network.ordered_segment_graph(graph4))
+    print("Dodgy test, as having (6,0) instead of (0,6) would be fine.")
+    assert got == {(0,1,2,3,4,5), (0,6), (0,7)}
+
+def test_ordered_segment_cycle():
+    graph = network.GraphBuilder().add_edge(0,1).add_edge(1,2).add_edge(0,2).build()
+    got = set(tuple(x) for x in network.ordered_segment_graph(graph))
+    print("Dodgy test...")
+    assert got == {(0,1,2)}
+    

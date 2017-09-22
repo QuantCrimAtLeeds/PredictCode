@@ -107,10 +107,7 @@ class PlanarGraphNodeOneShot():
     """
     def __init__(self, nodes, tolerance = 0.1):
         self._edges = []
-        all_nodes = []
-        for (x,y,*z) in nodes:
-            all_nodes.append((x,y))
-        all_nodes = list(set(all_nodes))
+        all_nodes = [(x,y) for (x,y,*z) in nodes]
         tree = _spatial.cKDTree(all_nodes)
         self._lookup = dict()
         self._nodes = []
@@ -140,18 +137,29 @@ class PlanarGraphNodeOneShot():
         :param path: A list of coordinates `(x,y)` (or possibly `(x,y,z)` with
           the `z` to be ignored).  This is compatible with the `shapely`
           format.
+          
+        :return: List of edges added, each in format `(key1, key2)` where these
+          are keys to vertices.
         """
         path = list(path)
+        edges = []
         for i in range(len(path) - 1):
             x1,y1,*z = path[i]
             x2,y2,*z = path[i + 1]
-            self.add_edge(x1, y1, x2, y2)
+            edges.append( self.add_edge(x1, y1, x2, y2) )
+        return edges
 
     def add_edge(self, x1, y1, x2, y2):
-        """Add an edge from `(x1, y1)` to `(x2, y2)`."""
+        """Add an edge from `(x1, y1)` to `(x2, y2)`.
+        
+        :return: The edge added, in format `(key1, key2)` where these are keys
+          to vertices.
+        """
         key1 = self._add_node(x1, y1)
         key2 = self._add_node(x2, y2)
-        self._edges.append((key1, key2))
+        e = (key1, key2)
+        self._edges.append(e)
+        return e
 
     def remove_duplicate_edges(self):
         """A neccessary evil.  Also removes loops."""
@@ -1208,3 +1216,60 @@ def shortest_edge_paths_with_degrees(graph, edge_index):
             distances[i] = le2 + le
             cum_degrees[i] = degrees[k2]
     return distances, cum_degrees
+
+def segment_graph(graph):
+    """Partition the edges of a graph into "segments", where a segment is a
+    maximal path where each "internal" vertex has degree two.  That is, a
+    segment is an equivalence class for the equivalence relation defined by
+    saying that two edges are equivalent if there is a path between them with
+    each vertex in the path having degree 2.
+    
+    :return: A generator of segments, where each segment is a set of indicies
+      into `graph.edges`.
+    """
+    edges_done = set()
+    for edge_index, (v1, v2) in enumerate(graph.edges):
+        if edge_index in edges_done:
+            continue
+        segment = {edge_index}
+        todo = {v1, v2}
+        vertices_visited = set()
+        while len(todo) > 0:
+            v = todo.pop()
+            vertices_visited.add(v)
+            edges = graph.neighbourhood_edges(v)
+            if len(edges) == 2:
+                for e in edges:
+                    segment.add(e)
+                    for u in graph.edges[e]:
+                        if u not in vertices_visited:
+                            todo.add(u)
+        edges_done.update(segment)
+        yield segment
+
+def ordered_segment_graph(graph):
+    """As :func:`segment_graph` but yields actual paths.
+    
+    :return: A generator of segments, where is segment is a list of vertex
+      keys, giving the path formed by the segment.  Will include the start/end
+      vertices of the path (i.e. vertices not of degree 2) unless the segment
+      forms a loop, in which case the start vertex will not be repeated.
+    """
+    for segment in segment_graph(graph):
+        vertices = set()
+        for e in segment:
+            vertices.update(graph.edges[e])
+        choices = [v for v in vertices if len(graph.neighbours(v)) != 2]
+        if len(choices) == 0:
+            assert all(len(graph.neighbours(v)) == 2 for v in vertices)
+            choices = list(vertices)
+        start = choices[0]
+        vertices.remove(start)
+        out = [start]
+        while len(vertices) > 0:
+            for v in set(graph.neighbours(out[-1])):
+                if v in vertices:
+                    vertices.remove(v)
+                    out.append(v)
+                    break
+        yield out
