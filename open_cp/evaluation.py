@@ -224,6 +224,35 @@ def network_hit_rate(graph, timed_network_points, source_graph=None):
             hits += 1
     return hits / len(timed_network_points.distances)
 
+def network_hit_rates_from_coverage(graph, risks, timed_network_points, percentage_coverages):
+    """Computes the "hit rate" for the given prediction for the passed
+    collection of events.  For each percent, we top slice that percentage of
+    edges from the `risks`, and compute the fraction of events which fall in
+    those edges.
+    
+    :param graph: The :class:`network.PlanarGraph` used to construct the
+      prediction.
+    :param risks: An array of risks of each edge, same length as `graph.edges`.
+    :param timed_network_points: An instance of :class:`TimedNetworkPoints`
+      to get events from.  We assume that the vertex keys used are the same
+      as in `graph`.
+    :param percentage_coverages: An iterable of percentage coverages to test.
+
+    :return: A dictionary from percentage coverage to hit rate percentage.
+      If there were no events in the `timed_points`, we return -1.
+    """
+    if len(timed_network_points.start_keys) == 0:
+        return {cov : -1.0 for cov in percentage_coverage}
+    edges = []
+    for st, en in zip(timed_network_points.start_keys, timed_network_points.end_keys):
+        e, _ = graph.find_edge(st, en)
+        edges.append(e)
+    out = dict()
+    for coverage in percentage_coverages:
+        mask = network_coverage(graph, risks, coverage / 100)
+        out[coverage] = sum(mask[e] for e in edges) * 100 / len(timed_network_points.start_keys)
+    return out
+
 def hit_rates(grid_pred, timed_points, percentage_coverage):
     """Computes the "hit rate" for the given prediction for the passed
     collection of events.  For each percent, we top slice that percentage of

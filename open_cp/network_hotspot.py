@@ -478,8 +478,9 @@ class ApproxPredictorCaching(ApproxPredictor):
                 self._cache[edge_index] = self._get_data(edge_index)
             kernel_dists, cumulative_degrees = self._cache[edge_index]
             mask = kernel_dists > -1
-            self._add_cache[edge_index] = self.kernel(kernel_dists[mask]) / cumulative_degrees[mask] * self.graph.lengths[mask]
-        risks[mask] += self._add_cache[edge_index] * tw
+            self._add_cache[edge_index] = mask, self.kernel(kernel_dists[mask]) / cumulative_degrees[mask] * self.graph.lengths[mask]
+        mask, toadd = self._add_cache[edge_index]
+        risks[mask] += toadd * tw
 
     @property
     def kernel(self):

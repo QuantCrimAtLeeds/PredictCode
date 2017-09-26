@@ -211,4 +211,23 @@ def test_network_coverage(graph):
     np.testing.assert_allclose(out, [False, False])
     out = evaluation.network_coverage(graph, [3,5], 0.99)
     np.testing.assert_allclose(out, [False, True])
+
+@pytest.fixture
+def graph2():
+    b = open_cp.network.GraphBuilder()
+    b.add_edge(0, 1)
+    b.add_edge(1, 2)
+    b.add_edge(0, 2)
+    b.add_edge(4, 5)
+    b.lengths = [10, 10, 10, 10]
+    return b.build()
     
+def test_network_hit_rates_from_coverage(network_points, graph2):
+    risks = [1, 2, 3, 4]
+    out = evaluation.network_hit_rates_from_coverage(graph2, risks, network_points, [10,25,50,74,75])
+    assert set(out) == {10,25,50,74,75}
+    assert out[10] == pytest.approx(0)
+    assert out[25] == pytest.approx(100/3)
+    assert out[50] == pytest.approx(100/3)
+    assert out[74] == pytest.approx(100/3)
+    assert out[75] == pytest.approx(200/3)
