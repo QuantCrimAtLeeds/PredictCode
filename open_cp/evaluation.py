@@ -11,6 +11,7 @@ from . import naive as _naive
 from . import predictors as _predictors
 from . import network as _network
 from . import geometry as _geometry
+from . import data as _data
 
 def _top_slice_one_dim(risk, fraction):
     data = risk.compressed().copy()
@@ -63,6 +64,21 @@ def top_slice(risk, fraction):
         return _top_slice_one_dim(risk, fraction)
     mask = _top_slice_one_dim(risk.ravel(), fraction)
     return _np.reshape(mask, risk.shape)
+
+def top_slice_prediction(prediction, fraction):
+    """As :func:`top_slice`.  Returns a new grid based prediction masked with
+    just the selected coverage.
+    
+    :param prediction: Grid based prediction.
+    :param fraction: Between 0 and 1.
+
+    :return: A new grid based prediction.
+    """
+    covered = top_slice(prediction.intensity_matrix, fraction)
+    hotspots = _data.MaskedGrid.from_grid(prediction, ~covered)
+    grid_pred = prediction.clone()
+    grid_pred.mask_with(hotspots)
+    return grid_pred
 
 def grid_risk_coverage_to_graph(grid_pred, graph, percentage_coverage, intersection_cutoff=None):
     """Find the given coverage for the grid prediction, and then intersect with

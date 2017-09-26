@@ -95,6 +95,21 @@ _FIELDS = {
             "timestamp": 'Date'},
         "GEOJSON_COORDS" : ('Longitude', 'Latitude'),
         "DT_CONVERT" : _date_from_csv
+    },
+    "gen" : {
+        "_DESCRIPTION_FIELD" : 'CRIME',
+        "_X_FIELD" : 'X',
+        "_Y_FIELD" : 'Y',
+        "_TIME_FIELD" : 'TIMESTAMP',
+
+        "_GEOJSON_LOOKUP" : {"case": 'CASE',
+            "address": "BLOCK",
+            "location": 'LOCATION',
+            "crime": 'CRIME',
+            "type": 'SUB-TYPE',
+            "timestamp": 'TIMESTAMP'},
+        "GEOJSON_COORDS" : ('X', 'Y'),
+        "DT_CONVERT" : _date_from_csv
     }
 }
 _FIELDS["all_other"] = dict(_FIELDS["all"])
@@ -125,10 +140,26 @@ def _get_dic(type):
     except KeyError:
         raise ValueError("Don't understand type {}".format(type))
 
-def load(filename, primary_description_names, to_meters=True, type="snapshot"):
+def _load_to_list(file, dic, primary_description_names):
+    reader = _csv.reader(file)
+    lookup = _convert_header(next(reader), dic)
+    dt_convert = dic["DT_CONVERT"]
+    data = []
+    for row in reader:
+        description = row[lookup[dic["_DESCRIPTION_FIELD"]]].strip()
+        if not description in primary_description_names:
+            continue
+        x = row[lookup[dic["_X_FIELD"]]].strip()
+        y = row[lookup[dic["_Y_FIELD"]]].strip()
+        t = row[lookup[dic["_TIME_FIELD"]]].strip()
+        if x != "" and y != "":
+            data.append((dt_convert(t), float(x), float(y)))
+    return data
+
+def load(file, primary_description_names, to_meters=True, type="snapshot"):
     """Load data from a CSV file in the expected format.
 
-    :param filename: Name of the CSV file load.
+    :param file: Name of the CSV file load, or a file-like object.
     :param primary_description_names: Set of names to search for in the
       "primary description field". E.g. pass `{"THEFT"}` to return only the
       "theft" crime type.
@@ -139,21 +170,12 @@ def load(filename, primary_description_names, to_meters=True, type="snapshot"):
     :return: An instance of :class:`open_cp.data.TimedPoints` or `None`.
     """
     dic = _get_dic(type)
-    dt_convert = dic["DT_CONVERT"]
-    data = []
 
-    with open(filename) as file:
-        reader = _csv.reader(file)
-        lookup = _convert_header(next(reader), dic)
-        for row in reader:
-            description = row[lookup[dic["_DESCRIPTION_FIELD"]]].strip()
-            if not description in primary_description_names:
-                continue
-            x = row[lookup[dic["_X_FIELD"]]].strip()
-            y = row[lookup[dic["_Y_FIELD"]]].strip()
-            t = row[lookup[dic["_TIME_FIELD"]]].strip()
-            if x != "" and y != "":
-                data.append((dt_convert(t), float(x), float(y)))
+    if isinstance(file, str):
+        with open(file) as file:
+            data = _load_to_list(file, dic, primary_description_names)
+    else:
+        data = _load_to_list(file, dic, primary_description_names)
 
     data.sort(key = lambda triple : triple[0])
     xcoords = _np.empty(len(data))
