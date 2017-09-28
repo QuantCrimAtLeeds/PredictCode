@@ -66,9 +66,9 @@ class ClassicWeight(Weight):
     :param time_bandwidth: Times greater than or equal to this set the weight
       to 0.
     """
-    def __init__(self):
-        self.space_bandwidth = 400 / 50
-        self.time_bandwidth = 8
+    def __init__(self, space_bandwidth=8, time_bandwidth=8):
+        self.space_bandwidth = space_bandwidth
+        self.time_bandwidth = time_bandwidth
 
     def __call__(self, dt, dd):
         mask = (dt < self.time_bandwidth) & (dd < self.space_bandwidth)
@@ -101,6 +101,7 @@ class DistanceDiagonalsDifferent(GridDistance):
     def __call__(self, x1, y1, x2, y2):
         return _np.abs(x1 - x2) + _np.abs(y1 - y2)
 
+
 class DistanceCircle(GridDistance):
     """Distance in the grid using the usual Euclidean distance, i.e. the
     :math:`\ell^2` norm.  This will work better with the continuous version
@@ -108,6 +109,7 @@ class DistanceCircle(GridDistance):
     """
     def __call__(self, x1, y1, x2, y2):
         return _np.sqrt((x1-x2)**2 + (y1-y2)**2)
+
 
 class ProspectiveHotSpot(_predictors.DataTrainer):
     """Implements the classical, grid based algorithm.  To calculate distances,

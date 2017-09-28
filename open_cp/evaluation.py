@@ -7,6 +7,7 @@ Contains routines and classes to help with evaluation of predictions.
 
 import numpy as _np
 import collections as _collections
+import logging as _logging
 from . import naive as _naive
 from . import predictors as _predictors
 from . import network as _network
@@ -364,6 +365,7 @@ class HitRateEvaluator(_predictors.DataTrainer):
     """
     def __init__(self, provider):
         self._provider = provider
+        self._logger = _logging.getLogger(__name__)
         
     def _points(self, start, end):
         mask = (self.data.timestamps >= start) & (self.data.timestamps < end)
@@ -397,6 +399,7 @@ class HitRateEvaluator(_predictors.DataTrainer):
         details = dict()
         out = dict()
         for start, end in times:
+            self._logger.debug("Making prediction using %s for %s--%s", self._provider, start, end)
             pred = self._provider.predict(start)
             points = self._points(start, end)
             if points.number_data_points == 0:
