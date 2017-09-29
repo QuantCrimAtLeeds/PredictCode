@@ -43,7 +43,7 @@ class QuadDecayTimeKernel():
     where :math:`beta` is the "scale".
     """
     def __init__(self, scale):
-        self._scale = scale
+        self.scale = scale
     
     @property
     def scale(self):
@@ -52,11 +52,11 @@ class QuadDecayTimeKernel():
     @scale.setter
     def scale(self, v):
         self._scale = v
+        self._norm = 2 / (self._scale * _np.pi)
 
     def __call__(self, x):
         x = _np.asarray(x)
-        norm = 2 / (self._scale * _np.pi)
-        return norm / (1 + (x / self._scale)**2)
+        return self._norm / (1 + (x / self._scale)**2)
     
 
 class KernelProvider():

@@ -107,25 +107,23 @@ class PlanarGraphNodeOneShot():
     """
     def __init__(self, nodes, tolerance = 0.1):
         self._edges = []
+        #all_nodes = list(set(((x,y) for x,y in points)))
         all_nodes = [(x,y) for (x,y,*z) in nodes]
         tree = _spatial.cKDTree(all_nodes)
-        self._lookup = dict()
+        
         self._nodes = []
-        inv_lookup = dict()
+        allnodes_to_nodes_lookup = dict()
         
         for i, pt in enumerate(all_nodes):
-            if i in inv_lookup:
+            if i in allnodes_to_nodes_lookup:
                 continue
-            close = tree.query_ball_point(pt, tolerance)
-            if close[0] < i:
-                index = inv_lookup[close[0]]
-                self._lookup[pt] = index
-                continue
+            index = len(self._nodes)
             self._nodes.append(pt)
-            index = len(self._nodes) - 1
-            for j in close:
-                self._lookup[all_nodes[j]] = index
-                inv_lookup[j] = index
+            for x in tree.query_ball_point(pt, tolerance):
+                if x not in allnodes_to_nodes_lookup:
+                    allnodes_to_nodes_lookup[x] = index
+                    
+        self._lookup = {pt:allnodes_to_nodes_lookup[i] for i, pt in enumerate(all_nodes)}
 
     def _add_node(self, x, y):
         return self._lookup[(x,y)]

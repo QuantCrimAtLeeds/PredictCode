@@ -109,9 +109,6 @@ class ExponentialTimeKernel(_kde.ExponentialTimeKernel):
     def __init__(self, scale):
         super().__init__(scale)
     
-    def __call__(self, x):
-        return _np.exp( - _np.asarray(x) / self._scale ) / self._scale
-
     def __repr__(self):
         return "ExponentialTimeKernel({})".format(self._scale)
 
@@ -122,10 +119,6 @@ class QuadDecayTimeKernel(_kde.QuadDecayTimeKernel):
     """
     def __init__(self, scale):
         super().__init__(scale)
-
-    def __call__(self, x):
-        y = _kde.QuadDecayTimeKernel.__call__(self, x)
-        return 2 * y / (_np.pi * self._scale)
 
     def __repr__(self):
         return "QuadDecayTimeKernel({})".format(self._scale)
