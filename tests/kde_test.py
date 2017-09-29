@@ -2,6 +2,7 @@ import pytest
 import open_cp.kde as kde
 import open_cp.data
 
+import scipy.integrate
 import numpy as np
 from unittest import mock
 import datetime
@@ -101,18 +102,38 @@ def test_exp_time_kernel():
     np.testing.assert_allclose(kernel([1,2]), np.exp([-1,-2]))
 
     kernel = kde.ExponentialTimeKernel(2)
-    assert kernel(1) == pytest.approx(np.exp(-1/2))
-    assert kernel(2) == pytest.approx(np.exp(-1))
-    np.testing.assert_allclose(kernel([1,2]), np.exp([-0.5,-1]))
+    assert kernel(1) == pytest.approx(np.exp(-1/2)/2)
+    assert kernel(2) == pytest.approx(np.exp(-1)/2)
+    np.testing.assert_allclose(kernel([1,2]), np.exp([-0.5,-1])/2)
+
+def test_exp_time_kernel_normalised():
+    kernel = kde.ExponentialTimeKernel(1)
+    got = scipy.integrate.quad(kernel, 0, 100)[0]
+    assert abs(got - 1) < 1e-5
+
+    kernel = kde.ExponentialTimeKernel(2)
+    got = scipy.integrate.quad(kernel, 0, 100)[0]
+    assert abs(got - 1) < 1e-5
 
 def test_quad_time_kernel():
     kernel = kde.QuadDecayTimeKernel(1)
-    assert kernel(1) == pytest.approx(1/(1+1))
-    assert kernel(2) == pytest.approx(1/(1+4))
-    np.testing.assert_allclose(kernel([1,2]), [0.5, 0.2])
+    n = 2 / np.pi
+    assert kernel(1) == pytest.approx(n/(1+1))
+    assert kernel(2) == pytest.approx(n/(1+4))
+    np.testing.assert_allclose(kernel([1,2]), np.asarray([0.5, 0.2])*n)
 
     kernel = kde.QuadDecayTimeKernel(2)
-    assert kernel(1) == pytest.approx(1/(1+1/4))
-    assert kernel(2) == pytest.approx(1/(1+1))
-    np.testing.assert_allclose(kernel([1,2]), [4/5, 0.5])
+    n = 1 / np.pi
+    assert kernel(1) == pytest.approx(n/(1+1/4))
+    assert kernel(2) == pytest.approx(n/(1+1))
+    np.testing.assert_allclose(kernel([1,2]), np.asarray([4/5, 0.5])*n)
+
+def test_quad_time_kernel_normalised():
+    kernel = kde.QuadDecayTimeKernel(1)
+    got = scipy.integrate.quad(kernel, 0, 1000)[0]
+    assert abs(got - 1) < 0.001
+
+    kernel = kde.QuadDecayTimeKernel(2)
+    got = scipy.integrate.quad(kernel, 0, 2000)[0]
+    assert abs(got - 1) < 0.001
     

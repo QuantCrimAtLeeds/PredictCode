@@ -35,7 +35,7 @@ class ExponentialTimeKernel():
         self._scale = v
     
     def __call__(self, x):
-        return _np.exp( - _np.asarray(x) / self._scale )
+        return _np.exp( - _np.asarray(x) / self._scale ) / self._scale
 
 
 class QuadDecayTimeKernel():
@@ -55,7 +55,8 @@ class QuadDecayTimeKernel():
 
     def __call__(self, x):
         x = _np.asarray(x)
-        return 1 / (1 + (x / self._scale)**2)
+        norm = 2 / (self._scale * _np.pi)
+        return norm / (1 + (x / self._scale)**2)
     
 
 class KernelProvider():
