@@ -621,3 +621,17 @@ def test_ordered_segment_cycle():
     print("Dodgy test...")
     assert got == {(0,1,2)}
     
+@pytest.fixture
+def graph5():
+    b = network.GraphBuilder()
+    b.add_edge(0,1).add_edge(1,2).add_edge(3,4).add_edge(4,5).add_edge(5,3)
+    b.vertices.add(6)
+    return b.build()
+
+def test_connected_components(graph5):
+    out = list(network.connected_components(graph5))
+    assert len(out) == 3
+    out = {frozenset(x) for x in out}
+    expected = {frozenset({0,1,2}), frozenset({4,5,3}), frozenset({6})}
+    assert out == expected
+    

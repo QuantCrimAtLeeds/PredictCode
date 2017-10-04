@@ -7,9 +7,11 @@ Methods to help with geometry work.  Uses `shapely`.
 
 import numpy as _np
 import math as _math
-import collections as _collections
 from . import data as _data
 import logging as _logging
+# For what we use this for, we could use e.g binary search; but why invent
+# the wheel?
+import scipy.optimize as _optimize
 
 _logger = _logging.getLogger(__name__)
 
@@ -473,12 +475,6 @@ class Voroni():
         :return: Iterator of "polygons".  Each "polygon" is a list of `(x,y)`
           points specifying the vertices.
         """
-        #region_to_points_lookup = _collections.defaultdict(list)
-        #for pt_index, region in enumerate(self._v.point_region):
-        #    region_to_points_lookup[region].append(pt_index)
-        #for region_index, region in enumerate(self._v.regions):
-        #    if len(region) == 0:
-        #        continue
         done = set()    
         for point_index in range(self._v.points.shape[0]):
             region_index = self._v.point_region[point_index]
@@ -488,12 +484,51 @@ class Voroni():
             yield self._region_as_polygon(region_index, point_index, inf_dist)
     
     def polygon_for(self, point_index, inf_dist=1):
+        """Return the polygon from the diagram which contains the given point.
+
+        :param point_index: Index into `self.points`
+        :param inf_dist: The distance to make each line towards the "point at
+          infinity".
+        
+        :return: A "polygon", which is a list of `(x,y)` points specifying the
+          vertices.
+        """
         region_index = self._v.point_region[point_index]
         return self._region_as_polygon(region_index, point_index, inf_dist)
 
-    def _region_as_polygon(self, region_index, point_index, inf_dist):
+    def polygon_for_by_distance(self, point_index, distance):
+        """Return the polygon from the diagram which contains the given point.
+        Scale the size so that the containing point is `distance` away from
+        "infinity".
+        """
+        region_index = self._v.point_region[point_index]
+        poly, extra = self._region_datum(region_index, point_index)
+        if extra is not None:
+            inf_index, (first, second) = extra
+            x1 = _np.asarray([first[0], first[1]])
+            dx1 = _np.asarray([first[2], first[3]])
+            x2 = _np.asarray([second[0], second[1]])
+            dx2 = _np.asarray([second[2], second[3]])
+            pt = self.points[point_index]
+            def dist(t):
+                return self._distance_line_to_point(x1 + t * dx1, x2 + t * dx2, pt)
+
+            res = _optimize.minimize(dist, [0], bounds=[[0,_np.inf]])
+            tzero = res.x
+            if dist(tzero) > distance:
+                t0 = 1
+            else:
+                t_up = tzero * 2
+                while dist(t_up) < 1.1 * distance:
+                    t_up += t_up
+                t0 = _optimize.brentq(lambda x : dist(x) - distance, tzero, t_up)
+            
+            poly[inf_index] = x1 + t0 * dx1
+            poly.insert(inf_index, x2 + t0 * dx2)
+        return poly
+    
+    def _region_datum(self, region_index, point_index):
         region = self._v.regions[region_index]    
-        #containing_points = set(region_to_points_lookup[region_index])
         containing_points = {point_index}
         poly = [self._v.vertices[k] for k in region]
         if -1 in region:
@@ -504,7 +539,7 @@ class Voroni():
             a, b = choices[0]
             dx, dy = self.perp_direction(self._v.points, a, b)
             x, y = self._v.vertices[after_vertex]
-            poly[inf_index] = x + dx * inf_dist, y + dy * inf_dist
+            extras = [(x, y, dx, dy)]
             
             before_vertex = region[(inf_index - 1) % len(region)]
             if before_vertex == after_vertex:
@@ -513,8 +548,33 @@ class Voroni():
                 a, b = self._find_perp_line_to_infinity(before_vertex, containing_points)[0]
             dx, dy = self.perp_direction(self._v.points, a, b)
             x, y = self._v.vertices[before_vertex]
+            extras.append((x, y, dx, dy))
+            return poly, (inf_index, extras)
+        else:
+            return poly, None
+
+    def _region_as_polygon(self, region_index, point_index, inf_dist):
+        poly, extra = self._region_datum(region_index, point_index)
+        if extra is not None:
+            inf_index, (first, second) = extra
+            x, y, dx, dy = first
+            poly[inf_index] = x + dx * inf_dist, y + dy * inf_dist
+            x, y, dx, dy = second
             poly.insert(inf_index, (x + dx * inf_dist, y + dy * inf_dist))
         return poly
+    
+    @staticmethod
+    def _distance_line_to_point(line_start, line_end, point):
+        a = _np.asarray(line_start)
+        b = _np.asarray(line_end)
+        v = b - a
+        vnormsq = _np.sum(v * v)
+        x = _np.asarray(point) - a
+        if vnormsq < 1e-12:
+            return _np.sqrt(_np.sum(x * x))
+        t = _np.sum(x * v) / vnormsq
+        u = x - t * v
+        return _np.sqrt(_np.sum(u * u))
     
     def _find_perp_line_to_infinity(self, vertex, containing_points):
         out = []

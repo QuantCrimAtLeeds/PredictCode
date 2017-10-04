@@ -269,6 +269,8 @@ class _STSTrainerBase(predictors.DataTrainer):
         events = self.data.events_before(time)
         if time is None:
             time = self.data.timestamps[-1]
+        else:
+            time = _np.datetime64(time)
         return events, time
 
 

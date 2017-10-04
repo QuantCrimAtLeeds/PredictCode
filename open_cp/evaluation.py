@@ -384,6 +384,14 @@ class HitRateEvaluator(_predictors.DataTrainer):
             yield (s, s + length)
             s += length
     
+    def _process(self, pred, points, coverage_levels):
+        out = hit_rates(pred, points, coverage_levels)
+        details = HitRateDetail(
+            total_cell_count=_np.ma.sum(~pred.intensity_matrix.mask),
+            prediction = pred
+            )
+        return out, details
+
     def run(self, times, coverage_levels):
         """Run tests.
         
@@ -400,13 +408,22 @@ class HitRateEvaluator(_predictors.DataTrainer):
         out = dict()
         for start, end in times:
             self._logger.debug("Making prediction using %s for %s--%s", self._provider, start, end)
-            pred = self._provider.predict(start)
             points = self._points(start, end)
             if points.number_data_points == 0:
                 continue
-            out[start] = hit_rates(pred, points, coverage_levels)
-            details[start] = HitRateDetail(
-                total_cell_count=_np.ma.sum(~pred.intensity_matrix.mask),
-                prediction = pred
-                )
+            preds = self._provider.predict(start)
+            try:
+                outs, ds = [], []
+                for pred in preds:
+                    ou, d = self._process(pred, points, coverage_levels)
+                    outs.append(ou)
+                    ds.append(d)
+                out[start] = outs
+                details[start] = ds
+            except:
+                out[start] = hit_rates(preds, points, coverage_levels)
+                details[start] = HitRateDetail(
+                    total_cell_count=_np.ma.sum(~preds.intensity_matrix.mask),
+                    prediction = preds
+                    )
         return HitRateResult(out, details)

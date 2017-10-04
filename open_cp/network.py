@@ -1271,3 +1271,23 @@ def ordered_segment_graph(graph):
                     out.append(v)
                     break
         yield out
+
+def connected_components(graph):
+    """Find all connected components (and isolated vertices) in the graph.
+    
+    :return: Generated sets of maximally connected vertices.
+    """
+    done = set()
+    for v in graph.vertices:
+        if v in done:
+            continue
+        com = set()
+        todo = [v]
+        while len(todo) > 0:
+            next_v = todo.pop()
+            if next_v in com:
+                continue
+            com.add(next_v)
+            todo.extend(graph.neighbours(next_v))
+        done.update(com)
+        yield com

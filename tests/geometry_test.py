@@ -274,3 +274,9 @@ def test_voroni_poly():
     voroni = geometry.Voroni(points)
     np.testing.assert_allclose(voroni.polygon_for(0, 2), [[0.5, -1.5], [-1.5,0.5], [0.5,0.5]])
     np.testing.assert_allclose(voroni.polygon_for(3, 2), [[2.5, 0.5], [0.5,2.5], [0.5,0.5]])
+
+def test_voroni_poly_by_distance():
+    points = np.asarray([[0,0], [1,0], [0,1], [1,1]])
+    voroni = geometry.Voroni(points)
+    a = 0.5 + np.sqrt(8)
+    np.testing.assert_allclose(voroni.polygon_for_by_distance(0, 2), [[0.5, -a], [-a,0.5], [0.5,0.5]])
