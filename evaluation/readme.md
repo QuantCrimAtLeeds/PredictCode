@@ -1,6 +1,6 @@
 # Evaluating hotspots
 
-For the moment, we shall presume we are only comparing grid based predictions (though with an eye to possibly every small grid cells arising from continuous predictions).
+For the moment, we shall presume we are only comparing grid based predictions (though with an eye to possibly very small grid cells arising from continuous predictions).
 
 We first discuss a very high-level overview of a "pipeline" for producing predictions, scoring them, and comparing different predictions.  We then provide more details on each stage.
 

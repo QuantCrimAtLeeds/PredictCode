@@ -541,8 +541,10 @@ class STSContinuousPrediction(predictors.ContinuousPrediction):
             pt = pt[:,None]
         risk = _np.zeros(pt.shape[1])
         for n, cluster in enumerate(self.clusters):
-            dist = ( _np.sqrt(_np.sum((pt - _np.asarray(cluster.centre)[:,None])**2, axis=0))
-                    / cluster.radius )
+            rad = cluster.radius
+            if rad == 0:
+                rad = 0.1
+            dist = _np.sqrt(_np.sum((pt - _np.asarray(cluster.centre)[:,None])**2, axis=0)) / rad
             weights = self._vectorised_weight(dist)
             risk += (len(self.clusters) - n - 1 + weights) * (weights > 0)
         return risk                
