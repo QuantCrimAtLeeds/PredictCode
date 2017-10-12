@@ -21,8 +21,7 @@ class _OurHandler(_logging.StreamHandler):
         self.open_cp_marker = True
 
 
-def _set_handler(handler):
-    logger = _logging.getLogger("open_cp")
+def _set_handler(handler, logger):
     existing = [ h for h in logger.handlers if hasattr(h, "open_cp_marker") ]
     for h in existing:
         logger.removeHandler(h)
@@ -32,25 +31,25 @@ def standard_formatter():
     """Our standard logging formatter"""
     return _logging.Formatter("{asctime} {levelname} {name} - {message}", style="{")
 
-def _log_to(file):
-    logger = _logging.getLogger("open_cp")
+def _log_to(file, name="open_cp"):
+    logger = _logging.getLogger(name)
     logger.setLevel(_logging.DEBUG)
     ch = _OurHandler(file)
     ch.setFormatter(standard_formatter())
-    _set_handler(ch)
+    _set_handler(ch, logger)
 
-def log_to_stdout():
+def log_to_stdout(name="open_cp"):
     """Start logging to `stdout`.  In a Jupyter notebook, this will print
     logging to the notebook.
     """
-    _log_to(_sys.stdout)
+    _log_to(_sys.stdout, name)
 
-def log_to_true_stdout():
+def log_to_true_stdout(name="open_cp"):
     """Start logging to the "real" `stdout`.  In a Jupyter notebook, this will
     print logging to the console the server is running in (and not to the
     notebook) itself.
     """
-    _log_to(_sys.__stdout__)
+    _log_to(_sys.__stdout__, name)
 
 
 class ProgressLogger():

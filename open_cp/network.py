@@ -829,7 +829,8 @@ class PlanarGraph(Graph):
         """Projects a point to the nearest edge in the graph.
         
         Uses a `numpy` O(N) algorithm which is not great, but is acceptable,
-        and "just works".
+        and "just works".  If installed, `rtree` will be used to accelerate
+        the search.
         
         :param x:
         :param y: The coordinates of the point
