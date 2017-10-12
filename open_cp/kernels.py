@@ -537,7 +537,7 @@ class GaussianBase():
         return self._data
     
     def set_scale(self, scale=1.0):
-        self.scale = 1.0
+        self.scale = scale
     
     
 class GaussianNearestNeighbour(GaussianBase):
