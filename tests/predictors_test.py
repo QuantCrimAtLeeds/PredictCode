@@ -207,6 +207,63 @@ def test_ContinuousPrediction_rebase_number_samples():
     test = test.rebase(100, 100, 5, 15)
     assert test.samples == 123
 
+@pytest.fixture
+def cp1():
+    class OurCP(testmod.ContinuousPrediction):
+        def __init__(self, cell_width, cell_height, xoffset, yoffset, samples):
+            super().__init__(cell_width, cell_height, xoffset, yoffset, samples)
+
+        def risk(self, x, y):
+            return x + y
+
+    return OurCP(50, 100, 5, 7, 100)
+
+def test_ContinuousPrediction_to_matrix(cp1):
+    matrix = cp1.to_matrix(10, 5)
+    # (y,x) -> region from (50*x+5, 100*y+7) ...(50*x+55, 100*y+107)
+    assert matrix.shape == (5,10)
+    print("Slightly dubious probabilistic test...")
+    for y in range(5):
+        for x in range(10):
+            midx = 50*x + 5 + 25
+            midy = 100*y + 7 + 50
+            assert abs(matrix[y,x] - (midx + midy)) < 12
+
+def test_ContinuousPrediction_to_matrix_from_masked_grid(cp1):
+    mask = np.random.random((12, 7)) < 0.5
+    mgrid = open_cp.data.MaskedGrid(20, 15, 2, 3, mask)
+    matrix = cp1.to_matrix_from_masked_grid(mgrid)
+    assert matrix.shape == (12, 7)
+    # (y,x) -> region from (20*x+2, 15*y+3) ...
+    print("Slightly dubious probabilistic test...")
+    for y in range(12):
+        for x in range(7):
+            if mask[y,x]:
+                assert matrix[y,x] == 0
+            else:
+                midx = 20*x + 2 + 10
+                midy = 15*y + 3 + 15/2
+                assert abs(matrix[y,x] - (midx + midy)) < 3
+
+def test_grid_prediction_from_kernel_and_masked_grid():
+    mask = np.random.random((12, 7)) < 0.5
+    mgrid = open_cp.data.MaskedGrid(20, 15, 2, 3, mask)
+    def kernel(pt):
+       return pt[0] + pt[1]
+    pred = testmod.grid_prediction_from_kernel_and_masked_grid(kernel, mgrid, 100)
+    assert pred.xsize == 20
+    assert pred.ysize == 15
+    assert pred.xoffset == 2
+    assert pred.yoffset == 3
+    np.testing.assert_allclose(pred.intensity_matrix.mask, mask)
+    print("Slightly dubious probabilistic test...")
+    for y in range(12):
+        for x in range(7):
+            if not mask[y,x]:
+                midx = 20*x + 2 + 10
+                midy = 15*y + 3 + 15/2
+                assert abs(pred.intensity_matrix[y,x] - (midx + midy)) < 3
+
 @patch("numpy.random.random")
 def test_KernelRiskPredictor(random_mock):
     random_mock.return_value = np.array([0.1, 0.2])

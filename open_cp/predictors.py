@@ -324,6 +324,28 @@ class ContinuousPrediction():
             matrix[gy] = _np.mean(_np.reshape(self._risk_array(x, y), (self.samples, width)), axis=0)
         return matrix
 
+    def to_matrix_from_masked_grid(self, masked_grid):
+        """Sample the risk at each "valid" grid point from `masked_grid`.
+        Takes grid geometry from `masked_grid` and not from own settings.
+        Useful for when the kernel cannot be evaluated at certain points."""
+        locations = []
+        to_cell = []
+        size = [masked_grid.xsize, masked_grid.ysize]
+        offset = [masked_grid.xoffset, masked_grid.yoffset]
+        for gy in range(masked_grid.yextent):
+            for gx in range(masked_grid.xextent):
+                if masked_grid.is_valid(gx, gy):
+                    to_cell.append((gx, gy))
+                    parts = (_np.random.random(size=(self.samples,2)) + [gx,gy]) * size + offset
+                    locations.extend(parts)
+        locations = _np.asarray(locations)
+        values = self._risk_array(*locations.T)
+        values = _np.mean(_np.reshape(values, (values.shape[0] // self.samples, self.samples)), axis=1)
+        matrix = _np.zeros((masked_grid.yextent, masked_grid.xextent))
+        for v, (gx, gy) in zip(values, to_cell):
+            matrix[gy, gx] = v
+        return matrix
+
     def to_kernel(self):
         """Returns a callable object which when called at `point` gives the
         risk at (point[0], point[1]).  `point` may be an array."""
@@ -392,6 +414,28 @@ def grid_prediction_from_kernel(kernel, region, grid_size, samples=None):
             samples=samples)
     return GridPredictionArray.from_continuous_prediction(cts_predictor,
             width, height)
+
+def grid_prediction_from_kernel_and_masked_grid(kernel, masked_grid, samples=None):
+    """Utility function to convert a space kernel into a grid based prediction.
+    
+    :param kernel: A kernel object taking an array of shape (2,N) of N lots
+      of spatial coordinates, and returning an array of shape (N).
+    :param masked_grid: An instance of :class:`MaskedGrid` to both base the
+      grid geometry on, and to select which grid cells to sample.
+    :param samples: As :class:`ContinuousPrediction`
+    
+    :return: An instance of :class GridPredictionArray:
+    """
+    region = masked_grid.region()
+    cts_predictor = KernelRiskPredictor(kernel,
+        xoffset=masked_grid.xoffset, yoffset=masked_grid.yoffset,
+        cell_width=masked_grid.xsize, cell_height=masked_grid.ysize,
+        samples=samples)
+    intensity_matrix = cts_predictor.to_matrix_from_masked_grid(masked_grid)
+    pred = GridPredictionArray(masked_grid.xsize, masked_grid.ysize,
+        intensity_matrix, masked_grid.xoffset, masked_grid.yoffset)
+    pred.mask_with(masked_grid)
+    return pred
 
 def grid_prediction(continuous_prediction, grid):
     """Utility function to convert a continuous prediction to a grid based

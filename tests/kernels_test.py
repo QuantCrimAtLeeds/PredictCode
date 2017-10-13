@@ -1,8 +1,11 @@
 import numpy as np
 import scipy.stats as stats
+import scipy.linalg
 import pytest
 import open_cp.kernels as testmod
+import open_cp.data
 import unittest.mock as mock
+import shapely.geometry
 
 def slow_gaussian_kernel_new(pts, mean, var):
     """Test case where `pts`, `mean`, `var` are all of shape 2."""
@@ -368,3 +371,149 @@ def test_GaussianNearestNeighbour():
         pts = np.random.random(size=(n,50))
         np.testing.assert_allclose(gnn(pts), kernel(pts))
     
+@pytest.fixture
+def geometry_square():
+    return shapely.geometry.Polygon([[0,0],[10,0], [10,10], [0,10]])
+
+@pytest.fixture
+def gec1(geometry_square):
+    data = [[1,9,9,1], [1,1,9,9]]
+    data = np.asarray(data)
+    assert data.shape == (2,4)
+    return testmod.GaussianEdgeCorrect(data, geometry_square)
+
+def test_GaussianEdgeCorrect_point_inside(gec1):
+    assert gec1.point_inside(0, 0)
+    assert gec1.point_inside(10, 0)
+    assert gec1.point_inside(9, 9)
+    assert not gec1.point_inside(-1, 0)
+    assert not gec1.point_inside(0, -1)
+    assert not gec1.point_inside(11, 11)
+
+def test_GaussianEdgeCorrect_agrees_with_GaussianBase(gec1):
+    gb = testmod.GaussianBase(gec1.data)
+    pts = np.random.random((2,10)) * np.asarray([10,10])[:,None]
+    np.testing.assert_allclose(gb(pts), gec1(pts))
+
+def test_GaussianEdgeCorrect_halfS(gec1):
+    gb = testmod.GaussianBase(gec1.data)
+    hS = scipy.linalg.inv(gb.covariance_matrix)
+    hS = scipy.linalg.fractional_matrix_power(hS, 0.5)
+    np.testing.assert_allclose(gec1.half_S, hS)
+
+def test_GaussianEdgeCorrect_transformed_geometry(gec1):
+    hS = gec1.half_S
+    pts = np.asarray([[0,10,10,0], [0,0,10,10]])
+    pts = np.dot(hS, pts)
+
+    got = np.asarray(gec1.transformed_geometry.exterior)
+    assert got.shape == (5, 2)
+    got = got[:4,:]
+    np.testing.assert_allclose(pts.T, got)
+
+def _make_sample_points(h, m=10, k=100):
+    expected_points = []
+    for i in range(1, m+1):
+        r = np.sqrt(-2 * h * h * (np.log(m-i+0.5) - np.log(m)))
+        for a in range(k):
+            angle = a * 2 * np.pi / k
+            x, y = r * np.cos(angle), r * np.sin(angle)
+            expected_points.append([x, y])
+    return np.asarray(expected_points)
+
+def test_GaussianEdgeCorrect_edge_sample_points(gec1):
+    expected_points = _make_sample_points(h=gec1.bandwidth)
+
+    def expected_pts(x, y):
+        pt = np.dot(gec1.half_S, np.asarray([x,y]))
+        return expected_points + pt
+
+    for _ in range(10):
+        x, y = np.random.random(2) * [10, 10]
+        print("Possibly we don't expect the _order_ to be the same...")
+        np.testing.assert_allclose(gec1.edge_sample_points([x,y]), expected_pts(x, y))
+
+def test_GaussianEdgeCorrect_number_intersecting_pts(gec1):
+    for _ in range(10):
+        pt = np.random.random(2) * [10, 10]
+        got = gec1.number_intersecting_pts(pt)
+        pts = shapely.geometry.MultiPoint(gec1.edge_sample_points(pt)).intersection(gec1.transformed_geometry)
+        assert len(pts) == got
+
+def test_GaussianEdgeCorrect_correction_factor(gec1):
+    for _ in range(10):
+        pt = np.random.random(2) * [10, 10]
+        got = gec1.correction_factor(pt)
+        expected = gec1.number_intersecting_pts(pt) / (gec1._m * gec1._k)
+        assert expected == pytest.approx(got)
+    
+    pts = np.random.random((100,2)) * [10, 10]
+    got = gec1.correction_factor(pts.T)
+    expected = [gec1.correction_factor(pt) for pt in pts]
+    np.testing.assert_allclose(got, expected)
+        
+@pytest.fixture
+def masked_grid():
+    mask = np.random.random((10,20)) <= 0.5
+    return open_cp.data.MaskedGrid(10, 15, 5, 7, mask)
+
+@pytest.fixture
+def gecg1(masked_grid):
+    data = [[10,90,90,10], [10,10,90,90]]
+    data = np.asarray(data)
+    assert data.shape == (2,4)
+    return testmod.GaussianEdgeCorrectGrid(data, masked_grid)
+
+def test_GaussianEdgeCorrectGrid_pts_to_grid_space(gecg1):
+    expected_points = _make_sample_points(h=gecg1.bandwidth)
+    pt = np.asarray([1,2])
+    S = scipy.linalg.fractional_matrix_power(gecg1.covariance_matrix, 0.5)
+    expected_points = np.dot(S, expected_points.T)
+    expected_points = (expected_points.T + pt - [5,7] ) / [10,15]
+    np.testing.assert_allclose(gecg1.points_to_grid_space(pt), np.floor(expected_points))
+    assert expected_points.shape == (1000, 2)
+
+def test_GaussianEdgeCorrectGrid_number_intersecting_pts(gecg1, masked_grid):
+    pt = [1,2]
+    got = gecg1.number_intersecting_pts([1,2])
+    expected = 0
+    for gx, gy in gecg1.points_to_grid_space(pt):
+        if gx >= 0 and gy >= 0 and gx < 20 and gy < 10 and not masked_grid.mask[gy][gx]:
+            expected += 1
+    assert got == expected
+
+def test_GaussianEdgeCorrectGrid_correction_factor(gecg1):
+    pt = np.asarray([[1,2,3], [4,5,6]])
+    assert pt.shape == (2,3)
+    expected = []
+    for x, y in pt.T:
+        expected.append(gecg1.correction_factor((x,y)))
+    np.testing.assert_allclose(expected, gecg1.correction_factor(pt))
+
+def _masked_grid_to_poly(mg):
+    poly = None
+    for x in range(mg.xextent):
+        for y in range(mg.yextent):
+            if mg.is_valid(x, y):
+                xx = x * mg.xsize + mg.xoffset
+                yy = y * mg.ysize + mg.yoffset
+                p = [[xx,yy], [xx+mg.xsize,yy], [xx+mg.xsize,yy+mg.ysize], [xx,yy+mg.ysize]]
+                p = shapely.geometry.Polygon(p)
+                if poly is None:
+                    poly = p
+                else:
+                    poly = poly.union(p)
+    return poly
+
+def test_GaussianEdgeCorrectGrid_vs_GaussianEdgeCorrect(gecg1):
+    geo = _masked_grid_to_poly(gecg1.masked_grid)
+    gec = testmod.GaussianEdgeCorrect(gecg1.data, geo)
+
+    for _ in range(100):
+        pt = np.random.random(2) * 100
+        gpt = pt - [gecg1.masked_grid.xoffset, gecg1.masked_grid.yoffset]
+        gpt = np.floor_divide(gpt, [gecg1.masked_grid.xsize, gecg1.masked_grid.ysize]).astype(np.int)
+        if gecg1.masked_grid.mask[gpt[1], gpt[0]]:
+            continue
+        assert gec.number_intersecting_pts(pt) == gecg1.number_intersecting_pts(pt)
+        assert gec.correction_factor(pt) == gecg1.correction_factor(pt)

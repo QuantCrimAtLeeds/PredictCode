@@ -403,8 +403,8 @@ class GaussianBase():
       - :attr:`bandwidth`
       - :attr:`weights`
     
-    :param data: N coordinates in n dimensional space.  When n>1, the
-          input should be an array of shape (n,N).
+    :param data: `N` coordinates in n dimensional space.  When `n>1`, the
+          input should be an array of shape `(n,N)`.
     """
     def __init__(self, data):
         data = _np.asarray(data)
@@ -559,3 +559,192 @@ class GaussianNearestNeighbour(GaussianBase):
         
         self.covariance_matrix = _np.diag(stds * stds)
         self.bandwidth = distance_to_k
+
+try:
+    import shapely.geometry as _sgeometry
+    import shapely.affinity as _saffinity
+except Exception as ex:
+    _sgeometry, _saffinity = None, None
+    _logger.error("Cannot load `shapely` because %s/%s", type(ex), ex)
+
+
+class _EdgeCorrect():
+    """A mix-in."""
+    def __init__(self):
+        self._m, self._k = 10, 100
+        self._cache = None
+
+    def _recalc(self):
+        if self._cache is not None:
+            if self.bandwidth == self._cache[0] and tuple(self.covariance_matrix.flatten()) == self._cache[1]:
+                return
+        halfS = _linalg.inv(_linalg.fractional_matrix_power(self.covariance_matrix, 0.5))
+
+        r = _np.arange(1, self._m+1) - 0.5
+        r = _np.log(self._m - r) - _np.log(self._m)
+        r = _np.sqrt(-2 * self.bandwidth * self.bandwidth * r)
+        
+        points = _np.empty((self._m * self._k, 2))
+        for i, radius in enumerate(r):
+            angles = _np.arange(self._k) * _np.pi * 2 / self._k
+            points[self._k*i:self._k*(i+1), 0] = radius * _np.cos(angles)
+            points[self._k*i:self._k*(i+1), 1] = radius * _np.sin(angles)
+
+        # Faster to keep points as array, translate, and then move to shapely
+        return (self.bandwidth, tuple(self.covariance_matrix.flatten()),
+                halfS, points)
+
+    @property
+    def half_S(self):
+        """:math:`S^{-1/2}` where `S` is the covariance matrix."""
+        self._recalc()
+        return self._cache[2]
+
+    def edge_sample_points(self, pt):
+        """The "sample points", to be intersected with the geometry, centred
+        at `pt == (x,y)`."""
+        self._recalc()
+        pt = _np.dot(self._cache[2], pt)
+        return self._cache[3] + pt
+
+
+
+class GaussianEdgeCorrect(GaussianBase, _EdgeCorrect):
+    """Subclass of :class:`GaussianBase` which implements two dimensional edge
+    correction.  This is rather slow; as such, direct evaluation of this kernel
+    is identical to using :class:`GaussianBase`, and we _additionally_ provide
+    the method :meth:`correction_factor`.
+
+    :param geometry: A `shapely` object which we'll intersect with points to
+      estimate the support 
+    """
+    def __init__(self, data, geometry):
+        GaussianBase.__init__(self, data)
+        _EdgeCorrect.__init__(self)
+        self._geo = geometry
+
+    @property
+    def geometry(self):
+        """The original geometry"""
+        return self._geo
+
+    def point_inside(self, x, y):
+        """Helper method.  Does the point intersect the geometry?"""
+        return _sgeometry.Point(x, y).intersects(self._geo)
+
+    def _recalc(self):
+        cache = _EdgeCorrect._recalc(self)
+        if cache is not None:
+            halfS = cache[2]
+            m = list(halfS.flatten()) + [0, 0]
+            geo = _saffinity.affine_transform(self._geo, m)
+            self._cache = cache + (geo,)
+
+    @property
+    def transformed_geometry(self):
+        """The geometry, transformed appropriately."""
+        self._recalc()
+        return self._cache[4]
+
+    def number_intersecting_pts(self, pt):
+        """The number of the sample points which intersect, once centred at
+        `pt`."""
+        pts = _sgeometry.MultiPoint(self.edge_sample_points(pt))
+        pts = pts.intersection(self.transformed_geometry)
+        # Seems the fastest method
+        return _np.asarray(pts).shape[0]
+
+    def correction_factor(self, pt):
+        """Find the correction factor.  This can be _painfully_ slow for
+        complicated geometry.
+
+        :param pt: Array of shape `(2,)` for a single point, or `(2,N)` for
+          `N` points.
+        """
+        pt = _np.asarray(pt)
+        if len(pt.shape) < 2:
+            pt = _np.atleast_2d(pt)
+        else:
+            pt = pt.T
+        geo = self.transformed_geometry
+        correction = _np.empty(pt.shape[0])
+        for i, p in enumerate(pt):
+            p = _np.dot(self._cache[2], p)
+            sample_points = self._cache[3] + p
+            sample_points = _sgeometry.MultiPoint(sample_points).intersection(geo)
+            correction[i] = _np.asarray(sample_points).shape[0] / (self._m * self._k)
+        if correction.shape[0] < 2:
+            return correction[0]
+        return correction
+
+
+class GaussianEdgeCorrectGrid(GaussianBase, _EdgeCorrect):
+    """Subclass of :class:`GaussianBase` which implements two dimensional edge
+    correction, based on a :class:`MaskedGrid` (or object with that interface).
+    This class combines the edge correction factor with the kernel, and so can
+    be used as a normal kernel, with edge correction built in.  However, it can
+    only be evaluated at points _inside_ the _valid_ parts of the grid.
+
+    :param grid: An instance of :class:`MaskedGrid`.
+    """
+    def __init__(self, data, grid):
+        GaussianBase.__init__(self, data)
+        _EdgeCorrect.__init__(self)
+        self._grid = grid
+
+    @property
+    def masked_grid(self):
+        """The masked grid used as geometry."""
+        return self._grid
+
+    def _recalc(self):
+        cache = _EdgeCorrect._recalc(self)
+        if cache is not None:
+            halfSinv = _linalg.fractional_matrix_power(self.covariance_matrix, 0.5)
+            self._cache = cache + (halfSinv,)
+
+    def points_to_grid_space(self, pt):
+        """For the given `pt = (x,y)` return the grid coordinates which the
+        sample points fall into."""
+        self._recalc()
+        hSi = self._cache[-1]
+        pts = _np.dot(self._cache[3], hSi) + pt
+        pts = pts -[self._grid.xoffset, self._grid.yoffset]
+        pts = _np.floor_divide(pts, _np.asarray([self._grid.xsize, self._grid.ysize])).astype(_np.int)
+        return pts
+
+    def number_intersecting_pts(self, pt):
+        """The number of the sample points which intersect, once centred at
+        `pt`."""
+        grid_pts = self.points_to_grid_space(pt)
+        m = (grid_pts >= [0,0]) & (grid_pts < [self._grid.xextent, self._grid.yextent])
+        m = _np.all(m, axis=1)
+        gx, gy = grid_pts[m,:].T
+        valid = self._grid.mask[gy, gx]
+        return valid.shape[0] - _np.sum(valid)
+
+    def correction_factor(self, pt):
+        """The correction factor at `pt`"""
+        pt = _np.asarray(pt)
+        if len(pt.shape) < 2:
+            return self.number_intersecting_pts(pt) / (self._k * self._m)
+        
+        pt = pt.T # Now shape (N, 2)
+        self._recalc()
+        hSi = self._cache[-1]
+        offset = (pt - [self._grid.xoffset, self._grid.yoffset])[None,:,:]
+        pts = _np.dot(self._cache[3], hSi)[:,None,:] + offset
+        pts = _np.floor_divide(pts, _np.asarray([self._grid.xsize, self._grid.ysize])[None,None,:]).astype(_np.int)
+
+        m = (pts >= [0,0]) & (pts < [self._grid.xextent, self._grid.yextent])
+        m = (m[:,:,0] & m[:,:,1])
+        
+        factor = _np.empty(pt.shape[0])
+        for i in range(pt.shape[0]):
+            gx, gy = pts[:,i,:][m[:,i],:].T
+            valid = self._grid.mask[gy, gx]
+            factor[i] = valid.shape[0] - _np.sum(valid)
+        return factor / (self._k * self._m)
+
+    def __call__(self, pts):
+        return super().__call__(pts) / self.correction_factor(pts)
