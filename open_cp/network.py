@@ -1246,32 +1246,47 @@ def segment_graph(graph):
         edges_done.update(segment)
         yield segment
 
+def edge_segment_to_vertices(graph, segment):
+    """Turn a set of edges which form a "segment" (e.g. an output of
+    :func:`segment_graph`) into an ordered list of vertices giving the
+    same segment.
+
+    :return: A list of vertex keys, giving the path formed by the segment.
+      Will include the start/end vertices of the path (i.e. vertices not of
+      degree 2); if the segment is a cycle, then the start and end vertices
+      will be the same.
+    """
+    seg = set(segment)
+    v1, v2 = graph.edges[seg.pop()]
+    ordered_vertices = [v1, v2]
+    while len(seg) > 0:
+        added = False
+        choices = [x for x in graph.neighbourhood_edges(ordered_vertices[0]) if x in seg]
+        if len(choices) > 0:
+            seg.remove(choices[0])
+            v1, v2 = graph.edges[choices[0]]
+            v = v1 if ordered_vertices[0] == v2 else v2
+            ordered_vertices.insert(0, v)
+            added = True
+        choices = [x for x in graph.neighbourhood_edges(ordered_vertices[-1]) if x in seg]
+        if len(choices) > 0:
+            seg.remove(choices[0])
+            v1, v2 = graph.edges[choices[0]]
+            v = v1 if ordered_vertices[-1] == v2 else v2
+            ordered_vertices.append(v)
+            added = True
+    return ordered_vertices
+
 def ordered_segment_graph(graph):
-    """As :func:`segment_graph` but yields actual paths.
+    """As :func:`segment_graph` but yields actual paths, in the same order.
     
     :return: A generator of segments, where is segment is a list of vertex
       keys, giving the path formed by the segment.  Will include the start/end
-      vertices of the path (i.e. vertices not of degree 2) unless the segment
-      forms a loop, in which case the start vertex will not be repeated.
+      vertices of the path (i.e. vertices not of degree 2); if the segment is a
+      cycle, then the start and end vertices will be the same.
     """
     for segment in segment_graph(graph):
-        vertices = set()
-        for e in segment:
-            vertices.update(graph.edges[e])
-        choices = [v for v in vertices if len(graph.neighbours(v)) != 2]
-        if len(choices) == 0:
-            assert all(len(graph.neighbours(v)) == 2 for v in vertices)
-            choices = list(vertices)
-        start = choices[0]
-        vertices.remove(start)
-        out = [start]
-        while len(vertices) > 0:
-            for v in set(graph.neighbours(out[-1])):
-                if v in vertices:
-                    vertices.remove(v)
-                    out.append(v)
-                    break
-        yield out
+        yield edge_segment_to_vertices(graph, segment)
 
 def connected_components(graph):
     """Find all connected components (and isolated vertices) in the graph.

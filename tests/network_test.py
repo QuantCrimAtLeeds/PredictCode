@@ -608,18 +608,18 @@ def test_ordered_segment_graph1(graph1):
 def test_ordered_segment_graph3(graph3):
     got = set(tuple(x) for x in network.ordered_segment_graph(graph3))
     print("Dodgy test...")
-    assert got == {(0,1), (1,2,3), (3,4,5), (3,5), (1,7,6,5)}
+    assert got == {(0,1), (1,2,3), (3,4,5), (3,5), (5,6,7,1)}
 
 def test_ordered_segment_graph4(graph4):
     got = set(tuple(x) for x in network.ordered_segment_graph(graph4))
     print("Dodgy test, as having (6,0) instead of (0,6) would be fine.")
-    assert got == {(0,1,2,3,4,5), (0,6), (0,7)}
+    assert got == {(3,4,5,0,1,2,3), (0,6), (0,7)}
 
 def test_ordered_segment_cycle():
     graph = network.GraphBuilder().add_edge(0,1).add_edge(1,2).add_edge(0,2).build()
     got = set(tuple(x) for x in network.ordered_segment_graph(graph))
     print("Dodgy test...")
-    assert got == {(0,1,2)}
+    assert got == {(2,0,1,2)}
     
 @pytest.fixture
 def graph5():
