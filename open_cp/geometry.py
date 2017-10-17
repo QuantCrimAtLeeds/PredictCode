@@ -520,7 +520,7 @@ class Voroni():
             else:
                 t_up = tzero * 2
                 while dist(t_up) < 1.1 * distance:
-                    t_up += t_up
+                    t_up += t_up + 1
                 t0 = _optimize.brentq(lambda x : dist(x) - distance, tzero, t_up)
             
             poly[inf_index] = x1 + t0 * dx1
