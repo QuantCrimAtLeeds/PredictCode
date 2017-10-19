@@ -517,7 +517,10 @@ class GaussianBase():
             raise ValueError("Must be the same dimension as the data")
         self._cov_matrix = S
         self._cov_matrix_inv = _linalg.inv(S)
-        self._sqrt_det = _np.sqrt(_linalg.det(self._cov_matrix))
+        d = _linalg.det(self._cov_matrix)
+        if d < 0:
+            raise ValueError("Matrix {} has negative determinant!".format(self._cov_matrix))
+        self._sqrt_det = _np.sqrt(d)
         self._update_norm()
 
     @property
@@ -606,7 +609,6 @@ class _EdgeCorrect():
         self._recalc()
         pt = _np.dot(self._cache[2], pt)
         return self._cache[3] + pt
-
 
 
 class GaussianEdgeCorrect(GaussianBase, _EdgeCorrect):

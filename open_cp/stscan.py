@@ -95,11 +95,7 @@ def bin_timestamps(timed_points, offset, bin_length):
     :param offset: A datetime-like object which is the start of the binning.
     :param bin_length: A timedelta-like object which is the length of each bin.
     """
-    offset = _np.datetime64(offset)
-    bin_length = _np.timedelta64(bin_length)
-    new_times = _np.floor((timed_points.timestamps - offset) / bin_length)
-    new_times = offset + new_times * bin_length
-    return data.TimedPoints(new_times, timed_points.coords)
+    return timed_points.bin_timestamps(offset, bin_length)
 
 
 class _STSTrainerBase(predictors.DataTrainer):
@@ -266,10 +262,11 @@ class _STSTrainerBase(predictors.DataTrainer):
     def _events_time(self, time=None):
         """If time is `None` set to last event in data.  Return data clamped to
         time range, and timestamp actually used."""
-        events = self.data.events_before(time)
         if time is None:
+            events = self.data
             time = self.data.timestamps[-1]
         else:
+            events = self.data[self.data.timestamps < time]
             time = _np.datetime64(time)
         return events, time
 
@@ -318,9 +315,10 @@ class STSTrainer(_STSTrainerBase):
     def predict(self, time=None, max_clusters=None):
         """Make a prediction.
         
-        :param time: Timestamp of the prediction point.  Only data up to
-          and including this time is used when computing clusters.  If `None`
-          then use the last timestamp of the data.
+        :param time: Timestamp of the prediction point.  Only data up to this
+          time is used when computing clusters (if you have binned timestamp to
+          the nearest day, for example, not including the edge case is
+          important!)  If `None` then use the last timestamp of the data.
         :param max_clusters: If not `None` then return at most this many
           clusters.
         

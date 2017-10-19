@@ -221,7 +221,50 @@ def test_order_by_times():
     for t, x, y in zip(timestamps, xcoords, ycoords):
         assert(x + y == 100)
         assert(t == ts[x])
+
+
+@pytest.fixture
+def timestamps():
+    return open_cp.data.TimeStamps([
+        datetime.datetime(2017,1,2,12,30),
+        datetime.datetime(2017,1,2,14,23),
+        datetime.datetime(2017,1,3,0,0),
+        datetime.datetime(2017,1,3,4,5),
+        datetime.datetime(2017,1,4,1,2)
+        ])
+
+def test_TimeStamps_bin(timestamps):
+    ts = timestamps.bin_timestamps(datetime.datetime(2017,1,1), datetime.timedelta(days=1))
+    np.testing.assert_allclose(ts.time_deltas(np.timedelta64(1,"h")) + 24, [24,24,48,48,72])
+    ts = timestamps.bin_timestamps(datetime.datetime(2017,1,1), datetime.timedelta(hours=12))
+    np.testing.assert_allclose(ts.time_deltas(np.timedelta64(1,"h")), [0,0,12,12,36])
+    ts = timestamps.bin_timestamps(datetime.datetime(2017,1,1,12,0), datetime.timedelta(hours=24))
+    np.testing.assert_allclose(ts.time_deltas(np.timedelta64(1,"h")), [0,0,0,0,24])
     
+@pytest.fixture
+def timedpoints():
+    ts = [
+        datetime.datetime(2017,1,2,12,30),
+        datetime.datetime(2017,1,2,14,23),
+        datetime.datetime(2017,1,3,0,0),
+        datetime.datetime(2017,1,3,4,5),
+        datetime.datetime(2017,1,4,1,2)
+        ]
+    x = np.random.random(len(ts))
+    y = np.random.random(len(ts))
+    return TimedPoints.from_coords(ts, x, y)
+
+def test_TimedPoints_bin(timedpoints):
+    ts = timedpoints.bin_timestamps(datetime.datetime(2017,1,1), datetime.timedelta(days=1))
+    np.testing.assert_allclose(ts.time_deltas(np.timedelta64(1,"h")) + 24, [24,24,48,48,72])
+    np.testing.assert_allclose(ts.coords, timedpoints.coords)
+    ts = timedpoints.bin_timestamps(datetime.datetime(2017,1,1), datetime.timedelta(hours=12))
+    np.testing.assert_allclose(ts.time_deltas(np.timedelta64(1,"h")), [0,0,12,12,36])
+    np.testing.assert_allclose(ts.coords, timedpoints.coords)
+    ts = timedpoints.bin_timestamps(datetime.datetime(2017,1,1,12,0), datetime.timedelta(hours=24))
+    np.testing.assert_allclose(ts.time_deltas(np.timedelta64(1,"h")), [0,0,0,0,24])
+    np.testing.assert_allclose(ts.coords, timedpoints.coords)
+
 
 def test_project_from_lon_lat():
     tp = TimedPoints([np.datetime64("2016-12")], [[-1.5],[50]])

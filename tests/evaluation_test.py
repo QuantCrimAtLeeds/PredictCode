@@ -5,6 +5,7 @@ import open_cp.predictors
 import open_cp.data
 import open_cp.network
 import numpy as np
+import scipy.special
 
 def test_top_slice():
     x = np.array([1,2,3,4,5,6])
@@ -88,6 +89,15 @@ def prediction():
     matrix = np.array([[1,2,3,4], [5,6,7,8]])
     return open_cp.predictors.GridPredictionArray(xsize=10, ysize=20, matrix=matrix, xoffset=2, yoffset=3)
 
+def test_generate_aggregated_cells(prediction):
+    out = list(evaluation.generate_aggregated_cells(prediction.intensity_matrix, 1))
+    assert all(x[1]==1 for x in out)
+    np.testing.assert_allclose([x[0] for x in out], [1,2,3,4,5,6,7,8])
+
+    out = list(evaluation.generate_aggregated_cells(prediction.intensity_matrix, 2))
+    assert all(x[1]==4 for x in out)
+    np.testing.assert_allclose([x[0] for x in out], [14, 18, 22])
+
 def test_hit_rate(prediction):
     t = [np.datetime64("2017-01-01")] * 8
     x = 2 + 5 + 10 * np.array([0,1,2,3,0,1,2,3])
@@ -110,6 +120,209 @@ def test_hit_rate_out_of_range(prediction):
     out = evaluation.hit_rates(prediction, tp, {1, 5, 100})
     assert set(out.values()) == {0}
     
+@pytest.fixture
+def masked_prediction():
+    mask = [[True, False, False, False], [True, True, False, True]]
+    matrix = np.array([[1,2,3,4], [5,6,7,8]])
+    matrix = np.ma.array(matrix, mask=mask)
+    return open_cp.predictors.GridPredictionArray(xsize=10, ysize=20, matrix=matrix, xoffset=2, yoffset=3)
+
+def test_generate_aggregated_cells_with_mask(masked_prediction):
+    out = list(evaluation.generate_aggregated_cells(masked_prediction.intensity_matrix, 1))
+    np.testing.assert_allclose([x[1] for x in out], [0,1,1,1,0,0,1,0])
+    np.testing.assert_allclose([x[0] for x in out], [0,2,3,4,0,0,7,0])
+
+    out = list(evaluation.generate_aggregated_cells(masked_prediction.intensity_matrix, 2))
+    np.testing.assert_allclose([x[1] for x in out], [1,3,3])
+    np.testing.assert_allclose([x[0] for x in out], [2,12,14])
+
+def test_inverse_hit_rate_no_mask(prediction):
+    t = [np.datetime64("2017-01-01")] * 8
+    x = 2 + 3 + 10 * np.array([0,1,2,3,0,1,2,3])
+    y = 3 + 8 + 20 * np.array([0,0,0,0,1,1,1,1])
+    tp = open_cp.data.TimedPoints.from_coords(t,x,y)
+    out = evaluation.inverse_hit_rates(prediction, tp)
+    assert out == {100*x/8 : 100*x/8 for x in range(1,9)}
+
+def test_inverse_hit_rate(masked_prediction):
+    t = [np.datetime64("2017-01-01")] * 8
+    x = 2 + 3 + 10 * np.array([0,1,2,3,0,1,2,3])
+    y = 3 + 8 + 20 * np.array([0,0,0,0,1,1,1,1])
+    tp = open_cp.data.TimedPoints.from_coords(t,x,y)
+    out = evaluation.inverse_hit_rates(masked_prediction, tp)
+    assert out == {12.5:25, 25:50, 37.5:75, 50:100}
+    
+def test_inverse_hit_rate1(masked_prediction):
+    t = [np.datetime64("2017-01-01")] * 5
+    x = [2,2, 12,12, 22]
+    y = [3,3, 3,3, 23]
+    tp = open_cp.data.TimedPoints.from_coords(t,x,y)
+    out = evaluation.inverse_hit_rates(masked_prediction, tp)
+    assert out == {20:25, 60:100}
+
+@pytest.fixture
+def masked_prediction1(prediction):
+    mask = [[True, False, False, False], [True, True, False, True]]
+    matrix = np.array([[1,2,3,7], [5,6,7,8]])
+    matrix = np.ma.array(matrix, mask=mask)
+    return open_cp.predictors.GridPredictionArray(xsize=10, ysize=20, matrix=matrix, xoffset=2, yoffset=3)
+
+def test_brier_score_mask(masked_prediction):
+    masked_prediction1 = masked_prediction.renormalise()
+    t = [np.datetime64("2017-01-01")] * 5
+    x = [12,12, 22, 24,24]
+    y = [3,3, 23, 5,5]
+    tp = open_cp.data.TimedPoints.from_coords(t,x,y)
+    score, skill = evaluation.brier_score(masked_prediction1, tp)
+    expected = (2/16 - 2/5)**2 + (3/16 - 2/5)**2 + (7/16 - 1/5)**2 + (4/16)**2
+    assert expected / (4*10*20) == pytest.approx(score)
+    score_worst = ((2/16)**2 + (3/16)**2 + (7/16)**2 + (4/16)**2 + (2/5)**2 + (2/5)**2 + (1/5)**2) / 800
+    skill_exp = 1 - score / score_worst
+    assert skill_exp == pytest.approx(skill)
+
+def test_brier_score_mask_agg(masked_prediction):
+    masked_prediction1 = masked_prediction.renormalise()
+    t = [np.datetime64("2017-01-01")] * 5
+    x = [12,12, 22, 24,24]
+    y = [3,3, 23, 5,5]
+    tp = open_cp.data.TimedPoints.from_coords(t,x,y)
+    
+    score, skill = evaluation.multiscale_brier_score(masked_prediction1, tp, 1)
+    score1, skill1 = evaluation.brier_score(masked_prediction1, tp)
+    assert score == pytest.approx(score1)
+    assert skill == pytest.approx(skill1)
+    
+    score, skill = evaluation.multiscale_brier_score(masked_prediction1, tp, 2)
+    expected = (1/7)*(2/28 - 2/10)**2 + (3/7)*(12/28 - 5/10)**2 + (3/7)*(14/28 - 3/10)**2
+    assert expected / 200 == pytest.approx(score)
+    worst = (1/7)*((2/28)**2 + (2/10)**2) + (3/7)*((12/28)**2 + (5/10)**2) + (3/7)*((14/28)**2 + (3/10)**2)
+    assert 1 - expected / worst == pytest.approx(skill)
+
+def test_inverse_hit_rate2(masked_prediction1):
+    t = [np.datetime64("2017-01-01")] * 5
+    x = [2,2, 12,12, 22]
+    y = [3,3, 3,3, 23]
+    tp = open_cp.data.TimedPoints.from_coords(t,x,y)
+    out = evaluation.inverse_hit_rates(masked_prediction1, tp)
+    assert out == {20:50, 60:100}
+
+def test_likelihood(masked_prediction):
+    t = [np.datetime64("2017-01-01")] * 5
+    x = [12,12, 22, 24,24]
+    y = [3,3, 23, 5,5]
+    tp = open_cp.data.TimedPoints.from_coords(t,x,y)
+    out = evaluation.likelihood(masked_prediction, tp)
+    assert out == pytest.approx((np.log(2)+np.log(2)+np.log(7)+np.log(3)+np.log(3))/5)
+
+def test_likelihood_in_mask(masked_prediction):
+    t = [np.datetime64("2017-01-01")] * 5
+    x = [2,12, 22, 24,24]
+    y = [3,3, 23, 5,5]
+    tp = open_cp.data.TimedPoints.from_coords(t,x,y)
+    with pytest.raises(ValueError):
+        evaluation.likelihood(masked_prediction, tp)
+
+def test_likelihood_no_mask(prediction):
+    t = [np.datetime64("2017-01-01")] * 5
+    x = [12,12, 22, 24,24]
+    y = [3,3, 23, 5,5]
+    tp = open_cp.data.TimedPoints.from_coords(t,x,y)
+    out = evaluation.likelihood(prediction, tp)
+    assert out == pytest.approx((np.log(2)+np.log(2)+np.log(7)+np.log(3)+np.log(3))/5)
+
+def test_likelihood_out_of_grid(prediction):
+    t = [np.datetime64("2017-01-01")] * 5
+    x = [0,12, 22, 24,24]
+    y = [3,3, 23, 5,5]
+    tp = open_cp.data.TimedPoints.from_coords(t,x,y)
+    with pytest.raises(ValueError):
+        evaluation.likelihood(prediction, tp)
+
+@pytest.fixture
+def prediction_with_zeros():
+    matrix = np.array([[1,2,0,2],[0,1,3,0]])
+    return open_cp.predictors.GridPredictionArray(xsize=10, ysize=20, matrix=matrix, xoffset=2, yoffset=3)
+
+@pytest.fixture
+def timed_pts_5():
+    t = [np.datetime64("2017-01-01")] * 5
+    x = [12,12, 22, 24,24]
+    y = [3,3, 23, 5,5]
+    return open_cp.data.TimedPoints.from_coords(t,x,y)
+
+def _test_kl_log(x, y):
+    if x <= 0:
+        return 0.0
+    if y <= 0:
+        return x * (np.log(x) + 20)
+    return x * (np.log(x) - np.log(y))
+
+def test_kl_score(prediction_with_zeros, timed_pts_5):
+    pred = prediction_with_zeros.renormalise()
+    score = evaluation.kl_score(pred, timed_pts_5)
+    a = [0, 2/5, 2/5, 0,   0, 0, 1/5, 0]
+    b = [1/9, 2/9, 0, 2/9,   0, 1/9, 1/3, 0]
+    expected = sum( _test_kl_log(x, y) for x, y in zip(a, b) )
+    expected += sum( _test_kl_log(1-x, 1-y) for x, y in zip(a, b) )
+    assert expected / (200 * 8) == pytest.approx(score)
+
+def test_kl_score_multi(prediction_with_zeros, timed_pts_5):
+    pred = prediction_with_zeros.renormalise()
+    score = evaluation.multiscale_kl_score(pred, timed_pts_5, 1)
+    score1 = evaluation.kl_score(pred, timed_pts_5)
+    assert score == pytest.approx(score1)
+    
+    score = evaluation.multiscale_kl_score(pred, timed_pts_5, 2)
+    a = [2/10, 5/10, 3/10]
+    b = [4/15, 6/15, 5/15]
+    expected = sum( _test_kl_log(x, y) for x, y in zip(a, b) )
+    expected += sum( _test_kl_log(1-x, 1-y) for x, y in zip(a, b) )
+    assert expected / (200 * 3) == pytest.approx(score)
+
+def test_bayesian_dirichlet_prior():
+    matrix = np.array([[1,2]])
+    pred = open_cp.predictors.GridPredictionArray(xsize=10, ysize=20, matrix=matrix, xoffset=2, yoffset=3)
+    t = [np.datetime64("2017-01-01")] * 3
+    x = [2, 2, 12]
+    y = [5] * 3
+    tp = open_cp.data.TimedPoints.from_coords(t,x,y)
+    score = evaluation.bayesian_dirichlet_prior(pred, tp, bias=300)
+    
+    exp = np.log(300 * 301 * 302 / (100 * 101 * 200))
+    exp += np.sum(scipy.special.digamma([102, 201, 303]) * [2, 1, -3])
+    
+    assert exp == pytest.approx(score)
+
+def test_bayesian_dirichlet_prior_masked():
+    matrix = np.ma.array([[1,2,3]], mask=[False, False, True])
+    pred = open_cp.predictors.GridPredictionArray(xsize=10, ysize=20, matrix=matrix, xoffset=2, yoffset=3)
+    t = [np.datetime64("2017-01-01")] * 3
+    x = [2, 2, 12]
+    y = [5] * 3
+    tp = open_cp.data.TimedPoints.from_coords(t,x,y)
+    score = evaluation.bayesian_dirichlet_prior(pred, tp, bias=300)
+    
+    exp = np.log(300 * 301 * 302 / (100 * 101 * 200))
+    exp += np.sum(scipy.special.digamma([102, 201, 303]) * [2, 1, -3])
+    
+    assert exp == pytest.approx(score)
+
+@pytest.fixture
+def prediction_with_zeros_and_mask():
+    mask = [[True, False, False, False], [True, True, False, True]]
+    matrix = np.array([[1,2,0,2],[0,1,3,0]])
+    matrix = np.ma.array(matrix, mask=mask)
+    return open_cp.predictors.GridPredictionArray(xsize=10, ysize=20, matrix=matrix, xoffset=2, yoffset=3)
+
+def test_kl_score_masked(prediction_with_zeros_and_mask, timed_pts_5):
+    pred = prediction_with_zeros_and_mask.renormalise()
+    score = evaluation.kl_score(pred, timed_pts_5)
+    a = [2/5, 2/5, 0,   1/5]
+    b = [2/7, 0, 2/7,   3/7]
+    expected = sum( _test_kl_log(x, y) for x, y in zip(a, b) )
+    expected += sum( _test_kl_log(1-x, 1-y) for x, y in zip(a, b) )
+    assert expected / (200 * 4) == pytest.approx(score)
+
 def test_grid_risk_coverage_to_graph(prediction):
     b = open_cp.network.PlanarGraphBuilder()
     b.add_vertex(35,30)

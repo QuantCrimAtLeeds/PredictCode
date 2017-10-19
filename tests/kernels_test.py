@@ -193,7 +193,9 @@ def test_GaussianBase_set_covariance():
     gb = testmod.GaussianBase([[1,2,3,4], [4,2,2,1]])
     with pytest.raises(ValueError):
         gb.covariance_matrix = [[1,2,3], [2,3,4]]
-    gb.covariance_matrix = [[1,2], [3,4]]
+    gb.covariance_matrix = [[2,2], [3,4]]
+    with pytest.raises(ValueError):
+        gb.covariance_matrix = [[1,2], [3,4]]
     with pytest.raises(ValueError):
         gb.covariance_matrix = 1
     

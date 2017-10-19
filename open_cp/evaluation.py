@@ -6,6 +6,7 @@ Contains routines and classes to help with evaluation of predictions.
 """
 
 import numpy as _np
+import scipy.special as _special
 import collections as _collections
 import logging as _logging
 from . import naive as _naive
@@ -80,6 +81,407 @@ def top_slice_prediction(prediction, fraction):
     grid_pred = prediction.clone()
     grid_pred.mask_with(hotspots)
     return grid_pred
+
+def hit_rates(grid_pred, timed_points, percentage_coverage):
+    """Computes the "hit rate" for the given prediction for the passed
+    collection of events.  For each percent, we top slice that percentage of
+    cells from the grid prediction, and compute the fraction of events which
+    fall in those cells.
+
+    :param grid_pred: An instance of :class:`GridPrediction` to give a
+      prediction.
+    :param timed_points: An instance of :class:`TimedPoints` from which to look
+      at the :attr:`coords`.
+    :param percentage_coverage: An iterable of percentage coverages to test.
+
+    :return: A dictionary from percentage coverage to hit rate percentage.
+      If there were no events in the `timed_points`, we return -1.
+    """
+    if len(timed_points.xcoords) == 0:
+        return {cov : -1.0 for cov in percentage_coverage}
+    risk = grid_pred.intensity_matrix
+    out = dict()
+    for coverage in percentage_coverage:
+        covered = top_slice(risk, coverage / 100)
+        
+        gx, gy = grid_pred.grid_coord(timed_points.xcoords, timed_points.ycoords)
+        gx, gy = gx.astype(_np.int), gy.astype(_np.int)
+        mask = (gx < 0) | (gx >= covered.shape[1]) | (gy < 0) | (gy >= covered.shape[0])
+        gx, gy = gx[~mask], gy[~mask]
+        count = _np.sum(covered[(gy,gx)])
+
+        out[coverage] = count / len(timed_points.xcoords)
+    return out
+
+def maximum_hit_rate(grid, timed_points, percentage_coverage):
+    """For the given collection of points, and given percentage coverages,
+    compute the maximum possible hit rate: that is, if the coverage gives `n`
+    grid cells, find the `n` cells with the most events in, and report the
+    percentage of all events this is.
+
+    :param grid: A :class:`BoundedGrid` defining the grid to use.
+    :param timed_points: An instance of :class:`TimedPoints` from which to look
+      at the :attr:`coords`.
+    :param percentage_coverage: An iterable of percentage coverages to test.
+
+    :return: A dictionary from percentage coverage to hit rate percentage.
+    """
+    pred = _naive.CountingGridKernel(grid.xsize, grid.ysize, grid.region())
+    pred.data = timed_points
+    risk = pred.predict()
+    try:
+        risk.mask_with(grid)
+    except:
+        # Oh well, couldn't do that
+        pass
+    return hit_rates(risk, timed_points, percentage_coverage)
+
+def inverse_hit_rates(grid_pred, timed_points):
+    """For the given prediction and the coordinates of events, find the
+    coverage level needed to achieve every possible hit-rate.  One problem is
+    how to break ties: that is, what if the prediction assigns the same
+    probability to multiple cells.  At present, we take a "maximal" approach,
+    and round coverage levels up to include all cells of the same probability.
+
+    :param grid_pred: An instance of :class:`GridPrediction` to give a
+      prediction.
+    :param timed_points: An instance of :class:`TimedPoints` from which to look
+      at the :attr:`coords`.
+
+    :return: A dictionary from hit rates to minimal required coverage levels.
+      Or empty dictionary if `timed_points` is empty.
+    """
+    if len(timed_points.xcoords) == 0:
+        return dict()
+    risk = grid_pred.intensity_matrix
+
+    gx, gy = grid_pred.grid_coord(timed_points.xcoords, timed_points.ycoords)
+    gx, gy = gx.astype(_np.int), gy.astype(_np.int)
+    mask = (gx < 0) | (gx >= risk.shape[1]) | (gy < 0) | (gy >= risk.shape[0])
+    gx, gy = gx[~mask], gy[~mask]
+    
+    indices = []
+    for x, y in zip(gx, gy):
+        indices.append( x + y * risk.shape[1] )
+    indices = _np.asarray(indices)
+    risk = risk.flatten()
+    try:
+        indices = indices[~risk.mask[indices]]
+    except:
+        pass
+    
+    reorder = _np.argsort(-risk)
+    risk = risk[reorder] # Decreasing with mask values at end
+    reordered_indices = []
+    for newi, oldi in enumerate(reorder):
+        reordered_indices.extend([newi] * _np.sum(indices == oldi))
+    reordered_indices = _np.asarray(reordered_indices)
+    try:
+        risk = _np.asarray(risk[~risk.mask])
+    except:
+        pass
+
+    total_points = len(timed_points.xcoords)
+    out = dict()
+    index = 0
+    while index < risk.shape[0]:
+        while index < risk.shape[0] - 1 and risk[index] == risk[index+1]:
+            index += 1
+        coverage = 100 * (index + 1) / risk.shape[0]
+        hitrate = 100 * _np.sum(reordered_indices <= index) / total_points
+        if hitrate > 0 and hitrate not in out:
+            out[hitrate] = coverage
+        index += 1
+    return out
+
+def _timed_points_to_grid(grid_pred, timed_points):
+    risk = grid_pred.intensity_matrix
+
+    gx, gy = grid_pred.grid_coord(timed_points.xcoords, timed_points.ycoords)
+    gx, gy = gx.astype(_np.int), gy.astype(_np.int)
+    mask = (gx < 0) | (gx >= risk.shape[1]) | (gy < 0) | (gy >= risk.shape[0])
+    if _np.any(mask):
+        raise ValueError("All points need to be inside the grid.")
+    try:
+        if _np.any(risk.mask[gy,gx]):
+            raise ValueError("All points need to be inside the non-masked area of the grid.")
+    except AttributeError:
+        pass
+
+    return gx, gy
+
+def likelihood(grid_pred, timed_points, minimum=1e-9):
+    """Compute the normalised log likelihood,
+    
+    :math:`\frac{1}{N} \sum_{i=1}^N \log f(x_i)`
+    
+    where the prediction gives the probability density function :math:`f`.
+
+    :param grid_pred: An instance of :class:`GridPrediction` to give a
+      prediction.  Should be normalised.
+    :param timed_points: An instance of :class:`TimedPoints` from which to look
+      at the :attr:`coords`.  All the points should fall inside the non-masked
+      area of the prediction.  Raises `ValueError` is not.
+    :param minimum: Adjust 0 probabilities to this value, defaults to `1e-9`
+
+    :return: A number, the average log likelihood.
+    """
+    if len(timed_points.xcoords) == 0:
+        return 0.0
+    gx, gy = _timed_points_to_grid(grid_pred, timed_points)
+    risk = grid_pred.intensity_matrix
+    pts = risk[gy,gx]
+    pts[pts<=0] = minimum
+    return _np.mean(_np.log(pts))
+    
+
+def _brier_setup(grid_pred, timed_points):
+    if len(timed_points.xcoords) == 0:
+        raise ValueError("Need non-empty timed points")
+    gx, gy = _timed_points_to_grid(grid_pred, timed_points)
+    risk = grid_pred.intensity_matrix
+    
+    u = _np.zeros_like(risk)
+    for x, y in zip(gx, gy):
+        u[y,x] += 1
+    u = u / _np.sum(u)
+    
+    try:
+        u = _np.ma.array(u, mask=risk.mask)
+    except AttributeError:
+        pass
+
+    return risk, u    
+
+def brier_score(grid_pred, timed_points):
+    """Compute the brier score,
+    
+      :math:`\frac{1}{A} \sum_i (p_i - u_i)^2`
+      
+    where `A` is the area of the (masked) grid, :math:`p_i` is the grid
+    prediction in cell `i`, and :math:`u_i` is the fraction of events which
+    occur in cell `i`.
+
+    :param grid_pred: An instance of :class:`GridPrediction` to give a
+      prediction.  Should be normalised.
+    :param timed_points: An instance of :class:`TimedPoints` from which to look
+      at the :attr:`coords`.  All the points should fall inside the non-masked
+      area of the prediction.  Raises `ValueError` is not.
+
+    :return: `(score, skill)` where `score` is as above, and `skill` is
+      :math:`\frac{2\sum_i p_iu_i}{\sum_i u_i^2 + \sum_i p_i^2}`.
+    """
+    risk, u = _brier_setup(grid_pred, timed_points)
+    try:
+        num_cells = _np.sum(~risk.mask)
+    except AttributeError:
+        num_cells = risk.shape[0] * risk.shape[1]
+    area = num_cells * grid_pred.xsize * grid_pred.ysize
+    score = _np.sum((u - risk)**2) / area
+    skill = 2 * _np.sum(u * risk) / (_np.sum(u * u + risk * risk))
+    return score, skill
+
+def _kl_log_func(x, y):
+    score = 0
+    x, y = _np.asarray(x), _np.asarray(y)
+    m = (x>0) & (y<=0)
+    if _np.any(m):
+        score += _np.sum(x[m] * (_np.log(x[m]) + 20))
+    m = (x>0) & (y>0)
+    if _np.any(m):
+        score += _np.sum(x[m] * (_np.log(x[m]) - _np.log(y[m])))
+    return score
+
+def kl_score(grid_pred, timed_points):
+    """Compute the (ad hoc) Kullback-Leibler divergance score,
+    
+      :math:`\frac{1}{A} \sum_i u_i\log(u_i/p_i) + (1-u_i)\log((1-u_i)/(1-p_i))
+      
+    where `A` is the area of the (masked) grid, :math:`p_i` is the grid
+    prediction in cell `i`, and :math:`u_i` is the fraction of events which
+    occur in cell `i`.
+
+    :param grid_pred: An instance of :class:`GridPrediction` to give a
+      prediction.  Should be normalised.
+    :param timed_points: An instance of :class:`TimedPoints` from which to look
+      at the :attr:`coords`.  All the points should fall inside the non-masked
+      area of the prediction.  Raises `ValueError` is not.
+
+    :return: The score
+    """
+    risk, u = _brier_setup(grid_pred, timed_points)
+    try:
+        num_cells = _np.sum(~risk.mask)
+    except AttributeError:
+        num_cells = risk.shape[0] * risk.shape[1]
+    area = num_cells * grid_pred.xsize * grid_pred.ysize
+
+    x, y = u.flatten(), risk.flatten()
+    score = _kl_log_func(x, y) + _kl_log_func(1-x, 1-y)
+    return score / area
+
+def _to_array_and_norm(a):
+    a = _np.asarray(a)
+    return a / _np.sum(a)
+
+def multiscale_brier_score(grid_pred, timed_points, size=1):
+    """Compute the brier score,
+    
+      :math:`\frac{1}{A} \sum_i (p_i - u_i)^2`
+      
+    where `A` is the area of the (masked) grid, :math:`p_i` is the grid
+    prediction in cell `i`, and :math:`u_i` is the fraction of events which
+    occur in cell `i`.  This version is slower, but allows an "aggregation
+    level" whereby we use a "moving window" to group together cells of a
+    square shape of a certain size.  Takes account of the mask sensibly.
+
+    :param grid_pred: An instance of :class:`GridPrediction` to give a
+      prediction.  Should be normalised.
+    :param timed_points: An instance of :class:`TimedPoints` from which to look
+      at the :attr:`coords`.  All the points should fall inside the non-masked
+      area of the prediction.  Raises `ValueError` is not.
+    :param size: The "aggregation level", an integer `>=1`.
+
+    :return: `(score, skill)` where `score` is as above, and `skill` is
+      :math:`\frac{2\sum_i p_iu_i}{\sum_i u_i^2 + \sum_i p_i^2}`.
+    """
+    risk, u = _brier_setup(grid_pred, timed_points)
+    cell_area = grid_pred.xsize * grid_pred.ysize
+
+    agg_risk, agg_u, cell_sizes = [], [], []
+    for (s1, c1), (s2, c2) in zip(generate_aggregated_cells(risk, size),
+                         generate_aggregated_cells(u, size)):
+        if c1 > 0:
+            cell_sizes.append(c1)
+            agg_risk.append(s1)
+            agg_u.append(s2)
+
+    agg_risk = _to_array_and_norm(agg_risk)
+    agg_u = _to_array_and_norm(agg_u)
+    cell_sizes = _to_array_and_norm(cell_sizes)
+
+    score = _np.sum( cell_sizes * (agg_risk - agg_u)**2 )
+    score_worst = _np.sum( cell_sizes * (agg_risk**2 + agg_u**2) )
+    skill = 1 - score / score_worst
+    return score / cell_area, skill
+    
+def _kl_log_func_weighted(x, y, w):
+    score = 0
+    x, y = _np.asarray(x), _np.asarray(y)
+    m = (x>0) & (y<=0)
+    if _np.any(m):
+        score += _np.sum(w[m] * x[m] * (_np.log(x[m]) + 20))
+    m = (x>0) & (y>0)
+    if _np.any(m):
+        score += _np.sum(w[m] * x[m] * (_np.log(x[m]) - _np.log(y[m])))
+    return score
+
+def multiscale_kl_score(grid_pred, timed_points, size=1):
+    """As :func:`kl_score` but with aggregation."""
+    risk, u = _brier_setup(grid_pred, timed_points)
+    cell_area = grid_pred.xsize * grid_pred.ysize
+
+    agg_risk, agg_u, cell_sizes = [], [], []
+    for (s1, c1), (s2, c2) in zip(generate_aggregated_cells(risk, size),
+                         generate_aggregated_cells(u, size)):
+        if c1 > 0:
+            cell_sizes.append(c1)
+            agg_risk.append(s1)
+            agg_u.append(s2)
+
+    agg_risk = _to_array_and_norm(agg_risk)
+    agg_u = _to_array_and_norm(agg_u)
+    cell_sizes = _to_array_and_norm(cell_sizes)
+
+    score = ( _kl_log_func_weighted(agg_u, agg_risk, cell_sizes)
+        + _kl_log_func_weighted(1 - agg_u, 1 - agg_risk, cell_sizes) )
+    return score / cell_area
+
+def generate_aggregated_cells(matrix, size):
+    """Working left to right, top to bottom, aggregate the values of the grid
+    into larger grid squares of size `size` by `size`.  Also computes the
+    fraction of grid cells not masked, if approrpriate.
+    
+    :param matrix: A (optionally masked) matrix of data.
+    :param size: The "aggregation level".
+    
+    :return: Generates pairs `(value, valid_cells)` where `value` is the sum
+      of the un-masked cells, and `valid_cells` is a count.  If the input
+      grid has size `X` by `Y` then returns `(Y+1-size) * (X+1-size)` pairs.
+    """
+    risk = matrix
+    have_mask = False
+    try:
+        risk.mask
+        have_mask = True
+    except AttributeError:
+        pass
+    
+    if have_mask:
+        m = risk.mask
+        for y in range(risk.shape[0] + 1 - size):
+            for x in range(risk.shape[1] + 1 - size):
+                s = _np.ma.sum(risk[y:y+size,x:x+size])
+                if s is _np.ma.masked:
+                    s = 0
+                yield s, _np.sum(~m[y:y+size,x:x+size])
+    else:
+        for y in range(risk.shape[0] + 1 - size):
+            for x in range(risk.shape[1] + 1 - size):
+                yield _np.sum(risk[y:y+size,x:x+size]), size * size
+    
+def bayesian_dirichlet_prior(grid_pred, timed_points, bias=10, lower_bound=1e-10):
+    """Compute the Kullback-Leibler diveregence between a Dirichlet prior and
+    the posterior given the data in `timed_points`.
+    
+    
+    :param grid_pred: An instance of :class:`GridPrediction` to give a
+      prediction.  Should be normalised.
+    :param timed_points: An instance of :class:`TimedPoints` from which to look
+      at the :attr:`coords`.  All the points should fall inside the non-masked
+      area of the prediction.  Raises `ValueError` is not.
+    :param bias: How much to scale the "prediction" by.
+    :param lower_bound: Set zero probabilities in the prediction to this,
+      before applying the `bias`.
+    """
+    if len(timed_points.xcoords) == 0:
+        raise ValueError("Need non-empty timed points")
+
+    alpha = _np.ma.array(grid_pred.intensity_matrix)
+    try:
+        # Seems necessary to avoid warnings
+        m = _np.asarray(alpha <= 0) & (~alpha.mask)
+        tmp = alpha.data
+        tmp[m] = lower_bound
+        alpha = _np.ma.array(tmp, mask=alpha.mask)
+    except AttributeError:
+        alpha[alpha <= 0] = lower_bound
+    alpha = alpha / _np.sum(alpha) * bias
+
+    gx, gy = _timed_points_to_grid(grid_pred, timed_points)
+    counts = _np.zeros_like(alpha)
+    for x, y in zip(gx, gy):
+        counts[y,x] += 1
+    try:
+        counts = _np.ma.array(counts, mask=alpha.mask)
+    except AttributeError:
+        pass
+    count = _np.sum(counts)
+    
+    score = _np.sum(_np.log(_np.arange(bias, bias + count)))
+    m = counts > 0
+    for a, c in zip(alpha[m], counts[m]):
+        score -= _np.sum(_np.log(_np.arange(a, a+c)))
+    
+    score += _np.sum(_special.digamma(alpha[m] + counts[m]) * counts[m])
+    score -= count * _special.digamma(bias + count)
+    
+    return score
+
+
+#############################################################################
+# Network stuff
+#############################################################################
 
 def grid_risk_coverage_to_graph(grid_pred, graph, percentage_coverage, intersection_cutoff=None):
     """Find the given coverage for the grid prediction, and then intersect with
@@ -269,60 +671,6 @@ def network_hit_rates_from_coverage(graph, risks, timed_network_points, percenta
         mask = network_coverage(graph, risks, coverage / 100)
         out[coverage] = sum(mask[e] for e in edges) * 100 / len(timed_network_points.start_keys)
     return out
-
-def hit_rates(grid_pred, timed_points, percentage_coverage):
-    """Computes the "hit rate" for the given prediction for the passed
-    collection of events.  For each percent, we top slice that percentage of
-    cells from the grid prediction, and compute the fraction of events which
-    fall in those cells.
-
-    :param grid_pred: An instance of :class:`GridPrediction` to give a
-      prediction.
-    :param timed_points: An instance of :class:`TimedPoints` from which to look
-      at the :attr:`coords`.
-    :param percentage_coverage: An iterable of percentage coverages to test.
-
-    :return: A dictionary from percentage coverage to hit rate percentage.
-      If there were no events in the `timed_points`, we return -1.
-    """
-    if len(timed_points.xcoords) == 0:
-        return {cov : -1.0 for cov in percentage_coverage}
-    risk = grid_pred.intensity_matrix
-    out = dict()
-    for coverage in percentage_coverage:
-        covered = top_slice(risk, coverage / 100)
-        
-        gx, gy = grid_pred.grid_coord(timed_points.xcoords, timed_points.ycoords)
-        gx, gy = gx.astype(_np.int), gy.astype(_np.int)
-        mask = (gx < 0) | (gx >= covered.shape[1]) | (gy < 0) | (gy >= covered.shape[0])
-        gx, gy = gx[~mask], gy[~mask]
-        count = _np.sum(covered[(gy,gx)])
-
-        out[coverage] = count / len(timed_points.xcoords)
-    return out
-
-def maximum_hit_rate(grid, timed_points, percentage_coverage):
-    """For the given collection of points, and given percentage coverages,
-    compute the maximum possible hit rate: that is, if the coverage gives `n`
-    grid cells, find the `n` cells with the most events in, and report the
-    percentage of all events this is.
-
-    :param grid: A :class:`BoundedGrid` defining the grid to use.
-    :param timed_points: An instance of :class:`TimedPoints` from which to look
-      at the :attr:`coords`.
-    :param percentage_coverage: An iterable of percentage coverages to test.
-
-    :return: A dictionary from percentage coverage to hit rate percentage.
-    """
-    pred = _naive.CountingGridKernel(grid.xsize, grid.ysize, grid.region())
-    pred.data = timed_points
-    risk = pred.predict()
-    try:
-        risk.mask_with(grid)
-    except:
-        # Oh well, couldn't do that
-        pass
-    return hit_rates(risk, timed_points, percentage_coverage)
 
 
 

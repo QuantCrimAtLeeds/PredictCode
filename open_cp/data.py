@@ -359,6 +359,26 @@ class TimeStamps():
         """
         return self.timestamps.astype(_datetime.datetime)
 
+    def bin_timestamps(self, offset, bin_length):
+        """Return a new instance of :class:`TimeStamps` where each timestamp
+        is adjusted.  Any timestamp between `offset` and `offset + bin_length`
+        is mapped to `offset`; timestamps between `offset + bin_length` and
+        `offset + 2 * bin_length` are mapped to `offset + bin_length`, and so
+        forth.
+        
+        :param offset: A datetime-like object which is the start of the
+          binning.
+        :param bin_length: A timedelta-like object which is the length of each
+          bin.
+          
+        :return: New instance of :class:`TimeStamps`.
+        """
+        offset = _np.datetime64(offset)
+        bin_length = _np.timedelta64(bin_length)
+        new_times = _np.floor((self._timestamps - offset) / bin_length)
+        new_times = offset + new_times * bin_length
+        return TimeStamps(new_times)
+
 
 class TimedPoints(TimeStamps):
     """Stores a list of timestamped x-y coordinates of events.
@@ -461,6 +481,23 @@ class TimedPoints(TimeStamps):
         xcoords = _np.asarray(xcoords)[indices]
         ycoords = _np.asarray(ycoords)[indices]
         return TimedPoints(timestamps, _np.stack([xcoords, ycoords]))
+
+    def bin_timestamps(self, offset, bin_length):
+        """Return a new instance of :class:`TimedPoints` where each timestamp
+        is adjusted.  Any timestamp between `offset` and `offset + bin_length`
+        is mapped to `offset`; timestamps between `offset + bin_length` and
+        `offset + 2 * bin_length` are mapped to `offset + bin_length`, and so
+        forth.
+        
+        :param offset: A datetime-like object which is the start of the
+          binning.
+        :param bin_length: A timedelta-like object which is the length of each
+          bin.
+          
+        :return: New instance of :class:`TimedPoints`.
+        """
+        new_times = super().bin_timestamps(offset, bin_length).timestamps
+        return TimedPoints(new_times, self.coords)
 
 
 try:
