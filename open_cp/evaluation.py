@@ -480,6 +480,18 @@ def bayesian_dirichlet_prior(grid_pred, timed_points, bias=10, lower_bound=1e-10
     return score
 
 def bayesian_predictive(grid_pred, timed_points, bias=10, lower_bound=1e-10):
+    """Compute the Kullback-Leibler diveregence between the prior and posterior
+    _predictive_ distributions, given a Dirichlet prior.
+    
+    :param grid_pred: An instance of :class:`GridPrediction` to give a
+      prediction.  Should be normalised.
+    :param timed_points: An instance of :class:`TimedPoints` from which to look
+      at the :attr:`coords`.  All the points should fall inside the non-masked
+      area of the prediction.  Raises `ValueError` is not.
+    :param bias: How much to scale the "prediction" by.
+    :param lower_bound: Set zero probabilities in the prediction to this,
+      before applying the `bias`.
+    """
     alpha, counts = _bayesian_prep(grid_pred, timed_points, bias, lower_bound)
     count = _np.sum(counts)
 
