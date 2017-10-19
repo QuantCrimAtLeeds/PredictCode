@@ -12,7 +12,13 @@ In this folder, we consider ways of comparing the outputs of predictions to what
 - [Hit rate](Hit%20Rate.ipynb)
 - [Likelihood](Likelihood.ipynb)
 - [Kernel Density Estimation](Kernel Density Estimation.ipynb)
+- [Scoring rules](Scoring%20functions.ipynb)
+- [Wavelet decompositions](Wavelet%20decompositions.ipynb) - Work in progress
+- [Bayesian + Information Theoretic ideas](Bayesian%20+%20Information%20Theoretic%20ideas.ipynb)
 
+### Examples
+
+- [Comparison with synthetic data](Comparison%20with%20synthetic%20data.ipynb)
 
 ### Future work
 

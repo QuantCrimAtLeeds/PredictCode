@@ -430,31 +430,15 @@ def generate_aggregated_cells(matrix, size):
             for x in range(risk.shape[1] + 1 - size):
                 yield _np.sum(risk[y:y+size,x:x+size]), size * size
     
-def bayesian_dirichlet_prior(grid_pred, timed_points, bias=10, lower_bound=1e-10):
-    """Compute the Kullback-Leibler diveregence between a Dirichlet prior and
-    the posterior given the data in `timed_points`.
-    
-    
-    :param grid_pred: An instance of :class:`GridPrediction` to give a
-      prediction.  Should be normalised.
-    :param timed_points: An instance of :class:`TimedPoints` from which to look
-      at the :attr:`coords`.  All the points should fall inside the non-masked
-      area of the prediction.  Raises `ValueError` is not.
-    :param bias: How much to scale the "prediction" by.
-    :param lower_bound: Set zero probabilities in the prediction to this,
-      before applying the `bias`.
-    """
+def _bayesian_prep(grid_pred, timed_points, bias, lower_bound):
     if len(timed_points.xcoords) == 0:
         raise ValueError("Need non-empty timed points")
 
-    alpha = _np.ma.array(grid_pred.intensity_matrix)
     try:
-        # Seems necessary to avoid warnings
-        m = _np.asarray(alpha <= 0) & (~alpha.mask)
-        tmp = alpha.data
-        tmp[m] = lower_bound
-        alpha = _np.ma.array(tmp, mask=alpha.mask)
+        alpha = _np.ma.array(grid_pred.intensity_matrix, mask=grid_pred.intensity_matrix.mask)
+        alpha[alpha <= 0] = lower_bound
     except AttributeError:
+        alpha = _np.array(grid_pred.intensity_matrix, dtype=_np.float)
         alpha[alpha <= 0] = lower_bound
     alpha = alpha / _np.sum(alpha) * bias
 
@@ -466,6 +450,23 @@ def bayesian_dirichlet_prior(grid_pred, timed_points, bias=10, lower_bound=1e-10
         counts = _np.ma.array(counts, mask=alpha.mask)
     except AttributeError:
         pass
+
+    return alpha.flatten(), counts.flatten()
+
+def bayesian_dirichlet_prior(grid_pred, timed_points, bias=10, lower_bound=1e-10):
+    """Compute the Kullback-Leibler diveregence between a Dirichlet prior and
+    the posterior given the data in `timed_points`.
+    
+    :param grid_pred: An instance of :class:`GridPrediction` to give a
+      prediction.  Should be normalised.
+    :param timed_points: An instance of :class:`TimedPoints` from which to look
+      at the :attr:`coords`.  All the points should fall inside the non-masked
+      area of the prediction.  Raises `ValueError` is not.
+    :param bias: How much to scale the "prediction" by.
+    :param lower_bound: Set zero probabilities in the prediction to this,
+      before applying the `bias`.
+    """
+    alpha, counts = _bayesian_prep(grid_pred, timed_points, bias, lower_bound)
     count = _np.sum(counts)
     
     score = _np.sum(_np.log(_np.arange(bias, bias + count)))
@@ -477,6 +478,13 @@ def bayesian_dirichlet_prior(grid_pred, timed_points, bias=10, lower_bound=1e-10
     score -= count * _special.digamma(bias + count)
     
     return score
+
+def bayesian_predictive(grid_pred, timed_points, bias=10, lower_bound=1e-10):
+    alpha, counts = _bayesian_prep(grid_pred, timed_points, bias, lower_bound)
+    count = _np.sum(counts)
+
+    w = (alpha + counts) / (bias + count)
+    return _np.sum(w * (_np.log(w) + _np.log(bias) - _np.log(alpha)))
 
 
 #############################################################################

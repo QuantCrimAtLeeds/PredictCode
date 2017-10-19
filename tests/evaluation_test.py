@@ -306,6 +306,37 @@ def test_bayesian_dirichlet_prior_masked():
     exp += np.sum(scipy.special.digamma([102, 201, 303]) * [2, 1, -3])
     
     assert exp == pytest.approx(score)
+    np.testing.assert_allclose(pred.intensity_matrix.data, [[1,2,3]])
+
+def test_bayesian_predictive():
+    matrix = np.ma.array([[1,2]], mask=[False, False])
+    pred = open_cp.predictors.GridPredictionArray(xsize=10, ysize=20, matrix=matrix, xoffset=2, yoffset=3)
+    t = [np.datetime64("2017-01-01")] * 3
+    x = [2, 2, 12]
+    y = [5] * 3
+    tp = open_cp.data.TimedPoints.from_coords(t,x,y)
+    score = evaluation.bayesian_predictive(pred, tp, bias=30)
+    
+    exp = (12 / 33) * np.log(36/33) + (21 / 33) * np.log((21*3)/(33*2))
+    assert exp == pytest.approx(score)
+    np.testing.assert_allclose(pred.intensity_matrix, [[1,2]])
+
+def test_bayesian_predictive_with_zero():
+    matrix = np.array([[0,2]])
+    pred = open_cp.predictors.GridPredictionArray(xsize=10, ysize=20, matrix=matrix, xoffset=2, yoffset=3)
+    t = [np.datetime64("2017-01-01")] * 3
+    x = [2, 2, 12]
+    y = [5] * 3
+    tp = open_cp.data.TimedPoints.from_coords(t,x,y)
+    score = evaluation.bayesian_predictive(pred, tp, bias=10, lower_bound = 0.001)
+    
+    a = np.asarray([0.001, 2]) / 2.001 * 10
+    n = np.asarray([2, 1])
+    print(a, n)
+    w = (a + n) / (13)
+    exp = np.sum(w * (np.log(w * 10 / a)))
+    assert exp == pytest.approx(score)
+    np.testing.assert_allclose(pred.intensity_matrix, [[0,2]])
 
 @pytest.fixture
 def prediction_with_zeros_and_mask():
