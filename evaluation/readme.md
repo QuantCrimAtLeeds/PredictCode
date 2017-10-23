@@ -10,6 +10,7 @@ In this folder, we consider ways of comparing the outputs of predictions to what
 ### Comparison methods
 
 - [Hit rate](Hit%20Rate.ipynb)
+- [Rank ordering](Rank%20ordering.ipynb)
 - [Likelihood](Likelihood.ipynb)
 - [Kernel Density Estimation](Kernel Density Estimation.ipynb)
 - [Scoring rules](Scoring%20functions.ipynb)
