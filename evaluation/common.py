@@ -14,7 +14,7 @@ import scipy.stats
 
 
 def load_geometry(datadir):
-    open_cp.sources.chicago.set_data_directory(os.path.join("/media", "disk", "Data"))
+    open_cp.sources.chicago.set_data_directory(datadir)
     return open_cp.sources.chicago.get_side("North")
 
 def make_grid(geo):
