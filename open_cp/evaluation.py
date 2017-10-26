@@ -498,6 +498,46 @@ def bayesian_predictive(grid_pred, timed_points, bias=10, lower_bound=1e-10):
     w = (alpha + counts) / (bias + count)
     return _np.sum(w * (_np.log(w) + _np.log(bias) - _np.log(alpha)))
 
+def convert_to_precentiles(intensity):
+    """Helper method.  Converts the (possibly masked) intensity array into a 
+    ranking" array, whereby the `i`th entry is the fraction of entries in
+    `intensity` which are less than or equal to `intensity[i]`.
+    
+    :param intensity: A possible masked array
+    
+    :return: A "ranking" array of the same shape and masking as `intensity`.
+    """
+    flat = intensity.flatten()
+    ranking = _np.sum(flat[:,None] <= flat[None,:], axis=0)
+    try:
+        ranking = ranking / _np.sum(~ranking.mask)
+    except AttributeError:
+        ranking = ranking / len(ranking)
+    return ranking.reshape(intensity.shape)
+    
+def ranking_score(grid_pred, timed_points):
+    """Convert the `timed_points` into a `ranking.  First the intensity matrix
+    of the prediction is converted to rank order (see
+    :func:`convert_to_precentiles`) and then each point is evaluated on the
+    rank.
+    
+    :param grid_pred: An instance of :class:`GridPrediction` to give a
+      prediction.  Should be normalised.
+    :param timed_points: An instance of :class:`TimedPoints` from which to look
+      at the :attr:`coords`.  All the points should fall inside the non-masked
+      area of the prediction.  Raises `ValueError` is not.
+      
+    :return: Array of rankings, same length as `timed_points`.
+    """
+    if len(timed_points.xcoords) == 0:
+        raise ValueError("Need non-empty timed points")
+    gx, gy = _timed_points_to_grid(grid_pred, timed_points)
+    ranking = convert_to_precentiles(grid_pred.intensity_matrix)
+    return ranking[gy,gx]
+
+
+
+
 
 #############################################################################
 # Network stuff

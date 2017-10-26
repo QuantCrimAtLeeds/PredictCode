@@ -307,6 +307,7 @@ class SEPPTrainer(predictors.DataTrainer):
         mu = _np.zeros_like(cells, dtype=_np.float) + 0.5
         if use_corrected:
             for _ in range(iterations):
+                self._logger.debug("Iterating with omega=%s, theta=%s, mu=%s", omega, theta, mu)
                 omega, theta, mu = maximisation_corrected(cells, omega, theta, mu, time_duration)
                 if not _np.all(_np.isfinite([omega, theta])) or not _np.all(_np.isfinite(mu)):
                     raise Exception("Convergence failed!")
@@ -314,6 +315,7 @@ class SEPPTrainer(predictors.DataTrainer):
                                omega, theta, mu)
         else:
             for _ in range(iterations):
+                self._logger.debug("Iterating with omega=%s, theta=%s, mu=%s", omega, theta, mu)
                 omega, theta, mu = maximisation(cells, omega, theta, mu, time_duration)
                 if not _np.all(_np.isfinite([omega, theta])) or not _np.all(_np.isfinite(mu)):
                     raise Exception("Convergence failed!")

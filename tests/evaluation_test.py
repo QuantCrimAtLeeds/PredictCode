@@ -354,6 +354,29 @@ def test_kl_score_masked(prediction_with_zeros_and_mask, timed_pts_5):
     expected += sum( _test_kl_log(1-x, 1-y) for x, y in zip(a, b) )
     assert expected / (200 * 4) == pytest.approx(score)
 
+def test_convert_to_precentiles():
+    array = np.asarray([5,2,3,6,5])
+    np.testing.assert_allclose(evaluation.convert_to_precentiles(array), [4/5,1/5,2/5,1,4/5])
+    
+    array = np.asarray([[5,2,2],[3,6,5]])
+    np.testing.assert_allclose(evaluation.convert_to_precentiles(array),
+                               [[5/6,2/6,2/6],[3/6,1,5/6]])
+
+    array = np.ma.array([5,2,3,6,5], mask=[True, False, False, True, False])
+    np.testing.assert_allclose(evaluation.convert_to_precentiles(array), [0,1/3,2/3,0,1])
+
+    array = np.ma.array([[5,2,2],[3,6,5]], mask=[[True,False,True],[False]*3])
+    np.testing.assert_allclose(evaluation.convert_to_precentiles(array),
+                               [[0,1/4,0],[2/4,1,3/4]])
+
+def test_ranking_score(prediction_with_zeros, timed_pts_5):
+    rank = evaluation.ranking_score(prediction_with_zeros, timed_pts_5)
+    np.testing.assert_allclose(rank, [7/8,7/8,1,3/8,3/8])
+
+def test_ranking_score1(masked_prediction1, timed_pts_5):
+    rank = evaluation.ranking_score(masked_prediction1, timed_pts_5)
+    np.testing.assert_allclose(rank, [1/4,1/4,1,2/4,2/4])
+
 def test_grid_risk_coverage_to_graph(prediction):
     b = open_cp.network.PlanarGraphBuilder()
     b.add_vertex(35,30)

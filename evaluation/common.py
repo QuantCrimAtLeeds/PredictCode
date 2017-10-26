@@ -364,6 +364,7 @@ def plot_paired_data(data, plot_func):
             plot_func(ax, d)
             ax.set_title("{} -> {} vs {}".format(source_name, *key))
     fig.tight_layout()
+    return fig, axes
 
 def comparison_uni_paired(lower_bound, upper_bound):
     """Returns a `plot_func` which is suitable for passing to
@@ -401,22 +402,32 @@ def scatter_uni_paired_plot_func(ax, data):
     d = (end - start) * 0.1
     ax.plot([start-d, end+d], [start-d, end+d], color="red", linewidth=1)
 
+def label_scatter_uni_paired(fig, axes):
+    """Suitable for calling after using :func:`scatter_uni_paired_plot_func`.
+    Sets labels on each axis, and tightly lays out the figure."""
+    for axes_row in axes:
+        for ax, (x,y) in zip(axes_row, [(1,2), (1,3), (2,3)]):
+            ax.set(xlabel="Model{}".format(x), ylabel="Model{}".format(y))
+    fig.tight_layout()
+
 
 #############################################################################
 # More tentative, data vis stuff.
 #############################################################################
 
+def hitrate_inverse_to_hitrate(inv_dict, coverages):
+    """Convert the "inverse hitrate dictionary" to a more traditional
+    lookup, using `coverages`."""
+    out = dict()
+    for cov in coverages:
+        choices = [k for k,v in inv_dict.items() if v <= cov]
+        out[cov] = 0 if len(choices) == 0 else max(choices)
+    return out
+
 def plot_hit_rate(data):
     """Draws a 3x3 grid; plots the mean and 25%, 75% percentiles of coverage
     against hit rate."""
     coverages = list(range(0,102,2))
-
-    def hitrate_inverse_to_hitrate(inv_dict, coverages):
-        out = dict()
-        for cov in coverages:
-            choices = [k for k,v in inv_dict.items() if v <= cov]
-            out[cov] = 0 if len(choices) == 0 else max(choices)
-        return out
 
     def to_by_coverage(result):
         by_cov = {cov : [] for cov in coverages}
