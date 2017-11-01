@@ -267,7 +267,9 @@ class SEPPTrainer(predictors.DataTrainer):
     from other data.
 
     For interpretting the parameters, we note that a time unit of "minutes" is
-    used internally.
+    used internally.  The initial conditions are chosen in a way which fits
+    "real" data (e.g. an expected trigger time of the order of days).  This can
+    lead to problems with data which is distributed in a very different way.
 
     :param region: The rectangular region the grid should cover.
     :param grid_size: The size of grid to use.
@@ -304,7 +306,7 @@ class SEPPTrainer(predictors.DataTrainer):
         theta = 0.5
         # time unit of minutes, want mean to be a day
         omega = 1 / (60 * 24)
-        mu = _np.zeros_like(cells, dtype=_np.float) + 0.5
+        mu = _np.vectorize(len)(cells) / time_duration
         if use_corrected:
             for _ in range(iterations):
                 self._logger.debug("Iterating with omega=%s, theta=%s, mu=%s", omega, theta, mu)
