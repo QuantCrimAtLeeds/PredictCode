@@ -381,6 +381,33 @@ def test_ranking_score1(masked_prediction1, timed_pts_5):
     rank = evaluation.ranking_score(masked_prediction1, timed_pts_5)
     np.testing.assert_allclose(rank, [1/4,1/4,1,2/4,2/4])
 
+def test_poisson_crps():
+    import scipy.stats as stats
+    for mean in (np.random.random(size=10) + 0.01)*10:
+        for actual in np.random.randint(0,100,size=10):
+            poi = stats.poisson(mean)
+            expected = 0.0
+            for i in range(110):
+                if i < actual:
+                    expected += poi.cdf(i)**2
+                else:
+                    expected += (1 - poi.cdf(i))**2
+            assert evaluation.poisson_crps(mean, actual) == pytest.approx(expected)
+
+def test_poisson_crps_score():
+    matrix = np.array([[1,2],[3,4]])
+    pred = open_cp.predictors.GridPredictionArray(xsize=10, ysize=20, matrix=matrix, xoffset=2, yoffset=3)
+    pred = pred.renormalise()
+    t = [np.datetime64("2017-01-01")] * 3
+    x = [2, 2, 12]
+    y = [5] * 3
+    tp = open_cp.data.TimedPoints.from_coords(t,x,y)
+
+    expected = (evaluation.poisson_crps(3/10, 2) + evaluation.poisson_crps(6/10, 1)
+        + evaluation.poisson_crps(9/10, 0) + evaluation.poisson_crps(12/10, 0))
+    
+    assert evaluation.poisson_crps_score(pred, tp) == pytest.approx(expected)
+
 def test_grid_risk_coverage_to_graph(prediction):
     b = open_cp.network.PlanarGraphBuilder()
     b.add_vertex(35,30)

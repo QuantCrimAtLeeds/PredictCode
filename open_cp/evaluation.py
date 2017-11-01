@@ -226,8 +226,9 @@ def likelihood(grid_pred, timed_points, minimum=1e-9):
     pts[pts<=0] = minimum
     return _np.mean(_np.log(pts))
     
-
 def _brier_setup(grid_pred, timed_points):
+    """Returns the risk intensity and a count of the number of events
+    occurring in each cell."""
     if len(timed_points.xcoords) == 0:
         raise ValueError("Need non-empty timed points")
     gx, gy = _timed_points_to_grid(grid_pred, timed_points)
@@ -309,6 +310,52 @@ def kl_score(grid_pred, timed_points):
     x, y = u.flatten(), risk.flatten()
     score = _kl_log_func(x, y) + _kl_log_func(1-x, 1-y)
     return score / area
+
+def poisson_crps(mean, actual):
+    """Compute the continuous ranked probability score for a Poisson
+    distribution.  Let
+      :math:`F(x) = \sum_{i=0}^{\lfloor x \rfloor} \frac{\mu^i}{i!} e^{-\mu}`
+    where :math:`\mu` is the mean.  If `n` is the actual number then we
+    compute
+      :math:`\int_0^n F(x)^2 + \int_n^\infty (1-F(x))^2`
+    """
+    F = []
+    total = 0
+    i = 1
+    val = _np.exp(-mean)
+    maxi = max(100, actual)
+    while total < 1 - 1e-5 or i < maxi:
+        total += val
+        F.append(total)
+        val = val * mean / i
+        i += 1
+    F = _np.asarray(F)
+    actual = int(actual)
+    return _np.sum(F[:actual]**2) + _np.sum((1-F[actual:])**2)
+
+def poisson_crps_score(grid_pred, timed_points):
+    """For each grid cell, scale the intensity by the total observed number of
+    points, and use :func:`poisson_crps` to compute the score.  Returns the
+    sum.
+    
+    :param grid_pred: An instance of :class:`GridPrediction` to give a
+      prediction.  Should be normalised.
+    :param timed_points: An instance of :class:`TimedPoints` from which to look
+      at the :attr:`coords`.  All the points should fall inside the non-masked
+      area of the prediction.
+    """
+    if len(timed_points.xcoords) == 0:
+        raise ValueError("Need non-empty timed points")
+    gx, gy = _timed_points_to_grid(grid_pred, timed_points)
+    risk = grid_pred.intensity_matrix
+    
+    counts = _np.zeros_like(risk)
+    for x, y in zip(gx, gy):
+        counts[y,x] += 1
+
+    total_count = _np.sum(counts)
+    return sum(poisson_crps(mean * total_count, count)
+            for mean, count in zip(risk.flat, counts.flat))
 
 def _to_array_and_norm(a):
     a = _np.asarray(a)

@@ -313,4 +313,29 @@ def test_GridPredictionArray_renormalise():
     gpa = testmod.GridPredictionArray(10, 10, mm, xoffset=2, yoffset=7)
     gpa2 = gpa.renormalise()
     np.testing.assert_allclose(np.array([[1,2,3], [4,5,6]]) / 15, gpa2.intensity_matrix)
+
+def test_GridPredictionArray_break_ties():
+    matrix = np.array([[1,2,3], [4,5,6]])
+    gpa = testmod.GridPredictionArray(10, 10, matrix, xoffset=2, yoffset=7)
+    gpa2 = gpa.break_ties()
+    np.testing.assert_allclose(np.array([[1,2,3], [4,5,6]]), gpa2.intensity_matrix)
+    assert gpa2.xoffset == 2
+    assert gpa2.yoffset == 7
+    assert gpa2.xsize == 10
+    assert gpa2.ysize == 10
+
+    matrix = np.array([[1,2,3], [3,5,6]])
+    gpa = testmod.GridPredictionArray(10, 10, matrix, xoffset=2, yoffset=7)
+    gpa2 = gpa.break_ties()
+    np.testing.assert_allclose(np.array([[1,2,3], [3,5,6]]), gpa2.intensity_matrix)
+    x = np.sort(gpa2.intensity_matrix.flatten())
+    assert np.all((x[1:]-x[:-1])>0)
+    x = np.sort(gpa.intensity_matrix.flatten())
+    assert not np.all((x[1:]-x[:-1])>0)
+
+    matrix = np.ma.array([[1,2,3], [3,5,6]], mask=[[False, True, True], [False]*3])
+    gpa = testmod.GridPredictionArray(10, 10, matrix, xoffset=2, yoffset=7)
+    gpa2 = gpa.break_ties()
+    np.testing.assert_allclose(gpa2.intensity_matrix.mask, matrix.mask)
+    np.testing.assert_allclose(gpa2.intensity_matrix, [[1,2,3], [3,5,6]])
     

@@ -139,6 +139,22 @@ class GridPredictionArray(GridPrediction):
         return GridPredictionArray(xsize=self.xsize, ysize=self.ysize,
             xoffset=self.xoffset, yoffset=self.yoffset, matrix=mat)        
 
+    def break_ties(self):
+        """If there are (non-masked) grid cells with identical intensity
+        values, then add a small amount of noise to break ties.
+        
+        :return: A new instance with noise added.
+        """
+        x = _np.sort(self._matrix.flatten())
+        x = x[1:] - x[:-1]
+        if not _np.all(x > 0):
+            epsilon = min(1e-9, _np.min(x[x>0]) / 100)
+            mat = self._matrix + _np.random.random(size=self._matrix.shape) * 2 * epsilon - epsilon
+        else:
+            mat = _np.ma.array(self._matrix)
+        return GridPredictionArray(xsize=self.xsize, ysize=self.ysize,
+            xoffset=self.xoffset, yoffset=self.yoffset, matrix=mat)        
+
     def grid_risk(self, gx, gy):
         """Find the risk in a grid cell.
 
