@@ -141,7 +141,9 @@ class GridPredictionArray(GridPrediction):
 
     def break_ties(self):
         """If there are (non-masked) grid cells with identical intensity
-        values, then add a small amount of noise to break ties.
+        values, then add a small amount of noise to break ties, without
+        otherwise changing the _ordering_ of intensities.  Because of finite
+        floating-point accuracy, this is not always possible.
         
         :return: A new instance with noise added.
         """

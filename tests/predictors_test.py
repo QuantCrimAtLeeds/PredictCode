@@ -338,4 +338,10 @@ def test_GridPredictionArray_break_ties():
     gpa2 = gpa.break_ties()
     np.testing.assert_allclose(gpa2.intensity_matrix.mask, matrix.mask)
     np.testing.assert_allclose(gpa2.intensity_matrix, [[1,2,3], [3,5,6]])
+
+    matrix = np.ma.array([[1,1,1], [1,1,1]], mask=[[False, True, True], [False]*3])
+    gpa = testmod.GridPredictionArray(10, 10, matrix, xoffset=2, yoffset=7)
+    gpa2 = gpa.break_ties()
+    x = np.sort(gpa2.intensity_matrix.flatten())
+    assert np.all((x[1:]-x[:-1])>0)
     
