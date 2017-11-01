@@ -362,6 +362,10 @@ def test_convert_to_precentiles():
     np.testing.assert_allclose(evaluation.convert_to_precentiles(array),
                                [[5/6,2/6,2/6],[3/6,1,5/6]])
 
+    array = np.ma.array([[5,2,2],[3,6,5]], mask=[[False]*3,[False]*3])
+    np.testing.assert_allclose(evaluation.convert_to_precentiles(array),
+                               [[5/6,2/6,2/6],[3/6,1,5/6]])
+
     array = np.ma.array([5,2,3,6,5], mask=[True, False, False, True, False])
     np.testing.assert_allclose(evaluation.convert_to_precentiles(array), [0,1/3,2/3,0,1])
 

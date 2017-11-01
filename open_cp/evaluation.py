@@ -132,7 +132,6 @@ def maximum_hit_rate(grid, timed_points, percentage_coverage):
     try:
         risk.mask_with(grid)
     except:
-        # Oh well, couldn't do that
         pass
     return hit_rates(risk, timed_points, percentage_coverage)
 
@@ -165,10 +164,8 @@ def inverse_hit_rates(grid_pred, timed_points):
         indices.append( x + y * risk.shape[1] )
     indices = _np.asarray(indices)
     risk = risk.flatten()
-    try:
-        indices = indices[~risk.mask[indices]]
-    except:
-        pass
+    mask = _np.ma.getmaskarray(risk)
+    indices = indices[~mask[indices]]
     
     reorder = _np.argsort(-risk)
     risk = risk[reorder] # Decreasing with mask values at end
@@ -176,10 +173,7 @@ def inverse_hit_rates(grid_pred, timed_points):
     for newi, oldi in enumerate(reorder):
         reordered_indices.extend([newi] * _np.sum(indices == oldi))
     reordered_indices = _np.asarray(reordered_indices)
-    try:
-        risk = _np.asarray(risk[~risk.mask])
-    except:
-        pass
+    risk = _np.asarray(risk[~mask])
 
     total_points = len(timed_points.xcoords)
     out = dict()
@@ -202,11 +196,9 @@ def _timed_points_to_grid(grid_pred, timed_points):
     mask = (gx < 0) | (gx >= risk.shape[1]) | (gy < 0) | (gy >= risk.shape[0])
     if _np.any(mask):
         raise ValueError("All points need to be inside the grid.")
-    try:
-        if _np.any(risk.mask[gy,gx]):
-            raise ValueError("All points need to be inside the non-masked area of the grid.")
-    except AttributeError:
-        pass
+    mask = _np.ma.getmaskarray(risk)
+    if _np.any(mask[gy,gx]):
+        raise ValueError("All points need to be inside the non-masked area of the grid.")
 
     return gx, gy
 
@@ -310,10 +302,8 @@ def kl_score(grid_pred, timed_points):
     :return: The score
     """
     risk, u = _brier_setup(grid_pred, timed_points)
-    try:
-        num_cells = _np.sum(~risk.mask)
-    except AttributeError:
-        num_cells = risk.shape[0] * risk.shape[1]
+    mask = _np.ma.getmaskarray(risk)
+    num_cells = _np.sum(~mask)
     area = num_cells * grid_pred.xsize * grid_pred.ysize
 
     x, y = u.flatten(), risk.flatten()
@@ -503,20 +493,18 @@ def convert_to_precentiles(intensity):
     ranking" array, whereby the `i`th entry is the fraction of entries in
     `intensity` which are less than or equal to `intensity[i]`.
     
-    :param intensity: A possible masked array
+    :param intensity: A possibly masked array
     
     :return: A "ranking" array of the same shape and masking as `intensity`.
     """
     flat = intensity.flatten()
     ranking = _np.sum(flat[:,None] <= flat[None,:], axis=0)
-    try:
-        ranking = ranking / _np.sum(~ranking.mask)
-    except AttributeError:
-        ranking = ranking / len(ranking)
+    mask = _np.ma.getmaskarray(ranking)
+    ranking = ranking / _np.sum(~mask)
     return ranking.reshape(intensity.shape)
     
 def ranking_score(grid_pred, timed_points):
-    """Convert the `timed_points` into a `ranking.  First the intensity matrix
+    """Convert the `timed_points` into a "ranking".  First the intensity matrix
     of the prediction is converted to rank order (see
     :func:`convert_to_precentiles`) and then each point is evaluated on the
     rank.
