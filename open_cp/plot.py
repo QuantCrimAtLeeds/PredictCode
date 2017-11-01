@@ -13,7 +13,37 @@ except:
     import sys
     print("Failed to load 'descartes' package.", file=sys.stderr)
     descartes = None
+try:
+    import shapely.geometry as _sgeometry
+except:
+    import sys
+    print("Failed to load 'shapely' package.", file=sys.stderr)
+    _sgeometry = None
 
+
+def outline_of_grid(grid):
+    """Returns a `shapely` (multi-)polygon object given by merging all the
+    grid cells from the passed :class:`MaskedGrid` object.
+
+    :param grid: A :class:`MaskedGrid` instace.
+
+    :return: A `shapely` geometry object.
+    """
+    height, width = grid.mask.shape
+    polygon = None
+    for y in range(height):
+        yy = y * grid.ysize + grid.yoffset
+        for x in range(width):
+            if grid.is_valid(x, y):
+                xx = x * grid.xsize + grid.xoffset
+                poly = _sgeometry.Polygon([[xx,yy], [xx+grid.xsize, yy],
+                        [xx+grid.xsize, yy+grid.ysize], [xx, yy+grid.ysize]])
+                if polygon is None:
+                    polygon = poly
+                else:
+                    polygon = polygon.union(poly)
+    return polygon
+    
 
 def patches_from_grid(grid):
     """Returns a list of `matplotlib` `patches` from the passed

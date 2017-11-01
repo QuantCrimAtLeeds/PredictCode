@@ -211,35 +211,6 @@ def sample_to_timed_points(model, size):
     assert pts.shape == (size, 2)
     return open_cp.data.TimedPoints.from_coords(t, *pts.T)
 
-def generate_data_preds(grid, num_trials=1000, base_intensity=10):
-    """Yield triples `(key, pred, tps)` where `key` is a pair
-    `(source_model_name, pred_model_name)`; `pred` is the prediction as a
-    :class:`GridPredictionArray` instance; `tps` is a :class:`TimedPoints`
-    instance.
-
-    :param grid: The masked grid to base everything on.
-    :param num_trials: The number of trials to run.  Will not yield empty point
-      collections, so may return fewer than this many tuples.
-    :param base_intensity: Each trial has `n` events where `n` is distributed
-      as a Poisson with mean `base_intensity`.
-    """
-    for SourceModel in [Model1, Model2, Model3]:
-        source_model = SourceModel(grid)
-        for PredModel in [Model1, Model2, Model3]:
-            pred_model = PredModel(grid)
-            key = (str(source_model), str(pred_model))
-            pred = pred_model.to_prediction()
-            for trial in range(num_trials):
-                num_pts = np.random.poisson(base_intensity)
-                if num_pts == 0:
-                    continue
-                tps = sample_to_timed_points(source_model, num_pts)
-                try:
-                    pred = pred_model.to_randomised_prediction()
-                except:
-                    pass
-                yield key, pred, tps
-
 def make_data_preds(grid, num_trials=1000, base_intensity=10):
     """Make the data in one go.
 
@@ -255,8 +226,23 @@ def make_data_preds(grid, num_trials=1000, base_intensity=10):
       :class:`TimedPoints` instance.
     """
     predictions = collections.defaultdict(list)
-    for key, pred, tps in generate_data_preds(grid, num_trials):
-        predictions[key].append((pred, tps))
+    for trial in range(num_trials):
+        for SourceModel in [Model1, Model2, Model3]:
+            source_model = SourceModel(grid)
+            while True:
+                num_pts = np.random.poisson(base_intensity)
+                if num_pts > 0:
+                    break
+            tps = sample_to_timed_points(source_model, num_pts)
+            for PredModel in [Model1, Model2, Model3]:
+                pred_model = PredModel(grid)
+                pred = pred_model.to_prediction()
+                try:
+                    pred = pred_model.to_randomised_prediction()
+                except:
+                    pass
+                key = (str(source_model), str(pred_model))
+                predictions[key].append((pred, tps))
     return predictions
 
 def process(all_data, func):
