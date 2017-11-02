@@ -353,6 +353,10 @@ def poisson_crps_score(grid_pred, timed_points):
     for x, y in zip(gx, gy):
         counts[y,x] += 1
 
+    counts = counts.flatten()
+    mask = _np.ma.getmaskarray(counts)
+    counts = counts[~mask]
+    risk = risk.flatten()[~mask]
     total_count = _np.sum(counts)
     return sum(poisson_crps(mean * total_count, count)
             for mean, count in zip(risk.flat, counts.flat))
@@ -756,7 +760,7 @@ def network_hit_rates_from_coverage(graph, risks, timed_network_points, percenta
       If there were no events in the `timed_points`, we return -1.
     """
     if len(timed_network_points.start_keys) == 0:
-        return {cov : -1.0 for cov in percentage_coverage}
+        return {cov : -1.0 for cov in percentage_coverages}
     edges = []
     for st, en in zip(timed_network_points.start_keys, timed_network_points.end_keys):
         e, _ = graph.find_edge(st, en)

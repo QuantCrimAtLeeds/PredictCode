@@ -408,6 +408,19 @@ def test_poisson_crps_score():
     
     assert evaluation.poisson_crps_score(pred, tp) == pytest.approx(expected)
 
+def test_poisson_crps_score_with_mask():
+    matrix = np.ma.array([[1,2],[3,4]], mask=[[False, False],[True, True]])
+    pred = open_cp.predictors.GridPredictionArray(xsize=10, ysize=20, matrix=matrix, xoffset=2, yoffset=3)
+    pred = pred.renormalise()
+    t = [np.datetime64("2017-01-01")] * 3
+    x = [2, 2, 12]
+    y = [5] * 3
+    tp = open_cp.data.TimedPoints.from_coords(t,x,y)
+
+    expected = evaluation.poisson_crps(1, 2) + evaluation.poisson_crps(2, 1)
+    
+    assert evaluation.poisson_crps_score(pred, tp) == pytest.approx(expected)
+
 def test_grid_risk_coverage_to_graph(prediction):
     b = open_cp.network.PlanarGraphBuilder()
     b.add_vertex(35,30)
