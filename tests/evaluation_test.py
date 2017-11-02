@@ -1,3 +1,4 @@
+import unittest.mock as mock
 import pytest
 
 import open_cp.evaluation as evaluation
@@ -420,6 +421,73 @@ def test_poisson_crps_score_with_mask():
     expected = evaluation.poisson_crps(1, 2) + evaluation.poisson_crps(2, 1)
     
     assert evaluation.poisson_crps_score(pred, tp) == pytest.approx(expected)
+
+@mock.patch("open_cp.evaluation._kernels")
+def test_score_kde(kernels_mock):
+    mask = np.asarray([[True, False, False], [False]*3])
+    grid = open_cp.data.MaskedGrid(xsize=10, ysize=20, xoffset=5, yoffset=7, mask=mask)
+    risk = np.arange(6).reshape(2,3)
+    pred = open_cp.predictors.GridPredictionArray(xsize=10, ysize=20, xoffset=5, yoffset=7, matrix=risk)
+
+    tps = mock.Mock()
+    tps.number_data_points = 5
+    def kernel(pt):
+        return 1
+    kernels_mock.GaussianEdgeCorrectGrid.return_value = kernel
+    got = evaluation.score_kde(pred, tps, grid)
+
+    coords, g = kernels_mock.GaussianEdgeCorrectGrid.call_args[0]
+    assert coords[0] == tps.xcoords
+    assert coords[1] == tps.ycoords
+    assert g is grid
+    
+    expected = np.sum((np.arange(1,6) - 1/5)**2)
+    assert got == pytest.approx(expected * 200)
+
+def test_score_kde_throw_cases():
+    mask = np.asarray([[True, False, False], [False]*3])
+    grid = open_cp.data.MaskedGrid(xsize=10, ysize=20, xoffset=5, yoffset=7, mask=mask)
+    risk = np.arange(6).reshape(2,3)
+    pred = open_cp.predictors.GridPredictionArray(xsize=10, ysize=20, xoffset=5, yoffset=7, matrix=risk)
+
+    tps = mock.Mock()
+    tps.number_data_points = 2
+    with pytest.raises(ValueError):
+        evaluation.score_kde(pred, tps, grid)
+
+    tps.number_data_points = 5
+    pred = open_cp.predictors.GridPredictionArray(xsize=10, ysize=19, xoffset=5, yoffset=7, matrix=risk)
+    with pytest.raises(ValueError):
+        evaluation.score_kde(pred, tps, grid)
+    
+    pred = open_cp.predictors.GridPredictionArray(xsize=10, ysize=20, xoffset=4, yoffset=7, matrix=risk)
+    with pytest.raises(ValueError):
+        evaluation.score_kde(pred, tps, grid)
+
+    risk = np.arange(8).reshape(2,4)
+    pred = open_cp.predictors.GridPredictionArray(xsize=10, ysize=20, xoffset=5, yoffset=7, matrix=risk)
+    with pytest.raises(ValueError):
+        evaluation.score_kde(pred, tps, grid)
+
+@mock.patch("open_cp.evaluation._kernels")
+def test_score_kde_fixed_bandwidth(kernels_mock):
+    mask = np.asarray([[True, False, False], [False]*3])
+    grid = open_cp.data.MaskedGrid(xsize=10, ysize=20, xoffset=5, yoffset=7, mask=mask)
+    risk = np.arange(6).reshape(2,3)
+    pred = open_cp.predictors.GridPredictionArray(xsize=10, ysize=20, xoffset=5, yoffset=7, matrix=risk)
+
+    tps = mock.Mock()
+    tps.number_data_points = 5
+    def kernel(pt):
+        return 1
+    kernels_mock.GaussianEdgeCorrectGrid.return_value = kernel
+    evaluation.score_kde_fixed_bandwidth(pred, tps, grid, 12.3)
+
+    np.testing.assert_allclose(kernels_mock.GaussianEdgeCorrectGrid.return_value.covariance_matrix,
+                               [[1,0],[0,1]])
+    assert kernels_mock.GaussianEdgeCorrectGrid.return_value.bandwidth == 12.3
+
+
 
 def test_grid_risk_coverage_to_graph(prediction):
     b = open_cp.network.PlanarGraphBuilder()

@@ -14,6 +14,7 @@ from . import predictors as _predictors
 from . import network as _network
 from . import geometry as _geometry
 from . import data as _data
+from . import kernels as _kernels
 
 def _top_slice_one_dim(risk, fraction):
     data = risk.compressed().copy()
@@ -227,23 +228,19 @@ def likelihood(grid_pred, timed_points, minimum=1e-9):
     return _np.mean(_np.log(pts))
     
 def _brier_setup(grid_pred, timed_points):
-    """Returns the risk intensity and a count of the number of events
+    """Returns the risk intensity and average count of the number of events
     occurring in each cell."""
     if len(timed_points.xcoords) == 0:
         raise ValueError("Need non-empty timed points")
     gx, gy = _timed_points_to_grid(grid_pred, timed_points)
     risk = grid_pred.intensity_matrix
-    
+
+    # Assigns mask from `risk` if there is one    
     u = _np.zeros_like(risk)
     for x, y in zip(gx, gy):
         u[y,x] += 1
     u = u / _np.sum(u)
     
-    try:
-        u = _np.ma.array(u, mask=risk.mask)
-    except AttributeError:
-        pass
-
     return risk, u    
 
 def brier_score(grid_pred, timed_points):
@@ -265,12 +262,8 @@ def brier_score(grid_pred, timed_points):
       :math:`\frac{2\sum_i p_iu_i}{\sum_i u_i^2 + \sum_i p_i^2}`.
     """
     risk, u = _brier_setup(grid_pred, timed_points)
-    try:
-        num_cells = _np.sum(~risk.mask)
-    except AttributeError:
-        num_cells = risk.shape[0] * risk.shape[1]
-    area = num_cells * grid_pred.xsize * grid_pred.ysize
-    score = _np.sum((u - risk)**2) / area
+    area = grid_pred.xsize * grid_pred.ysize
+    score = _np.mean((u - risk)**2) / area
     skill = 2 * _np.sum(u * risk) / (_np.sum(u * u + risk * risk))
     return score, skill
 
@@ -573,6 +566,62 @@ def ranking_score(grid_pred, timed_points):
     gx, gy = _timed_points_to_grid(grid_pred, timed_points)
     ranking = convert_to_precentiles(grid_pred.intensity_matrix)
     return ranking[gy,gx]
+
+def _to_kernel_for_kde(pred, tps, grid):
+    points = _np.asarray([tps.xcoords, tps.ycoords])
+    if tps.number_data_points <= 2:
+        raise ValueError("Need at least 3 events.")
+    if (pred.xsize, pred.ysize) != (grid.xsize, grid.ysize):
+        raise ValueError("Grid cell sizes are different.")
+    if (pred.xoffset, pred.yoffset) != (grid.xoffset, grid.yoffset):
+        raise ValueError("Grid offsets are different.")
+    if (pred.xextent, pred.yextent) != (grid.xextent, grid.yextent):
+        raise ValueError("Grid extents are different.")
+    return _kernels.GaussianEdgeCorrectGrid(points, grid)
+
+def _score_from_kernel(kernel, grid, pred):
+    kde_pred = _predictors.grid_prediction_from_kernel_and_masked_grid(
+                    kernel, grid, samples=5)
+    kde_pred = kde_pred.renormalise()
+    return (_np.sum((pred.intensity_matrix - kde_pred.intensity_matrix)**2)
+                * grid.xsize * grid.ysize)
+
+def score_kde(pred, tps, grid):
+    """Use a plug-in bandwidth estimator based KDE, with edge correction, to
+    convert the actual events into a kernel, and then compute the squared
+    error to the prediction.
+    
+    :param grid_pred: An instance of :class:`GridPrediction` to give a
+      prediction.  Should be normalised.
+    :param timed_points: An instance of :class:`TimedPoints` from which to look
+      at the :attr:`coords`.
+    :param grid: An instance of :class:`MaskedGrid` to use for edge correction
+      of the KDE.
+    
+    :return: The squared error, adjusted for area of each grid cell.
+    """
+    kernel = _to_kernel_for_kde(pred, tps, grid)
+    return _score_from_kernel(kernel, grid, pred)
+
+def score_kde_fixed_bandwidth(pred, tps, grid, bandwidth):
+    """Use a plug-in bandwidth estimator based KDE, with edge correction, to
+    convert the actual events into a kernel, and then compute the squared
+    error to the prediction.
+    
+    :param grid_pred: An instance of :class:`GridPrediction` to give a
+      prediction.  Should be normalised.
+    :param timed_points: An instance of :class:`TimedPoints` from which to look
+      at the :attr:`coords`.
+    :param grid: An instance of :class:`MaskedGrid` to use for edge correction
+      of the KDE.
+    
+    :return: The squared error, adjusted for area of each grid cell.
+    """
+    kernel = _to_kernel_for_kde(pred, tps, grid)
+    kernel.covariance_matrix = [[1,0],[0,1]]
+    kernel.bandwidth = bandwidth
+    return _score_from_kernel(kernel, grid, pred)
+
 
 
 

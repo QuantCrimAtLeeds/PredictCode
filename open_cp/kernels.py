@@ -34,7 +34,6 @@ e.g. scipy convention:
 """
 
 
-import scipy.spatial as _spatial
 import numpy as _np
 import abc as _abc
 import logging as _logging
@@ -572,7 +571,7 @@ except Exception as ex:
 
 
 class _EdgeCorrect():
-    """A mix-in."""
+    """A (ahem, stateful) mix-in."""
     def __init__(self):
         self._m, self._k = 10, 100
         self._cache = None
