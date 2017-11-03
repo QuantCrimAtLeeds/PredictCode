@@ -145,21 +145,34 @@ def test_inverse_hit_rate_no_mask(prediction):
     out = evaluation.inverse_hit_rates(prediction, tp)
     assert out == {100*x/8 : 100*x/8 for x in range(1,9)}
 
+def test_inverse_hit_rate_no_mask1(prediction):
+    t = [np.datetime64("2017-01-01")] * 4
+    x = 2 + 3 + 10 * np.array([0,1,3,3])
+    y = 3 + 8 + 20 * np.array([1,1,0,1])
+    tp = open_cp.data.TimedPoints.from_coords(t,x,y)
+    out = evaluation.inverse_hit_rates(prediction, tp)
+    assert out == {25: 100/8, 50: 300/8, 75: 50, 100: 500/8}
+
 def test_inverse_hit_rate(masked_prediction):
-    t = [np.datetime64("2017-01-01")] * 8
-    x = 2 + 3 + 10 * np.array([0,1,2,3,0,1,2,3])
-    y = 3 + 8 + 20 * np.array([0,0,0,0,1,1,1,1])
+    t = [np.datetime64("2017-01-01")] * 4
+    x = 2 + 3 + 10 * np.array([1,2,3,2])
+    y = 3 + 8 + 20 * np.array([0,0,0,1])
     tp = open_cp.data.TimedPoints.from_coords(t,x,y)
     out = evaluation.inverse_hit_rates(masked_prediction, tp)
-    assert out == {12.5:25, 25:50, 37.5:75, 50:100}
+    assert out == {25*n:25*n for n in [1,2,3,4]}
     
 def test_inverse_hit_rate1(masked_prediction):
-    t = [np.datetime64("2017-01-01")] * 5
-    x = [2,2, 12,12, 22]
-    y = [3,3, 3,3, 23]
+    t = [np.datetime64("2017-01-01")] * 3
+    x = [12,12, 22]
+    y = [3, 3,  23]
     tp = open_cp.data.TimedPoints.from_coords(t,x,y)
     out = evaluation.inverse_hit_rates(masked_prediction, tp)
-    assert out == {20:25, 60:100}
+    assert out == {100/3:25, 100:100}
+
+def test_yield_hit_rates_segments():
+    assert list(evaluation.yield_hit_rates_segments([7,7,5,3,3,1], [1,1,0,1,2,0])) == [(2,1), (0,2), (3,4), (0,5)]
+    assert list(evaluation.yield_hit_rates_segments([7,6,5,3,2,1], [1,1,0,1,2,0])) == [(x,i) for i, x in enumerate([1,1,0,1,2,0])]
+    assert list(evaluation.yield_hit_rates_segments([1,1,1,1,1,1], [1,1,0,1,2,0])) == [(5,5)]
 
 @pytest.fixture
 def masked_prediction1(prediction):
@@ -200,12 +213,12 @@ def test_brier_score_mask_agg(masked_prediction):
     assert 1 - expected / worst == pytest.approx(skill)
 
 def test_inverse_hit_rate2(masked_prediction1):
-    t = [np.datetime64("2017-01-01")] * 5
-    x = [2,2, 12,12, 22]
-    y = [3,3, 3,3, 23]
+    t = [np.datetime64("2017-01-01")] * 3
+    x = [12,12, 22]
+    y = [3, 3,  23]
     tp = open_cp.data.TimedPoints.from_coords(t,x,y)
     out = evaluation.inverse_hit_rates(masked_prediction1, tp)
-    assert out == {20:50, 60:100}
+    assert out == {100/3: 50, 100: 100}
 
 def test_likelihood(masked_prediction):
     t = [np.datetime64("2017-01-01")] * 5

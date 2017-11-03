@@ -136,6 +136,45 @@ def maximum_hit_rate(grid, timed_points, percentage_coverage):
         pass
     return hit_rates(risk, timed_points, percentage_coverage)
 
+def _inverse_hit_rates_setup(grid_pred, timed_points):
+    """Returns the risk intensity and count of the number of events
+    occurring in each cell.
+    
+    :return `(risk, counts)` arrays both of same shape and having the
+      same mask (if applicable).
+    """
+    gx, gy = _timed_points_to_grid(grid_pred, timed_points)
+    risk = grid_pred.intensity_matrix
+
+    # Assigns mask from `risk` if there is one    
+    u = _np.zeros_like(risk)
+    for x, y in zip(gx, gy):
+        u[y,x] += 1
+    
+    return risk, u    
+
+def yield_hit_rates_segments(ordered_risk, ordered_counts):
+    """`ordered_risk` is a non-increasing 1D array of risks.
+    `ordered_counts` is an array, same shape, of integer counts.
+    A "segment" is a run of equal values in `ordered_risk`.  Yields
+    pairs `(count, index)` where `count` is the sum of `ordered_counts`
+    for each segment, and `index` is the current index.
+    
+    E.g. [7,7,5,3,3,1], [1,1,0,1,2,0] -->  (2,1), (0,2), (3,4), (0,5)
+    """
+    previous_index = 0
+    index = 0
+    while True:
+        current_sum = 0
+        while ordered_risk[previous_index] == ordered_risk[index]:
+            current_sum += ordered_counts[index]
+            index += 1
+            if index == len(ordered_risk):
+                yield current_sum, index - 1
+                return
+        yield current_sum, index - 1
+        previous_index = index
+        
 def inverse_hit_rates(grid_pred, timed_points):
     """For the given prediction and the coordinates of events, find the
     coverage level needed to achieve every possible hit-rate.  One problem is
@@ -153,17 +192,49 @@ def inverse_hit_rates(grid_pred, timed_points):
     """
     if len(timed_points.xcoords) == 0:
         return dict()
-    risk = grid_pred.intensity_matrix
+    risk, counts = _inverse_hit_rates_setup(grid_pred, timed_points)
 
-    gx, gy = grid_pred.grid_coord(timed_points.xcoords, timed_points.ycoords)
-    gx, gy = gx.astype(_np.int), gy.astype(_np.int)
-    mask = (gx < 0) | (gx >= risk.shape[1]) | (gy < 0) | (gy >= risk.shape[0])
-    gx, gy = gx[~mask], gy[~mask]
+    risk = risk.flatten()
+    mask = _np.ma.getmaskarray(risk)
+    risk = _np.array(risk[~mask])
+    counts = _np.array(counts.flatten()[~mask])
     
-    indices = []
-    for x, y in zip(gx, gy):
-        indices.append( x + y * risk.shape[1] )
-    indices = _np.asarray(indices)
+    ordering = _np.argsort(-risk)
+    ordered_counts = counts[ordering]
+    ordered_risk = risk[ordering]
+    
+    total_counts = _np.sum(ordered_counts)
+    length = ordered_counts.shape[0]
+    out = {}
+    current_count = 0
+    for count, index in yield_hit_rates_segments(ordered_risk, ordered_counts):
+        if count == 0:
+            continue
+        current_count += count
+        out[100 * current_count / total_counts] = 100 * (index + 1) / length
+    return out
+
+def inverse_hit_rates_old(grid_pred, timed_points):
+    """For the given prediction and the coordinates of events, find the
+    coverage level needed to achieve every possible hit-rate.  One problem is
+    how to break ties: that is, what if the prediction assigns the same
+    probability to multiple cells.  At present, we take a "maximal" approach,
+    and round coverage levels up to include all cells of the same probability.
+
+    :param grid_pred: An instance of :class:`GridPrediction` to give a
+      prediction.
+    :param timed_points: An instance of :class:`TimedPoints` from which to look
+      at the :attr:`coords`.
+
+    :return: A dictionary from hit rates to minimal required coverage levels.
+      Or empty dictionary if `timed_points` is empty.
+    """
+    if len(timed_points.xcoords) == 0:
+        return dict()
+    gx, gy = _timed_points_to_grid(grid_pred, timed_points)
+    
+    risk = grid_pred.intensity_matrix
+    indices = _np.asarray([x + y * risk.shape[1] for x, y in zip(gx, gy)])
     risk = risk.flatten()
     mask = _np.ma.getmaskarray(risk)
     indices = indices[~mask[indices]]
@@ -190,6 +261,12 @@ def inverse_hit_rates(grid_pred, timed_points):
     return out
 
 def _timed_points_to_grid(grid_pred, timed_points):
+    """Like `grid_pred.grid_coord`, but checks that all points sit within
+    the _valid_ area befored by the prediction.
+    
+    :return `(gx, gy)` pair of arrays of coordinates into the grid of the
+      points.
+    """
     risk = grid_pred.intensity_matrix
 
     gx, gy = grid_pred.grid_coord(timed_points.xcoords, timed_points.ycoords)
