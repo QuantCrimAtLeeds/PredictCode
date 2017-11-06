@@ -135,6 +135,8 @@ class GridPredictionArray(GridPrediction):
         """Return a new instance with the intensity matrix scaled so that it
         sums to 1, taking account of any mask."""
         norm = _np.ma.sum(self._matrix)
+        if norm <= 0:
+            raise ValueError("Cannot renormalise a zero matrix!")
         mat = _np.ma.array(self._matrix) / norm
         return GridPredictionArray(xsize=self.xsize, ysize=self.ysize,
             xoffset=self.xoffset, yoffset=self.yoffset, matrix=mat)        
