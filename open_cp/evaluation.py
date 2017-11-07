@@ -100,6 +100,15 @@ def hit_rates(grid_pred, timed_points, percentage_coverage):
     """
     if len(timed_points.xcoords) == 0:
         return {cov : -1.0 for cov in percentage_coverage}
+    out = hit_counts(grid_pred, timed_points, percentage_coverage)
+    return {k : a/b for k, (a,b) in out.items()}
+
+def hit_counts(grid_pred, timed_points, percentage_coverage):
+    """As :func:`hit_rates` but return pairs `(captured_count, total_count)`
+    instead of the rate `captured_count / total_count`.
+    """
+    if len(timed_points.xcoords) == 0:
+        return {cov : (0,0) for cov in percentage_coverage}
     risk = grid_pred.intensity_matrix
     out = dict()
     for coverage in percentage_coverage:
@@ -111,7 +120,7 @@ def hit_rates(grid_pred, timed_points, percentage_coverage):
         gx, gy = gx[~mask], gy[~mask]
         count = _np.sum(covered[(gy,gx)])
 
-        out[coverage] = count / len(timed_points.xcoords)
+        out[coverage] = (count, len(timed_points.xcoords))
     return out
 
 def maximum_hit_rate(grid, timed_points, percentage_coverage):
@@ -212,52 +221,6 @@ def inverse_hit_rates(grid_pred, timed_points):
             continue
         current_count += count
         out[100 * current_count / total_counts] = 100 * (index + 1) / length
-    return out
-
-def inverse_hit_rates_old(grid_pred, timed_points):
-    """For the given prediction and the coordinates of events, find the
-    coverage level needed to achieve every possible hit-rate.  One problem is
-    how to break ties: that is, what if the prediction assigns the same
-    probability to multiple cells.  At present, we take a "maximal" approach,
-    and round coverage levels up to include all cells of the same probability.
-
-    :param grid_pred: An instance of :class:`GridPrediction` to give a
-      prediction.
-    :param timed_points: An instance of :class:`TimedPoints` from which to look
-      at the :attr:`coords`.
-
-    :return: A dictionary from hit rates to minimal required coverage levels.
-      Or empty dictionary if `timed_points` is empty.
-    """
-    if len(timed_points.xcoords) == 0:
-        return dict()
-    gx, gy = _timed_points_to_grid(grid_pred, timed_points)
-    
-    risk = grid_pred.intensity_matrix
-    indices = _np.asarray([x + y * risk.shape[1] for x, y in zip(gx, gy)])
-    risk = risk.flatten()
-    mask = _np.ma.getmaskarray(risk)
-    indices = indices[~mask[indices]]
-    
-    reorder = _np.argsort(-risk)
-    risk = risk[reorder] # Decreasing with mask values at end
-    reordered_indices = []
-    for newi, oldi in enumerate(reorder):
-        reordered_indices.extend([newi] * _np.sum(indices == oldi))
-    reordered_indices = _np.asarray(reordered_indices)
-    risk = _np.asarray(risk[~mask])
-
-    total_points = len(timed_points.xcoords)
-    out = dict()
-    index = 0
-    while index < risk.shape[0]:
-        while index < risk.shape[0] - 1 and risk[index] == risk[index+1]:
-            index += 1
-        coverage = 100 * (index + 1) / risk.shape[0]
-        hitrate = 100 * _np.sum(reordered_indices <= index) / total_points
-        if hitrate > 0 and hitrate not in out:
-            out[hitrate] = coverage
-        index += 1
     return out
 
 def _timed_points_to_grid(grid_pred, timed_points):
