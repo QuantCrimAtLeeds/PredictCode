@@ -9,16 +9,20 @@ algorithms from published sources.
 - [Example Jupyter notebooks](examples) showing the different algorithms in action, together with
   discussion of the literature and implementation details.
 - [Notebooks](notebooks) giving more technical details
-- [Documentation](https://quantcrimatleeds.github.io/PredictCode/) extracted from the doc strings in the Python code.
+- [Evaluation](evaluation) gives details about different evaluation/comparison methods
+  for comparing predictions.  (ToDo: Link to academic paper once finished.)
+- [Documentation](https://quantcrimatleeds.github.io/PredictCode/) extracted from the doc strings in the Python code.  (ToDo: Rebuild, as hasn't been compiled in ages).
 
 
 ## GUI mode
 
-Current very much a work in progress.  Can be run without installation via:
+Currently a work in progress.  Can be run without installation via:
 
     python -m open_cp
 
 
 ## Install
 
-Currently a work in progress.  The notebooks can be run without installation.
+Most notebooks can be run without installation.  To install,
+
+    python setup.py install
