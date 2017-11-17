@@ -25,7 +25,7 @@ from ..data import TimedPoints
 
 _datadir = None
 _default_filename = "chicago.csv"
-_FEET_IN_METERS = 3.28084
+_FEET_IN_METERS = 3937 / 1200
 
 def set_data_directory(datadir):
     """Set the default location for search for the default input file."""
