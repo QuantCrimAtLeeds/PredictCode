@@ -29,8 +29,8 @@ def test_load_data(string_data_snap):
         assert( len(points.timestamps) == 2 )
         assert( points.timestamps[0] == np.datetime64("2016-03-13T02:53:30") )
         assert( points.timestamps[1] == np.datetime64("2017-01-01T22:30:23") )
-        np.testing.assert_allclose( points.coords[:,0], np.array([123, 456]) / 3.28084 )
-        np.testing.assert_allclose( points.coords[:,1], np.array([789, 1012]) / 3.28084 )
+        np.testing.assert_allclose( points.coords[:,0], np.array([123, 456]) * 1200 / 3937 )
+        np.testing.assert_allclose( points.coords[:,1], np.array([789, 1012]) * 1200 / 3937 )
 
 def test_load_data_keep_in_feet(string_data_snap):
     with mock.patch("builtins.open", MockOpen(string_data_snap)) as open_mock:
