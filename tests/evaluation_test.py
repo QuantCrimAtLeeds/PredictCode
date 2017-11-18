@@ -7,6 +7,7 @@ import open_cp.data
 import open_cp.network
 import numpy as np
 import scipy.special
+import datetime
 
 def test_top_slice():
     x = np.array([1,2,3,4,5,6])
@@ -623,3 +624,56 @@ def test_network_hit_rates_from_coverage(network_points, graph2):
     assert out[50] == pytest.approx(100/3)
     assert out[74] == pytest.approx(100/3)
     assert out[75] == pytest.approx(200/3)
+
+
+#############################################################################
+# Automate prediction making and evaluating testing
+#############################################################################
+
+@pytest.fixture
+def timed_pts_10():
+    ts = [datetime.datetime(2017,1,1) + datetime.timedelta(days=x) for x in range(10)]
+    ts = [np.datetime64(dt) for dt in ts]
+    x = np.random.random(10)
+    y = np.random.random(10)
+    return open_cp.data.TimedPoints.from_coords(ts, x, y)
+
+def test_StandardPredictionProvider(timed_pts_10):
+    mat = np.asarray([[False, True, True, False], [True]*4])
+    grid = open_cp.data.MaskedGrid(10, 15, 5, 7, mat)
+    spp = evaluation.StandardPredictionProvider(timed_pts_10, grid)
+    spp.give_prediction = mock.Mock()
+
+    assert spp.points is timed_pts_10
+    assert spp.grid is grid
+
+    pred = spp.predict(datetime.datetime(2017,2,1))
+    args = spp.give_prediction.call_args[0]
+    assert args[0] is grid
+    assert args[1].number_data_points == 10
+    np.testing.assert_allclose(args[1].coords, timed_pts_10.coords)
+    assert args[2] == np.datetime64("2017-02-01")
+    assert pred is spp.give_prediction.return_value.renormalise.return_value
+    spp.give_prediction.return_value.mask_with.assert_called_with(grid)
+
+    pred = spp.predict(datetime.datetime(2017,1,2))
+    args = spp.give_prediction.call_args[0]
+    assert args[0] is grid
+    assert args[1].number_data_points == 1
+    assert args[1].xcoords[0] == timed_pts_10.xcoords[0]
+    assert args[2] == np.datetime64("2017-01-02")
+
+@mock.patch("open_cp.naive.CountingGridKernel")
+def test_NaiveProvider(mock_provider, timed_pts_10):
+    mat = np.asarray([[False, True, True, False], [True]*4])
+    grid = open_cp.data.MaskedGrid(10, 15, 5, 7, mat)
+    nprov = evaluation.NaiveProvider(timed_pts_10, grid)
+    pred = nprov.predict(datetime.datetime(2017,2,3))
+    args = mock_provider.call_args[0]
+    assert args[0] == 10
+    assert args[1] == 15
+    assert args[2].xmin == 5
+    assert args[2].xmax == 5 + 10 * 4
+    assert args[2].ymin == 7
+    assert args[2].ymax == 7 + 15 * 2
+    assert pred is mock_provider.return_value.predict.return_value.renormalise.return_value

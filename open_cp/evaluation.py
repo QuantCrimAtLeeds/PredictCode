@@ -863,13 +863,74 @@ def network_hit_rates_from_coverage(graph, risks, timed_network_points, percenta
 
 
 
-
-####  Below is some _tentative_ code...
+#############################################################################
+# Automate prediction making and evaluating
+#############################################################################
 
 class PredictionProvider():
+    """Abstract base class; recommended to use
+    :class:`StandardPredictionProvider` instead."""
     def predict(self, time):
         """Produce a prediction at this time."""
         raise NotImplementedError()
+
+
+class StandardPredictionProvider(PredictionProvider):
+    """Standard prediction provider which takes a collection of events, and a
+    masked grid, and performs the following workflow:
+
+    - To make a prediction at `time`,
+    - Look at just the events which occur strictly before `time`
+    - Calls the abstract method `give_prediction` to obtain a grid prediction
+    - Mask the prediction, renormalise it, and return.
+
+    :param points: The :class:`data.TimedPoints` to use for all predictions.
+      The time range will be clamped, so this should _start_ at the correct
+      point in time, but can extend as far into the future as you like.
+    :param grid: Instance of :class:`data.MaskedGrid` to base the prediction
+      region on, and to mask the prediction with.
+    """
+    def __init__(self, points, grid):
+        self._points = points
+        self._grid = grid
+        
+    @property
+    def points(self):
+        """The total collection of events to use."""
+        return self._points
+
+    @property
+    def grid(self):
+        """The masked grid."""
+        return self._grid
+
+    def predict(self, time):
+        time = _np.datetime64(time)
+        points = self.points[self.points.timestamps < time]
+        pred = self.give_prediction(self.grid, points, time)
+        pred.mask_with(self.grid)
+        return pred.renormalise()
+
+    def give_prediction(self, grid, points, time):
+        """Abstract method to be overridden.
+
+        :param grid: Instance of :class:`data.BoundedGrid` to base the
+          prediction region on.
+        :param points: The data to use to make the prediction; will be confined
+          to the time range already.
+        :param time: If needed, the time to make a prediction at.
+        """
+        raise NotImplementedError()
+
+
+from . import naive
+
+class NaiveProvider(StandardPredictionProvider):
+    """Make predictions using :class:`naive.CountingGridKernel`."""
+    def give_prediction(self, grid, points, time):
+        predictor = naive.CountingGridKernel(grid.xsize, grid.ysize, grid.region())
+        predictor.data = points
+        return predictor.predict()
 
 
 HitRateDetail = _collections.namedtuple("HitRateDetail",
@@ -898,6 +959,8 @@ class HitRateEvaluator(_predictors.DataTrainer):
     of data, producing a prediction, and then comparing this prediction against
     reality at various coverage levels, and then repeating for all dates in a
     range.
+
+    :param provider: Instance of :class:`PredictionProvider`.
     """
     def __init__(self, provider):
         self._provider = provider
