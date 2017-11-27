@@ -519,3 +519,14 @@ def test_GaussianEdgeCorrectGrid_vs_GaussianEdgeCorrect(gecg1):
             continue
         assert gec.number_intersecting_pts(pt) == gecg1.number_intersecting_pts(pt)
         assert gec.correction_factor(pt) == gecg1.correction_factor(pt)
+
+
+def test_Reflect1D():
+    def kernel(pts):
+        return np.exp(-pts*pts)
+
+    k = testmod.Reflect1D(kernel)
+
+    assert k.kernel is kernel
+    assert k(5) == pytest.approx(2*np.exp(-25))
+    np.testing.assert_allclose(k([5,7]), 2*np.exp([-25, -49]))

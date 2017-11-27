@@ -562,6 +562,25 @@ class GaussianNearestNeighbour(GaussianBase):
         self.covariance_matrix = _np.diag(stds * stds)
         self.bandwidth = distance_to_k
 
+
+class Reflect1D():
+    """A simple delegating class which reflects a one dimensional kernel about
+    0.
+
+    :param kernel: The kernel to delegate to.
+    """
+    def __init__(self, kernel):
+        self._kernel = kernel
+
+    @property
+    def kernel(self):
+        """The kernel we delegate to."""
+        return self._kernel
+
+    def __call__(self, points):
+        points = _np.asarray(points)
+        return self._kernel(points) + self._kernel(-points)
+
 try:
     import shapely.geometry as _sgeometry
     import shapely.affinity as _saffinity
