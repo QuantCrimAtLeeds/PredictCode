@@ -30,7 +30,10 @@ def slow_p_matrix(model, points):
         p[i,i] = model.background(pt[:,None])
         for j in range(i):
             dp = pt - points[:,j]
-            p[j,i] = model.trigger(pt, dp[:,None])
+            if dp[0] <= 0:
+                p[j,i] = 0
+            else:
+                p[j,i] = model.trigger(pt, dp[:,None])
             
     for i in range(d):
         p[:,i] /= np.sum(p[:,i])
@@ -42,6 +45,25 @@ def test_p_matrix():
     for _ in range(10):
         points = np.random.random((3,20))
         points[0].sort()
+        expected = slow_p_matrix(model, points)
+        got = sepp_base.p_matrix(model, points)
+        np.testing.assert_allclose(got, expected)
+
+
+class OurModel1(OurModel):
+    def trigger(self, pt, dpts):
+        super().trigger(pt, dpts)
+        w = np.sum(np.abs(pt))
+        return (1 + dpts[0]) * np.exp(-(dpts[1]**2 + dpts[2]**2) / w)
+
+
+def test_p_matrix_with_time_repeats():
+    model = OurModel1()
+    for _ in range(10):
+        points = np.random.random((3,20))
+        points[0].sort()
+        points[0][1] = points[0][0]
+        points[0][15] = points[0][14]
         expected = slow_p_matrix(model, points)
         got = sepp_base.p_matrix(model, points)
         np.testing.assert_allclose(got, expected)

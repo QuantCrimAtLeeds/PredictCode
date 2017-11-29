@@ -67,7 +67,9 @@ def non_normalised_p_matrix(model, points):
     for i in range(d):
         trigger_point = points[:,i]
         delta_points = trigger_point[:,None] - points[:, :i]
-        p[:i, i] = model.trigger(trigger_point, delta_points)
+        m = delta_points[0] > 0
+        p[:i, i][m] = model.trigger(trigger_point, delta_points[:,m])
+        p[:i, i][~m] = 0
     return p
 
 def p_matrix(model, points):
