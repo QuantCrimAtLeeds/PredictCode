@@ -3,6 +3,7 @@ import unittest.mock as mock
 
 import open_cp.sepp_base as sepp_base
 import open_cp.data
+import open_cp.predictors
 import numpy as np
 import datetime
 
@@ -220,3 +221,46 @@ def test_Trainer_optimise2(trainer):
     assert call[0][0] is trainer._testing_im
     call = trainer._opt_class_mock.call_args_list[1]
     assert call[0][0] is model
+
+
+def test_PredictorBase():
+    class Model():
+        def background(self, points):
+            return points[0]
+        
+        def trigger(self, pt, dp):
+            return pt[0] * (dp[1] + dp[2])**2
+        
+    pts = [[0,1,2,3], [4,7,2,3], [4,5,6,1]]
+    model = Model()
+    pred = sepp_base.PredictorBase(model, pts)
+    
+    assert pred.model is model
+    np.testing.assert_allclose(pred.points, pts)
+    
+    assert pred.point_predict(1, [2,3]) == pytest.approx(10)
+    assert pred.point_predict(0.5, [2,3]) == pytest.approx(5)
+    assert pred.point_predict(1, [4,4]) == pytest.approx(1)
+    assert pred.point_predict(1, [4,5]) == pytest.approx(2)
+    np.testing.assert_allclose(pred.point_predict(1, [[2,4,4], [3,4,5]]), [10,1,2])
+    
+    assert pred.point_predict(2, [2,3]) == pytest.approx(2 + 18 + 2*49)
+    
+    expected = sum(t*10 for t in np.linspace(0,1,20))
+    assert pred.range_predict(0, 1, [2,3]) == pytest.approx(expected / 20)
+    
+def test_Predictor(trainer):
+    mask = np.asarray([[False, True, False], [False]*3])
+    grid = open_cp.data.MaskedGrid(xsize=10, ysize=15, xoffset=2, yoffset=3, mask=mask)
+    model = OurModel()
+    pred = sepp_base.Predictor(grid, model)
+    pred.data = trainer.data    
+    
+    gp = pred.predict(np.datetime64("2017-05-04T00:00"))
+    
+    np.testing.assert_allclose(gp.intensity_matrix.mask, mask)
+    assert (gp.xsize, gp.ysize) == (grid.xsize, grid.ysize)
+    
+    gp = pred.predict(np.datetime64("2017-05-04T00:00"), end_time=np.datetime64("2017-05-05T00:00"))
+    np.testing.assert_allclose(gp.intensity_matrix.mask, mask)
+    assert (gp.xsize, gp.ysize) == (grid.xsize, grid.ysize)

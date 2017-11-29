@@ -446,7 +446,6 @@ def grid_prediction_from_kernel_and_masked_grid(kernel, masked_grid, samples=Non
     
     :return: An instance of :class GridPredictionArray:
     """
-    region = masked_grid.region()
     cts_predictor = KernelRiskPredictor(kernel,
         xoffset=masked_grid.xoffset, yoffset=masked_grid.yoffset,
         cell_width=masked_grid.xsize, cell_height=masked_grid.ysize,
@@ -454,7 +453,10 @@ def grid_prediction_from_kernel_and_masked_grid(kernel, masked_grid, samples=Non
     intensity_matrix = cts_predictor.to_matrix_from_masked_grid(masked_grid)
     pred = GridPredictionArray(masked_grid.xsize, masked_grid.ysize,
         intensity_matrix, masked_grid.xoffset, masked_grid.yoffset)
-    pred.mask_with(masked_grid)
+    try:
+        pred.mask_with(masked_grid)
+    except:
+        pass
     return pred
 
 def grid_prediction(continuous_prediction, grid):

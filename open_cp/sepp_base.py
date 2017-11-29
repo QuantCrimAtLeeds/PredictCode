@@ -60,6 +60,60 @@ class ModelBase():
         return out
         
 
+class PredictorBase():
+    """Base class which can perform "predictions".  Predictions are formed by
+    evaluating the intensity (background and triggers) at one or more time
+    points and averaging.
+    
+    :param model: The :class:`ModelBase` object to get the trigger and
+      background from.
+    :param points: Usual array of shape `(3,N)`
+    """
+    def __init__(self, model, points):
+        self._model = model
+        self._points = _np.asarray(points)
+        
+    @property
+    def model(self):
+        return self._model
+    
+    @property
+    def points(self):
+        return self._points
+    
+    def point_predict(self, time, space_points):
+        """Find a point prediction at one time and one or more locations.
+        The data the class holds will be clipped to be before `time` and
+        the used as the trigger events.
+        
+        :param time: Time point to evaluate at
+        :param space_points: Array of shape `(2,n)`
+        
+        :return: Array of shape `(n,)`
+        """
+        space_points = _np.asarray(space_points)
+        if len(space_points.shape) == 1:
+            space_points = space_points[:,None]
+        eval_points = _np.asarray([[time] * space_points.shape[1],
+                                   space_points[0], space_points[1]])
+        out = self._model.background(eval_points)
+        data = self._points[:,self._points[0] < time]
+        for i, pt in enumerate(eval_points.T):
+            out[i] += _np.sum(self._model.trigger(pt, pt[:,None] - data))
+        return out
+    
+    def range_predict(self, time_start, time_end, space_points, samples=20):
+        if not time_start < time_end:
+            raise ValueError()
+        out = self.point_predict(time_start, space_points)
+        for i in range(1, samples):
+            t = time_start + (time_end - time_start) * i / (samples - 1)
+            print(t, out)
+            n = self.point_predict(t, space_points)
+            out = out + n
+        return out / samples
+    
+
 def non_normalised_p_matrix(model, points):
     d = points.shape[1]
     p = _np.zeros((d,d))
@@ -146,15 +200,11 @@ class Optimiser():
         raise NotImplementedError()
 
 
-class Trainer(predictors.DataTrainer):
-    """Base class for a standard "trainer".  It is not assumed that this will
-    always be used; but it may prove helpful often.
-    
-    """
+class _BaseTrainer(predictors.DataTrainer):
     def __init__(self):
         self.time_unit = _np.timedelta64(1, "D")
         self._logger = _logging.getLogger(__name__)
-
+    
     @property
     def time_unit(self):
         """The unit of time to use to convert real timestamps into abstract
@@ -169,11 +219,11 @@ class Trainer(predictors.DataTrainer):
         """Internal method, and for testing.  Returns the data in the format
         expected by the base classes.
         
-        :param predict_time: As in :meth:`train`.
+        :param predict_time: Crop the data to before this time, and use this time
+          as the end point.  If `None` then use the final timestamp in the
+          data, rounded up by the currently in use time unit.
         
-        :return: `(fixed, data)` where `fixed` is a class describing any
-          "fixed" parameters of the model (meta-parameters if you like) and
-          `data` is an array of shape `(3,N)`.
+        :return: `predict_time, for_fixed, data`
         """
         if predict_time is None:
             offset = _np.datetime64("2000-01-01T00:00")
@@ -184,8 +234,31 @@ class Trainer(predictors.DataTrainer):
             predict_time = _np.datetime64(predict_time)
         data = self.data[self.data.timestamps <= predict_time]
         times = (data.timestamps - data.timestamps[0]) / self.time_unit
-        fixed = self.make_fixed((predict_time - data.timestamps) / self.time_unit)
-        return fixed, _np.asarray([times, data.xcoords, data.ycoords])
+        for_fixed = (predict_time - data.timestamps) / self.time_unit
+        data = _np.asarray([times, data.xcoords, data.ycoords])
+        return predict_time, for_fixed, data
+
+
+class Trainer(_BaseTrainer):
+    """Base class for a standard "trainer".  It is not assumed that this will
+    always be used; but it may prove helpful often.
+    
+    """
+    def __init__(self):
+        super().__init__()
+
+    def make_data(self, predict_time=None):
+        """Internal method, and for testing.  Returns the data in the format
+        expected by the base classes.
+        
+        :param predict_time: As in :meth:`train`.
+        
+        :return: `(fixed, data)` where `fixed` is a class describing any
+          "fixed" parameters of the model (meta-parameters if you like) and
+          `data` is an array of shape `(3,N)`.
+        """
+        predict_time, for_fixed, data = super().make_data(predict_time)
+        return self.make_fixed(for_fixed), data
 
     def make_fixed(self, times):
         """Abstract method to return the "fixed" model.
@@ -223,3 +296,51 @@ class Trainer(predictors.DataTrainer):
             model = opt.iterate()
             self._logger.debug(model)
         return model
+    
+    
+class Predictor(_BaseTrainer):
+    """A :class:`DataTrainer` which uses a model to make predictions.
+    
+    :param grid: The Grid object to make predictions against.
+    :param model: The model object to use.
+    """
+    def __init__(self, grid, model):
+        super().__init__()
+        self._grid = grid
+        self._model = model
+        
+    def predict(self, predict_time, end_time=None, time_samples=20, space_samples=20):
+        """Make a prediction at this time.
+        
+        :param predict_time: Limit to data before this time, and
+          use this as the predict time.
+        :param end_time: If not `None`, then approximately intergate
+          over this time range.
+         
+        :return: A grid prediction, masked if possible with the grid, and
+          normalised.
+        """
+        predict_time, for_fixed, data = self.make_data(predict_time)
+        time = _np.max(for_fixed)
+        pred = PredictorBase(self._model, data)
+
+        if end_time is None:
+            def kernel(pts):
+                return pred.point_predict(time, pts)
+        else:
+            time_end = time + (end_time - predict_time) / self.time_unit
+            def kernel(pts):
+                return pred.range_predict(time, time_end, pts, samples=time_samples)
+        
+        cts_predictor = predictors.KernelRiskPredictor(kernel,
+            xoffset=self._grid.xoffset, yoffset=self._grid.yoffset,
+            cell_width=self._grid.xsize, cell_height=self._grid.ysize,
+            samples=space_samples)
+
+        grid_pred = predictors.GridPredictionArray.from_continuous_prediction_grid(
+                    cts_predictor, self._grid)
+        try:
+            grid_pred.mask_with(self._grid)
+        except:
+            pass
+        return grid_pred.renormalise()
