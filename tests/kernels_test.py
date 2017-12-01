@@ -264,7 +264,36 @@ def test_GaussianBase_eval_with_bandwidth():
     assert gb(0) == pytest.approx(x0)
     np.testing.assert_allclose(gb([0]), [x0])
     np.testing.assert_allclose(gb([0,2,5,2,5,0]), [x0,x2,x5,x2,x5,x0])
-    
+
+def test_GaussianBase_large_eval():
+    n = 1000000
+    pts = np.arange(n) / n
+    gb = testmod.GaussianBase(pts)
+    gb.covariance_matrix = 1.0
+    gb.bandwidth = 1.0
+
+    x5 = np.sum(np.exp(-(5 - pts)**2 / 2)) / n / sqrt2pi
+    assert gb(5) == pytest.approx(x5)
+    x3 = np.sum(np.exp(-(3 - pts)**2 / 2)) / n / sqrt2pi
+    assert gb(3) == pytest.approx(x3)
+    np.testing.assert_allclose(gb([5,3]), [x5,x3])
+
+def test_GaussianBase_large_eval_3d():
+    n = 1000000
+    pts = np.random.random((3,n)) * 100
+    gb = testmod.GaussianBase(pts)
+    gb.covariance_matrix = np.eye(3)
+    gb.bandwidth = 1.0
+
+    pt = np.asarray([1,2,3])
+    x = np.sum(np.exp(-np.sum((pts - pt[:,None])**2,axis=0) / 2)) / n / (sqrt2pi**3)
+    assert gb([1,2,3]) == pytest.approx(x)
+    pt = np.asarray([4,2,1])
+    y = np.sum(np.exp(-np.sum((pts - pt[:,None])**2,axis=0) / 2)) / n / (sqrt2pi**3)
+    assert gb([4,2,1]) == pytest.approx(y)
+
+    np.testing.assert_allclose(gb([[1,4], [2,2], [3,1]]), [x,y])
+
 def test_GaussianBase_eval_with_cov():
     gb = testmod.GaussianBase([1,2,3,4])
     assert gb.covariance_matrix[0,0] == pytest.approx(20/12)

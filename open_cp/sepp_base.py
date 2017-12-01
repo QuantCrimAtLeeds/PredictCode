@@ -126,6 +126,9 @@ def non_normalised_p_matrix(model, points):
         p[:i, i][~m] = 0
     return p
 
+def normalise_p(p):
+    return p / _np.sum(p, axis=0)[None,:]
+
 def p_matrix(model, points):
     """Compute the normalised "p" matrix.
     
@@ -133,8 +136,19 @@ def p_matrix(model, points):
     :param points: Data
     """
     p = non_normalised_p_matrix(model, points)
-    return p / _np.sum(p, axis=0)[None,:]
+    return normalise_p(p)
 
+def clamp_p(p, cutoff = 99.9):
+    """For each column, set entries beyond the `cutoff` percentile to 0.
+    """
+    pp = _np.array(p)
+    for j in range(1, p.shape[1]):
+        x = pp[:j+1,j]
+        lookup = _np.argsort(x)
+        s = x[lookup]
+        c = _np.sum(_np.cumsum(s) < 1 - cutoff / 100)
+        x[lookup[:c]] = 0
+    return pp
 
 class Optimiser():
     """We cannot know all models and how to optimise them, but we provide some

@@ -429,6 +429,17 @@ class GaussianBase():
             pts = _np.atleast_2d(pts)
         if pts.shape[0] != self.dimension:
             raise ValueError("Data is {} dimensional but asked to evaluate on {} dimensional data".format(self.dimension, pts.shape[0]))
+        out = self._fast_call(pts)
+        if out is None:
+            out = _np.asarray([self(pt)[0] for pt in pts.T])
+        return out
+
+    def _too_large(self, pts):
+        return pts.shape[1] > 1 and self.data.shape[0] * self.data.shape[1] * pts.shape[1] > 100000
+
+    def _fast_call(self, pts):
+        if self._too_large(pts):
+            return None
         x = self.data[:,:,None] - pts[:,None,:]
         x = _np.sum(x * _np.sum(self._cov_matrix_inv[:,:,None,None] * x[:,None,:,:], axis=0), axis=0)
         if len(self._bandwidth_2sq.shape) == 0:
@@ -439,7 +450,7 @@ class GaussianBase():
         if self.weights is not None:
             x = x * self.weights[:,None]
         return _np.sum(x, axis=0) / self._norm * self.scale
-        
+
     def _update_norm(self):
         if self.weights is not None:
             norm = self._weight_sum
@@ -449,6 +460,8 @@ class GaussianBase():
         if len(self._bandwidth_to_dim.shape) == 0:
             norm *= self._bandwidth_to_dim
         norm *= (2 * _np.pi) ** (self.dimension / 2)
+        if norm < 1e-9:
+            raise ValueError("norm is too small")
         self._norm = norm
     
     @property
@@ -462,11 +475,13 @@ class GaussianBase():
         if w is None:
             self._weights = None
         else:
-            w = _np.asarray(w)
+            w = _np.asarray(_np.abs(w))
             if len(w.shape) != 1 or w.shape[0] != self.num_points:
                 raise ValueError("Need a one-dimensional array of the same length as the number of points.")
             self._weights = w
             self._weight_sum = _np.sum(w)
+            if self._weight_sum < 1e-9:
+                raise ValueError("Sum of weights is too small.", w)
         self._update_norm()
         
     @property

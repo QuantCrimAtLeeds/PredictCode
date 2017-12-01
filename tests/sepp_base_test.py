@@ -264,3 +264,21 @@ def test_Predictor(trainer):
     gp = pred.predict(np.datetime64("2017-05-04T00:00"), end_time=np.datetime64("2017-05-05T00:00"))
     np.testing.assert_allclose(gp.intensity_matrix.mask, mask)
     assert (gp.xsize, gp.ysize) == (grid.xsize, grid.ysize)
+
+def test_clamp_p():
+    p = [[1, 0, 0, 0], [0.6, 0.4, 0, 0], [0.99, 0.01, 0, 0], [0.2, 0.05, 0.7, 0.05]]
+    p = np.asarray(p).T
+    pc = np.asarray(p)
+    pp = sepp_base.clamp_p(p, 99)
+
+    np.testing.assert_allclose(p, pc) # Don't mutate p
+    np.testing.assert_allclose(pp[:,0], [1,0,0,0])
+    np.testing.assert_allclose(pp[:,1], [0.6,0.4,0,0])
+    np.testing.assert_allclose(pp[:,2], [0.99,0,0,0])
+    np.testing.assert_allclose(pp[:,3], [0.2,0.05,0.7,0.05])
+
+    pp = sepp_base.clamp_p(p, 49)
+    np.testing.assert_allclose(pp[:,0], [1,0,0,0])
+    np.testing.assert_allclose(pp[:,1], [0.6,0,0,0])
+    np.testing.assert_allclose(pp[:,2], [0.99,0,0,0])
+    np.testing.assert_allclose(pp[:,3], [0,0,0.7,0])
