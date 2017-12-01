@@ -7,9 +7,11 @@ A more abstract approach to SEPP type algorithms.
 """
 
 from . import predictors
-#from . import kernels
+from . import logger as _ocp_logger
 import numpy as _np
+import datetime as _datetime
 import logging as _logging
+_logger = _logging.getLogger(__name__)
 
 class ModelBase():
     """Interface for a "model".
@@ -117,13 +119,16 @@ class PredictorBase():
 def non_normalised_p_matrix(model, points):
     d = points.shape[1]
     p = _np.zeros((d,d))
+    progress = _ocp_logger.ProgressLogger(d * (d+1) / 2, _datetime.timedelta(seconds=10), _logger)
     p[_np.diag_indices(d)] = model.background(points)
+    progress.add_to_count(d)
     for i in range(d):
         trigger_point = points[:,i]
         delta_points = trigger_point[:,None] - points[:, :i]
         m = delta_points[0] > 0
         p[:i, i][m] = model.trigger(trigger_point, delta_points[:,m])
         p[:i, i][~m] = 0
+        progress.add_to_count(i)
     return p
 
 def normalise_p(p):

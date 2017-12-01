@@ -73,7 +73,16 @@ class ProgressLogger():
         :return: `None` if no log needed, or :attr:`logger` is not set.
           Otherwise `(count, target, time_left)`.
         """
-        self._count += 1
+        return self.add_to_count(1)
+        
+    def add_to_count(self, addition):
+        """Increase the count by the amount given, and if appropriate, log.
+        If the logger is set then debug log.
+        
+        :return: `None` if no log needed, or :attr:`logger` is not set.
+          Otherwise `(count, target, time_left)`.
+        """
+        self._count += addition
         now = _datetime.datetime.now()
         out = None
         if self._last_log_time is None or now - self._last_log_time >= self._report_interval:
@@ -85,7 +94,7 @@ class ProgressLogger():
         if out is not None and self.logger is not None:
             self.logger.debug("Completed %s out of %s, time left: %s", *out)
         else:
-            return out
+            return out        
         
     @property
     def count(self):
