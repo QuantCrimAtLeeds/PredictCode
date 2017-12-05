@@ -110,7 +110,6 @@ class PredictorBase():
         out = self.point_predict(time_start, space_points)
         for i in range(1, samples):
             t = time_start + (time_end - time_start) * i / (samples - 1)
-            print(t, out)
             n = self.point_predict(t, space_points)
             out = out + n
         return out / samples
@@ -213,6 +212,40 @@ class Optimiser():
     def diff_col_points(self, col):
         """`xypoints[col] - xypoints[:col]`"""
         return self._points[1:, col][:,None] - self._points[1:, :col]
+
+    def sample(self):
+        """Use the p-matrix to take a "sample", returning background events
+        and triggered events.
+
+        :return: Pair `(bk_indices, trigger_pairs)` where `bk_indices` are
+          indices into :attr:`points` giving the sampled background events,
+          and `trigger_pairs` is a list of pairs `(trigger, triggered)` where
+          `trigger` is the trigger index, and `triggered` if the (later) index
+          of the event which is triggered.
+        """
+        bk, tr = [], []
+        for i in range(self.num_points):
+            j = _np.random.choice(i+1, p=self.p[:i+1,i])
+            if i==j:
+                bk.append(i)
+            else:
+                tr.append((j,i))
+        return bk, tr
+
+    def sample_to_points(self):
+        """Use the p-matrix to take a "sample", returning background events
+        and triggered events.
+
+        :return: Pair `(bk_points, trigger_deltas)` both arrays of points,
+          `bk_points` being the background events, and `trigger_deltas` being
+          the "jumps" from the triggering to the triggered events.
+        """
+        bk, tr = self.sample()
+        bk = _np.array(bk, dtype=_np.int)
+        bk_points = self._points[:, bk]
+        trigger_deltas = [self._points[:,end] - self._points[:,start]
+            for start, end in tr]
+        return bk_points, _np.asarray(trigger_deltas).T
 
     def iterate(self):
         """Abstract method to be over-riden.  Should return a new `model`."""
@@ -347,6 +380,7 @@ class Predictor(_BaseTrainer):
             def kernel(pts):
                 return pred.point_predict(time, pts)
         else:
+            end_time = _np.datetime64(end_time)
             time_end = time + (end_time - predict_time) / self.time_unit
             def kernel(pts):
                 return pred.range_predict(time, time_end, pts, samples=time_samples)

@@ -282,3 +282,36 @@ def test_clamp_p():
     np.testing.assert_allclose(pp[:,1], [0.6,0,0,0])
     np.testing.assert_allclose(pp[:,2], [0.99,0,0,0])
     np.testing.assert_allclose(pp[:,3], [0,0,0.7,0])
+
+def test_Optimiser_sample():
+    model = sepp_base.ModelBase()
+    model.background = lambda pts : [1]*pts.shape[-1]
+    model.trigger = lambda tp, pts : [1]*pts.shape[-1]
+
+    opt = sepp_base.Optimiser(model, np.random.random((3,4)))
+    p = [[1,0,0,0], [0,1,0,0], [1,0,0,0], [0,0,1,0]]
+    opt._p = np.asarray(p).T
+
+    bk, tr = opt.sample()
+
+    assert bk == [0,1]
+    assert tr == [(0,2), (2,3)]
+
+def test_Optimiser_sample_to_points():
+    model = sepp_base.ModelBase()
+    model.background = lambda pts : [1]*pts.shape[-1]
+    model.trigger = lambda tp, pts : [1]*pts.shape[-1]
+
+    pts = np.random.random((3,4))
+    opt = sepp_base.Optimiser(model, pts)
+    p = [[1,0,0,0], [0,1,0,0], [1,0,0,0], [0,0,1,0]]
+    opt._p = np.asarray(p).T
+
+    bk, tr = opt.sample_to_points()
+
+    np.testing.assert_allclose(bk, pts[:,:2])
+    expected_trigger = [pts[:,2] - pts[:,0], pts[:,3] - pts[:,2]]
+    expected_trigger = np.asarray(expected_trigger).T
+    np.testing.assert_allclose(tr, expected_trigger)
+
+    
