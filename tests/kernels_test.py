@@ -402,6 +402,45 @@ def test_GaussianNearestNeighbour():
         pts = np.random.random(size=(n,50))
         np.testing.assert_allclose(gnn(pts), kernel(pts))
     
+def check_marginal_kernel(ker, axis=0):
+    new_ker = testmod.marginalise_gaussian_kernel(ker, axis)
+    
+    import scipy.integrate
+    def expect(x):
+        def func(t):
+            y = list(x)
+            y.insert(axis, t)
+            return ker(y)
+        return scipy.integrate.quad(func, -10, 10)
+    
+    for _ in range(20):
+        pt = np.random.random(2)
+        val, error = expect(pt)
+        assert np.abs(new_ker(pt) - val) <= val * 1e-5
+    
+def test_marginalise_gaussian_kernel():
+    pts = np.random.random((3,20))
+    ker = testmod.GaussianBase(pts)
+    ker.covariance_matrix = np.diag([2,3,4])
+    ker.bandwidth = 1.4
+    check_marginal_kernel(ker, 0)
+
+    ker = testmod.GaussianBase(pts)
+    ker.covariance_matrix = np.diag([2,3,4])
+    ker.bandwidth = 1.4
+    ker.weights = np.random.random(20)
+    check_marginal_kernel(ker, 0)
+
+    ker = testmod.GaussianBase(pts)
+    ker.covariance_matrix = np.diag([2,3,4])
+    ker.bandwidth = np.random.random(20)
+    ker.weights = np.random.random(20)
+    check_marginal_kernel(ker, 0)
+
+    ker = testmod.GaussianBase(pts)
+    ker.covariance_matrix = np.diag([2,3,4])
+    check_marginal_kernel(ker, 1)
+    
 @pytest.fixture
 def geometry_square():
     return shapely.geometry.Polygon([[0,0],[10,0], [10,10], [0,10]])

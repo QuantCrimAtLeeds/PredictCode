@@ -578,6 +578,30 @@ class GaussianNearestNeighbour(GaussianBase):
         self.bandwidth = distance_to_k
 
 
+def marginalise_gaussian_kernel(kernel, axis=0):
+    """Assuming that the covariance matrix is _diagonal_ return a new
+    instance with the given axis marginalised out.
+    
+    :param kernel: Instance of :class:`GaussianBase`
+    :param axis: The axis to marginalise out, defaults to 0
+    
+    :return: New instance of :class:`GaussianBase` of one dimension less.
+    """
+    S = kernel.covariance_matrix
+    SS = _np.diag(_np.diag(S))
+    if not _np.sum((S-SS)**2) < 1e-9:
+        raise ValueError("Covariance matrix must be diagonal")
+    dims = list(range(S.shape[0]))
+    dims.remove(axis)
+    
+    new_kernel = GaussianBase(kernel.data[dims])
+    new_kernel.covariance_matrix = _np.diag(_np.diag(S)[dims])
+    new_kernel.weights = kernel.weights
+    new_kernel.bandwidth = kernel.bandwidth
+    new_kernel.scale = kernel.scale
+    return new_kernel
+
+
 class Reflect1D():
     """A simple delegating class which reflects a one dimensional kernel about
     0.
