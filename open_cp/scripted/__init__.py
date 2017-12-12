@@ -15,6 +15,9 @@ easier to run overnight from the command line) than the GUI mode.
 TODO: Quick list of what we provide.
 """
 
+# TODO: Lazy initialisation
+# Allow grid to be changed / set
+
 from .preds import *
 from .evaluators import *
 from .processors import *
@@ -30,7 +33,7 @@ _logger.setLevel(logging.INFO)
 
 
 class Data():
-    def __init__(self, point_provider, geometry_provider=None, start=None, end=None):
+    def __init__(self, point_provider, geometry_provider=None, grid=None, start=None, end=None):
         _logger.info("Loading timed points...")
         points = point_provider()
         _logger.info("Loaded %s crime events", points.number_data_points)
@@ -40,7 +43,9 @@ class Data():
         if end is not None:
             points = points[points.timestamps < end]
             _logger.info("Restricted to events before %s, leading %s events", end, points.number_data_points)
-        self._grid = data.Grid(150, 150, 0, 0)
+        if grid is None:
+            grid = data.Grid(150, 150, 0, 0)
+        self._grid = grid
         self._geometry = None
         if geometry_provider is not None:
             _logger.info("Loading geometry...")

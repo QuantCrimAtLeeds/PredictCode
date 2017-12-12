@@ -41,7 +41,7 @@ class _TextFileOpenMixin():
             file = open(filename, "wt", newline="")
             need_close = True
         else:
-            file = self._filename
+            file = filename
         try:
             yield file
         finally:

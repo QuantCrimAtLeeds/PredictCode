@@ -948,6 +948,60 @@ class ScipyKDEProvider(StandardPredictionProvider):
         return "NaiveProvider (ScipyKDE)"
 
 
+from . import retrohotspot as _retrohotspot
+
+class RetroHotspotProvider():
+    """A factory class which when called produces the actual provider.
+    
+    :param weight: The class:`open_cp.retrohotspot.Weight: instance to use.
+    """
+    def __init__(self, weight):
+        self._weight = weight
+
+    def __call__(self, *args):
+        provider = self._RetroHotspotProvider(*args)
+        provider.weight = self._weight
+        return provider
+
+    class _RetroHotspotProvider(StandardPredictionProvider):
+        def give_prediction(self, grid, points, time):
+            predictor = _retrohotspot.RetroHotSpotGrid(grid=grid)
+            predictor.weight = self.weight
+            predictor.data = points
+            return predictor.predict(end_time=time)
+        
+        def __repr__(self):
+            return "RetroHotspotProvider(Weight={})".format(self.weight)
+
+
+class RetroHotspotCtsProvider():
+    """A factory class which when called produces the actual provider.
+    Passes by way of continuous predicition, which is slower, but probably
+    better.
+    
+    :param weight: The class:`open_cp.retrohotspot.Weight: instance to use.
+    """
+    def __init__(self, weight):
+        self._weight = weight
+
+    def __call__(self, *args):
+        provider = self._RetroHotspotProvider(*args)
+        provider.weight = self._weight
+        return provider
+
+    class _RetroHotspotProvider(StandardPredictionProvider):
+        def give_prediction(self, grid, points, time):
+            predictor = _retrohotspot.RetroHotSpot()
+            predictor.weight = self.weight
+            predictor.data = points
+            cts_pred = predictor.predict(end_time=time)
+            cts_pred.samples = 5
+            pred = _predictors.GridPredictionArray.from_continuous_prediction_grid(cts_pred, grid)
+            return pred
+        
+        def __repr__(self):
+            return "RetroHotspotCtsProvider(Weight={})".format(self.weight)
+
 
 HitRateDetail = _collections.namedtuple("HitRateDetail",
     ["total_cell_count", "prediction"])

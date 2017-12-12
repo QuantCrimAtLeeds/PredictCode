@@ -50,6 +50,7 @@ class Quartic(Weight):
     :param bandwidth: The maximum extend of the kernel.
     """
     def __init__(self, bandwidth = 200):
+        self._h = bandwidth
         self._cutoff = bandwidth ** 2
 
     def __call__(self, x, y):
@@ -57,6 +58,9 @@ class Quartic(Weight):
         distance_sq = x*x + y*y
         weight = (1 - distance_sq / self._cutoff) ** 2
         return weight * ( distance_sq <= self._cutoff )
+
+    def __repr__(self):
+        return "Quartic(bandwidth={})".format(self._h)
 
 
 class TruncatedGaussian(Weight):
@@ -66,6 +70,7 @@ class TruncatedGaussian(Weight):
     :param standard_devs: The range of the standard Gaussian to use.
     """
     def __init__(self, bandwidth = 200, standard_devs=3.0):
+        self._h = bandwidth
         self._cutoff = bandwidth ** 2
         self._range = standard_devs
         
@@ -76,6 +81,9 @@ class TruncatedGaussian(Weight):
         out = _np.exp(-normalised / 2)
         return out * ( distance_sq <= self._cutoff )
         
+    def __repr__(self):
+        return "TruncatedGaussian(bandwidth={}, sd={})".format(self._h, self._range)
+
 
 def _clip_data(data, start_time, end_time):
     mask = None

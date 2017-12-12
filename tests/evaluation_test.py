@@ -5,6 +5,7 @@ import open_cp.evaluation as evaluation
 import open_cp.predictors
 import open_cp.data
 import open_cp.network
+import open_cp.retrohotspot
 import numpy as np
 import scipy.special
 import datetime
@@ -679,7 +680,6 @@ def test_NaiveProvider(mock_provider, timed_pts_10):
     assert pred is mock_provider.return_value.predict.return_value.renormalise.return_value
 
 @mock.patch("open_cp.predictors.GridPredictionArray")
-#@mock.patch("open_cp.evaluation._predictors.GridPredictionArray")
 @mock.patch("open_cp.naive.ScipyKDE")
 def test_ScipyKDEProvider(mock_provider, mock_preds, timed_pts_10):
     mat = np.asarray([[False, True, True, False], [True]*4])
@@ -691,3 +691,17 @@ def test_ScipyKDEProvider(mock_provider, mock_preds, timed_pts_10):
     assert args[0] == mock_provider.return_value.predict.return_value
     assert args[1] == grid
     assert pred is mock_preds.from_continuous_prediction_grid.return_value.renormalise.return_value
+
+@mock.patch("open_cp.retrohotspot.RetroHotSpotGrid")
+def test_ScipyKDEProvider(mock_provider, timed_pts_10):
+    mat = np.asarray([[False, True, True, False], [True]*4])
+    grid = open_cp.data.MaskedGrid(15, 15, 5, 7, mat)
+    
+    weight = open_cp.retrohotspot.TruncatedGaussian()
+    provider = evaluation.RetroHotspotProvider(weight)
+    prov = provider(timed_pts_10, grid)
+    pred = prov.predict(datetime.datetime(2017,2,3))
+    mock_provider.assert_called_with(grid=grid)
+    assert mock_provider.return_value.weight == weight
+    mock_provider.return_value.predict.assert_called_with(end_time=datetime.datetime(2017,2,3))
+    assert pred is mock_provider.return_value.predict.return_value.renormalise.return_value
