@@ -57,14 +57,17 @@ class ProgressLogger():
     
     :param target: The total number of "events" to count.
     :param report_interval: `timedelta` object giving the ideal report period.
+    :param logger: Optional logger to use (can be set later)
+    :param level: The level to log at, defaults to debug.
     """
-    def __init__(self, target, report_interval, logger=None):
+    def __init__(self, target, report_interval, logger=None, level=_logging.DEBUG):
         self._target = target
         self._report_interval = report_interval
         self._count = 0
         self._start = _datetime.datetime.now()
         self._last_log_time = None
         self.logger = logger
+        self._level = level
         
     def increase_count(self):
         """Increase the count, and if appropriate, log.  If the logger is set
@@ -92,7 +95,7 @@ class ProgressLogger():
             out = (self._count, self._target, expected_time_left)
             self._last_log_time = now
         if out is not None and self.logger is not None:
-            self.logger.debug("Completed %s out of %s, time left: %s", *out)
+            self.logger.log(self._level, "Completed %s out of %s, time left: %s", *out)
         else:
             return out        
         
@@ -109,4 +112,13 @@ class ProgressLogger():
     @logger.setter
     def logger(self, v):
         self._logger = v
+        
+    @property
+    def level(self):
+        return self._level
+    
+    @level.setter
+    def level(self, v):
+        self._level = v
+    
     

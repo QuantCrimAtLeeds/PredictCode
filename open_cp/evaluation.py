@@ -923,14 +923,30 @@ class StandardPredictionProvider(PredictionProvider):
         raise NotImplementedError()
 
 
-from . import naive
-
 class NaiveProvider(StandardPredictionProvider):
     """Make predictions using :class:`naive.CountingGridKernel`."""
     def give_prediction(self, grid, points, time):
-        predictor = naive.CountingGridKernel(grid.xsize, grid.ysize, grid.region())
+        predictor = _naive.CountingGridKernel(grid.xsize, grid.ysize, grid.region())
         predictor.data = points
         return predictor.predict()
+    
+    def __repr__(self):
+        return "NaiveProvider (CountingGridKernel)"
+
+
+class ScipyKDEProvider(StandardPredictionProvider):
+    """Make predictions using :class:`naive.ScipyKDE`."""
+    def give_prediction(self, grid, points, time):
+        predictor = _naive.ScipyKDE()
+        predictor.data = points
+        cts_pred = predictor.predict()
+        cts_pred.samples = 5
+        pred = _predictors.GridPredictionArray.from_continuous_prediction_grid(cts_pred, grid)
+        return pred
+
+    def __repr__(self):
+        return "NaiveProvider (ScipyKDE)"
+
 
 
 HitRateDetail = _collections.namedtuple("HitRateDetail",

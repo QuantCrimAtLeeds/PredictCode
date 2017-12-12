@@ -677,3 +677,17 @@ def test_NaiveProvider(mock_provider, timed_pts_10):
     assert args[2].ymin == 7
     assert args[2].ymax == 7 + 15 * 2
     assert pred is mock_provider.return_value.predict.return_value.renormalise.return_value
+
+@mock.patch("open_cp.predictors.GridPredictionArray")
+#@mock.patch("open_cp.evaluation._predictors.GridPredictionArray")
+@mock.patch("open_cp.naive.ScipyKDE")
+def test_ScipyKDEProvider(mock_provider, mock_preds, timed_pts_10):
+    mat = np.asarray([[False, True, True, False], [True]*4])
+    grid = open_cp.data.MaskedGrid(10, 15, 5, 7, mat)
+    prov = evaluation.ScipyKDEProvider(timed_pts_10, grid)
+    pred = prov.predict(datetime.datetime(2017,2,3))
+    mock_provider.assert_called()
+    args = mock_preds.from_continuous_prediction_grid.call_args[0]
+    assert args[0] == mock_provider.return_value.predict.return_value
+    assert args[1] == grid
+    assert pred is mock_preds.from_continuous_prediction_grid.return_value.renormalise.return_value

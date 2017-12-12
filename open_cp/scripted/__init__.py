@@ -15,16 +15,19 @@ easier to run overnight from the command line) than the GUI mode.
 TODO: Quick list of what we provide.
 """
 
-from ..evaluation import *
-import numpy as np
+from .preds import *
+from .evaluators import *
+from .processors import *
+
 from .. import data
 from .. import logger
-import logging
+import logging, lzma, pickle, collections, datetime
 from .. import geometry
-from .. import predictors
 
 logger.log_to_stdout()
 _logger = logging.getLogger(__name__)
+_logger.setLevel(logging.INFO)
+
 
 class Data():
     def __init__(self, point_provider, geometry_provider=None, start=None, end=None):
@@ -38,6 +41,7 @@ class Data():
             points = points[points.timestamps < end]
             _logger.info("Restricted to events before %s, leading %s events", end, points.number_data_points)
         self._grid = data.Grid(150, 150, 0, 0)
+        self._geometry = None
         if geometry_provider is not None:
             _logger.info("Loading geometry...")
             self._geometry = geometry_provider()
@@ -49,66 +53,177 @@ class Data():
             self._points = geometry.intersect_timed_points(points, self._geometry)
         else:
             self._points = points
-        _logger.info("Using %s events from %s to %s", points.number_data_points, *points.time_range)
+        _logger.info("Using %s events from %s to %s", self._points.number_data_points, *self._points.time_range)
 
         self._predictors = []
         self._evaluators = []
         self._processors = []
+        self._prediction_cache = PredictionCache()
+        self._prediction_notifiers = []
 
     def __enter__(self):
         return self
 
     def __exit__(self, *args):
+        if args[0] is not None:
+            _logger.info("Exception raised in context body, rethrowing...")
+            return False
+        
         _logger.info("Starting processing...")
-        for predictor in self._predictors:
-            self._run_predictor(predictor)
+        for evaluator in self._evaluators:
+            _logger.info("Using evaluator %s", evaluator)
 
-    def _run_predictor(self, predictor):
-        # For each evaluator, if we need to, make a new prediction for the time,
-        # and then score it.
-        # Once done, run through the processor
+        try:
+            all_scores = dict()
+            for predictor, time_range in self._predictors:
+                all_scores[predictor] = self._run_predictor(predictor, time_range), time_range
+            
+            for processor in self._processors:
+                _logger.info("Running processor %s", processor)
+                processor.init()
+                for predictor, (scores, time_range) in all_scores.items():
+                    for evaluator, score_list in scores.items():
+                        processor.process(predictor, evaluator, score_list, time_range)
+                processor.done()
+        finally:
+            for watcher in self._prediction_notifiers:
+                watcher.close()
 
-    def add_prediction(self, prediction_provider):
+    def _run_predictor(self, predictor, times):
+        _logger.info("Making predictions using %s for %s", predictor, times)
+        pl = logger.ProgressLogger(len(times), datetime.timedelta(minutes=1), _logger, level=logging.INFO)
+        scores = {ev : list() for ev in self._evaluators}
+        
+        for start, end in times:
+            if not self._prediction_cache.has(predictor, start):
+                _logger.debug("Making prediction for time %s", start)
+                pred = predictor.predict(start)
+                self._prediction_cache.put(predictor, start, pred)
+                for watcher in self._prediction_notifiers:
+                    watcher.notify(predictor, start, pred)
+            pred = self._prediction_cache.get(predictor, start)
+            for evaluator in self._evaluators:
+                score = evaluator.evaluate(pred, start, end)
+                scores[evaluator].append(score)
+            pl.increase_count()
+
+        return scores
+
+    def add_prediction(self, prediction_provider, times):
+        """Add a prediction method to be run
+        
+        :param prediction_provider: Class of type
+          :class:`open_cp.evaluation.StandardPredictionProvider` (not an
+          instance!)
+        :param times: An iterable of time intervals `[start, end)`, for
+          example, :class:`TimeRange`
+        """
         predictor = prediction_provider(self._points, self._grid)
-        self._predictors.append(predictor)
+        self._predictors.append((predictor, times))
 
-    def score(self, evaluator, times):
+    def score(self, evaluator):
+        """Add an evaluation step.
+        
+        :param evaluator: Class of type :class:`EvaluatorBase` (not an
+          instance!)
+        """
         ev = evaluator()
         ev.data = self._points
-        self._evaluators.append((ev, times))
+        self._evaluators.append(ev)
 
     def process(self, interpretor):
+        """Add a "processor" step.
+        
+        :param interpretor: Instance (not class!) of :class:`ProcessorBase`
+        """
         self._processors.append(interpretor)
 
+    def save_predictions(self, filename):
+        """Save the input data points, geometry (if applicable) and each
+        prediction.
+        
+        :param filename: Name of a file to save to.  Will be a `lzma`
+          compressed `pickle` file.
+        """
+        saver = Saver(filename, self._points, self._geometry, self._grid)        
+        self._prediction_notifiers.append(saver)
 
 
-def time_range(first, stop_before, duration):
-    """Returns a list `[first, first + duration, first + 2 * duration, ...]`
-    until we get to `stop_before` (not inclusive)."""
-    out = []
-    t = first
-    while t < stop_before:
-        out.append(t)
-        t = t + duration
-    return out
+class Saver():
+    def __init__(self, filename, points, geometry, grid):
+        self._file = lzma.open(filename, "wb")
+        pickle.dump(points, self._file)
+        pickle.dump(geometry, self._file)
+        pickle.dump(grid, self._file)
+        
+    def close(self):
+        self._file.close()
+        
+    def notify(self, predictor, time, prediction):
+        pickle.dump((predictor, time, prediction), self._file)
+        _logger.debug("Saving prediction for {}".format(time))
 
-class HitRateEvaluator(predictors.DataTrainer):
-    def __init__(self):
-        pass
 
+LoadedPrediction = collections.namedtuple("LoadedPrediction", "predictor_class time prediction")
 
-
-class ProcessorBase():
-    def accept(self, evaluator):
-        raise NotImplementedError()
-
-class HitRateSave():
-    def __init__(self, csv_filename):
-        self._filename = csv_filename
-
-    def accept(self, evaluator):
-        return isinstance(evaluator, HitRateEvaluator)
+class Loader():
+    """Use to load saved predictions.
     
+    :param filename: The `lzma` compressed file to load.
+    """
+    def __init__(self, filename):
+        with lzma.open(filename, "rb") as f:
+            self._points = pickle.load(f)
+            self._geometry = pickle.load(f)
+            self._grid = pickle.load(f)
+            self._predictions = []
+            while True:
+                try:
+                    triple = pickle.load(f)
+                except EOFError:
+                    break
+                self._predictions.append(triple)
+                
+    @property
+    def timed_points(self):
+        """The loaded data"""
+        return self._points
+    
+    @property
+    def geometry(self):
+        """The loaded geometry, or `None`"""
+        return self._geometry
+    
+    @property
+    def grid(self):
+        """The grid object we used for making predictions."""
+        return self._grid
+    
+    def __iter__(self):
+        for row in self._predictions:
+            yield LoadedPrediction(*row)
 
+
+class PredictionCache():
+    """Simple cache from `(predictor, time)` to prediction.
+    
+    Currently just a wrapper around a dictionary."""
+    def __init__(self):
+        self._cache = dict()
+        
+    def _key(self, predictor, time):
+        return (id(predictor), time)
+
+    def has(self, predictor, time):
+        return self._key(predictor, time) in self._cache
+    
+    def get(self, predictor, time):
+        key = self._key(predictor, time)
+        if key not in self._cache:
+            return KeyError()
+        return self._cache[key]
+    
+    def put(self, predictor, time, prediction):
+        self._cache[self._key(predictor, time)] = prediction
 
     

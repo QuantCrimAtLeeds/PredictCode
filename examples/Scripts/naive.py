@@ -19,6 +19,7 @@ import open_cp.sources.chicago
 import lzma
 
 datadir = os.path.join("..", "..", "..", "..", "..", "Data")
+datadir = os.path.join("/media", "disk", "Data")
 
 def load_points():
     """Load Chicago data for 2016"""
@@ -40,10 +41,15 @@ import datetime
 with scripted.Data(load_points, load_geometry,
         start=datetime.datetime(2016,1,1)) as state:
     
-    state.add_prediction(scripted.NaiveProvider)
+    time_range = scripted.TimeRange(datetime.datetime(2016,10,1),
+            datetime.datetime(2017,1,1), datetime.timedelta(days=1))
+    state.add_prediction(scripted.NaiveProvider, time_range)
+    state.add_prediction(scripted.ScipyKDEProvider, time_range)
 
-    state.score(scripted.HitRateEvaluator, time_range)
+    state.score(scripted.HitRateEvaluator)
+    state.score(scripted.HitCountEvaluator)
 
-    #scripted.save_predictions("naive_preds.pic.xz")
+    state.save_predictions("naive_preds.pic.xz")
 
     state.process(scripted.HitRateSave("naive.csv"))
+    state.process(scripted.HitCountSave("naive_counts.csv"))
