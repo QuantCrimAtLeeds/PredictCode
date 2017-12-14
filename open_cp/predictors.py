@@ -287,7 +287,8 @@ class ContinuousPrediction():
     :param xoffset: The x coordinate of the start of the grid.
     :param yoffset: The y coordinate of the start of the grid.
     :param samples: The number of samples to use when computing the risk in a
-      grid cell.
+      grid cell.  Set to `None` to use a fixed density.  Set to a negative
+      number to sample on a regular pattern.
     """
     def __init__(self, cell_width=50, cell_height=50, xoffset=0, yoffset=0, samples=None):
         self.cell_width = cell_width
@@ -298,8 +299,14 @@ class ContinuousPrediction():
     
     @property
     def samples(self):
-        """The number of samples to use per cell.  Set to null to use a _fixed
-        density_, currently 1 sample per 200 units of area."""
+        """The number of samples to use per cell.
+        
+        Set to `None` to use a _fixed density_, currently 1 sample per 200
+        units of area.
+        
+        Set to a negative number, say `-x`, to sample on a subgrid of size
+        `x * x` per grid cell.  This is more reproducible.
+        """
         return self._samples
     
     @samples.setter
@@ -335,6 +342,8 @@ class ContinuousPrediction():
     def to_matrix(self, width, height):
         """Sample the risk at each grid point from `(0, 0)` to
         `(width-1, height-1)` inclusive.  Optimised."""
+        if self.samples < 0:
+            return self._to_matrix_grid(width, height)
         matrix = _np.empty((height, width))
         for gy in range(height):
             y = (gy + _np.random.random(size=self.samples * width)) * self.cell_height + self.yoffset
@@ -344,10 +353,28 @@ class ContinuousPrediction():
             matrix[gy] = _np.mean(_np.reshape(self._risk_array(x, y), (self.samples, width)), axis=0)
         return matrix
 
+    def _sub_grid_mesh(self):
+        s = -self.samples
+        pat = (_np.arange(s) * 2 + 1) / (s + s)
+        xx, yy = _np.meshgrid(pat, pat)
+        return xx.ravel(), yy.ravel()
+        
+    def _to_matrix_grid(self, width, height):
+        matrix = _np.empty((height, width))
+        xx, yy = self._sub_grid_mesh()
+        for gy in range(height):
+            y = (yy + gy) * self.cell_height + self.yoffset
+            for gx in range(width):
+                x = (xx + gx) * self.cell_width + self.xoffset
+                matrix[gy][gx] = _np.mean(self.risk(x, y))
+        return matrix
+
     def to_matrix_from_masked_grid(self, masked_grid):
         """Sample the risk at each "valid" grid point from `masked_grid`.
         Takes grid geometry from `masked_grid` and not from own settings.
         Useful for when the kernel cannot be evaluated at certain points."""
+        if self.samples < 0:
+            return self._to_matrix_from_masked_grid_regular(masked_grid)
         locations = []
         to_cell = []
         size = [masked_grid.xsize, masked_grid.ysize]
@@ -365,6 +392,28 @@ class ContinuousPrediction():
         for v, (gx, gy) in zip(values, to_cell):
             matrix[gy, gx] = v
         return matrix
+
+    def _to_matrix_from_masked_grid_regular(self, masked_grid):
+        locations = []
+        to_cell = []
+        size = [masked_grid.xsize, masked_grid.ysize]
+        offset = [masked_grid.xoffset, masked_grid.yoffset]
+        xx, yy = self._sub_grid_mesh()
+        for gy in range(masked_grid.yextent):
+            for gx in range(masked_grid.xextent):
+                if masked_grid.is_valid(gx, gy):
+                    to_cell.append((gx, gy))
+                    parts = _np.vstack([xx + gx, yy + gy]).T * size + offset
+                    locations.extend(parts)
+        locations = _np.asarray(locations)
+        values = self._risk_array(*locations.T)
+        ss = self.samples * self.samples
+        values = _np.mean(_np.reshape(values, (values.shape[0] // ss, ss)), axis=1)
+        matrix = _np.zeros((masked_grid.yextent, masked_grid.xextent))
+        for v, (gx, gy) in zip(values, to_cell):
+            matrix[gy, gx] = v
+        return matrix
+
 
     def to_kernel(self):
         """Returns a callable object which when called at `point` gives the
@@ -398,7 +447,7 @@ class ContinuousPrediction():
 
 
 class KernelRiskPredictor(ContinuousPrediction):
-    """Wraps a kernel object so as to make a :class ContinuousPrediction:
+    """Wraps a kernel object so as to make a :class:`ContinuousPrediction`
     instance
     
     :param kernel: A callable object with signature `kernel(points)` where

@@ -75,6 +75,21 @@ def test_mask_grid_by_points_intersection(points1):
         for y in range(4):
             assert mg.is_valid(x, y) == ((x,y) in expected)
 
+@pytest.fixture
+def unit_square():
+    return shapely.geometry.Polygon([[0,0], [1,0], [1,1], [0,1]])
+
+def test_intersect_timed_points(unit_square):
+    x = [0, 1, 2,   0.5, 0.5] 
+    y = [0, 1, 0.5, 2,   0.4]
+    times = [datetime.datetime(2017,1,1) + datetime.timedelta(days=n) for n in range(len(x))]
+    tps = open_cp.data.TimedPoints.from_coords(times,x,y)
+    tps1 = geometry.intersect_timed_points(tps, unit_square)
+    np.testing.assert_allclose(tps1.xcoords, [0,1,0.5])
+    np.testing.assert_allclose(tps1.ycoords, [0,1,0.4])
+    tt = (tps1.timestamps - np.datetime64("2017-01-01")) / np.timedelta64(1, "D")
+    np.testing.assert_allclose(tt, [0,1,4])
+    
 def test_configure_gdal():
     geometry.configure_gdal()
     import os

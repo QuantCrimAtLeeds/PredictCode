@@ -15,9 +15,6 @@ easier to run overnight from the command line) than the GUI mode.
 TODO: Quick list of what we provide.
 """
 
-# TODO: Lazy initialisation
-# Allow grid to be changed / set
-
 from .preds import *
 from .evaluators import *
 from .processors import *
@@ -32,11 +29,14 @@ _logger = logging.getLogger(__name__)
 _logger.setLevel(logging.INFO)
 
 
+# TODO: It might be nice to make this full "lazy evaluation", so that the
+# `__exit__` method does everything.  But this would be a big refactor, and I
+# don't have time right now.
 class Data():
     def __init__(self, point_provider, geometry_provider=None, grid=None, start=None, end=None):
         _logger.info("Loading timed points...")
         points = point_provider()
-        _logger.info("Loaded %s crime events", points.number_data_points)
+        _logger.info("Loaded %s crime events, time range: %s", points.number_data_points, points.time_range)
         if start is not None:
             points = points[points.timestamps >= start]
             _logger.info("Restricted to events not before %s, leading %s events", start, points.number_data_points)
@@ -76,12 +76,16 @@ class Data():
         
         _logger.info("Starting processing...")
         for evaluator in self._evaluators:
-            _logger.info("Using evaluator %s", evaluator)
+            _logger.info("  Using evaluator %s", evaluator)
+        _logger.info("Have a total of %s prediction methods", len(self._predictors))
 
         try:
             all_scores = dict()
+            pl = logger.ProgressLogger(len(self._predictors), datetime.timedelta(minutes=1), _logger, level=logging.INFO)
+            pl.message = "Total prediction tasks; completed %s / %s, time left: %s"
             for predictor, time_range in self._predictors:
                 all_scores[predictor] = self._run_predictor(predictor, time_range), time_range
+                pl.increase_count()
             
             for processor in self._processors:
                 _logger.info("Running processor %s", processor)

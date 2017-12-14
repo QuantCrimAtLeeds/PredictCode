@@ -74,6 +74,13 @@ class ClassicWeight(Weight):
         mask = (dt < self.time_bandwidth) & (dd < self.space_bandwidth)
         return 1 / ( (1 + dd) * ( 1 + dt) ) * mask
 
+    def __repr__(self):
+        return "Classic(sb={}, tb={})".format(self.space_bandwidth, self.time_bandwidth)
+
+    @property
+    def args(self):
+        return "C{},{}".format(self.space_bandwidth, self.time_bandwidth)
+
 
 class GridDistance(metaclass=_abc.ABCMeta):
     """Abstract base class to calculate the distance between grid cells"""
@@ -91,6 +98,9 @@ class DistanceDiagonalsSame(GridDistance):
         xx = _np.abs(x1 - x2)
         yy = _np.abs(y1 - y2)
         return _np.max(_np.vstack((xx, yy)), axis=0)
+    
+    def __repr__(self):
+        return "DiagsSame"
 
 
 class DistanceDiagonalsDifferent(GridDistance):
@@ -101,6 +111,9 @@ class DistanceDiagonalsDifferent(GridDistance):
     def __call__(self, x1, y1, x2, y2):
         return _np.abs(x1 - x2) + _np.abs(y1 - y2)
 
+    def __repr__(self):
+        return "DiagsDiff"
+
 
 class DistanceCircle(GridDistance):
     """Distance in the grid using the usual Euclidean distance, i.e. the
@@ -109,6 +122,9 @@ class DistanceCircle(GridDistance):
     """
     def __call__(self, x1, y1, x2, y2):
         return _np.sqrt((x1-x2)**2 + (y1-y2)**2)
+
+    def __repr__(self):
+        return "DiagsCircle"
 
 
 class ProspectiveHotSpot(_predictors.DataTrainer):

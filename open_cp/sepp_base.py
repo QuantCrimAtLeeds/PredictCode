@@ -131,7 +131,10 @@ def non_normalised_p_matrix(model, points):
     return p
 
 def normalise_p(p):
-    return p / _np.sum(p, axis=0)[None,:]
+    norm = _np.sum(p, axis=0)[None,:]
+    if _np.any(norm==0):
+        raise ValueError("Zero column in p matrix", p)
+    return p / norm
 
 def p_matrix(model, points):
     """Compute the normalised "p" matrix.

@@ -8,6 +8,7 @@ Contains routines and classes to help with evaluation of predictions.
 import numpy as _np
 import scipy.special as _special
 import collections as _collections
+import datetime as datetime
 import logging as _logging
 from . import naive as _naive
 from . import predictors as _predictors
@@ -932,6 +933,10 @@ class NaiveProvider(StandardPredictionProvider):
     
     def __repr__(self):
         return "NaiveProvider (CountingGridKernel)"
+    
+    @property
+    def args(self):
+        return ""
 
 
 class ScipyKDEProvider(StandardPredictionProvider):
@@ -940,12 +945,16 @@ class ScipyKDEProvider(StandardPredictionProvider):
         predictor = _naive.ScipyKDE()
         predictor.data = points
         cts_pred = predictor.predict()
-        cts_pred.samples = 5
+        cts_pred.samples = -5
         pred = _predictors.GridPredictionArray.from_continuous_prediction_grid(cts_pred, grid)
         return pred
 
     def __repr__(self):
         return "NaiveProvider (ScipyKDE)"
+
+    @property
+    def args(self):
+        return ""
 
 
 from . import retrohotspot as _retrohotspot
@@ -959,11 +968,11 @@ class RetroHotspotProvider():
         self._weight = weight
 
     def __call__(self, *args):
-        provider = self._RetroHotspotProvider(*args)
+        provider = self._Provider(*args)
         provider.weight = self._weight
         return provider
 
-    class _RetroHotspotProvider(StandardPredictionProvider):
+    class _Provider(StandardPredictionProvider):
         def give_prediction(self, grid, points, time):
             predictor = _retrohotspot.RetroHotSpotGrid(grid=grid)
             predictor.weight = self.weight
@@ -973,10 +982,14 @@ class RetroHotspotProvider():
         def __repr__(self):
             return "RetroHotspotProvider(Weight={})".format(self.weight)
 
+        @property
+        def args(self):
+            return self.weight.args
+
 
 class RetroHotspotCtsProvider():
     """A factory class which when called produces the actual provider.
-    Passes by way of continuous predicition, which is slower, but probably
+    Passes by way of continuous prediction, which is slower, but probably
     better.
     
     :param weight: The class:`open_cp.retrohotspot.Weight: instance to use.
@@ -985,23 +998,147 @@ class RetroHotspotCtsProvider():
         self._weight = weight
 
     def __call__(self, *args):
-        provider = self._RetroHotspotProvider(*args)
+        provider = self._Provider(*args)
         provider.weight = self._weight
         return provider
 
-    class _RetroHotspotProvider(StandardPredictionProvider):
+    class _Provider(StandardPredictionProvider):
         def give_prediction(self, grid, points, time):
             predictor = _retrohotspot.RetroHotSpot()
             predictor.weight = self.weight
             predictor.data = points
             cts_pred = predictor.predict(end_time=time)
-            cts_pred.samples = 5
+            cts_pred.samples = -5
             pred = _predictors.GridPredictionArray.from_continuous_prediction_grid(cts_pred, grid)
             return pred
         
         def __repr__(self):
             return "RetroHotspotCtsProvider(Weight={})".format(self.weight)
 
+        @property
+        def args(self):
+            return self.weight.args
+
+
+from . import prohotspot as _prohotspot
+
+class ProHotspotCtsProvider():
+    """A factory class which when called produces the actual provider.
+    Passes by way of continuous prediction, which is slower, but probably
+    better.  As we use the same weights as the grid based propsective hotspot
+    technique, you need to specify "units" for time and distance.  The time
+    unit is fixed at one week, but the distance unit can be changed.
+    
+    :param weight: The :class:`open_cp.prohotspot.Weight: instance to use.
+    :param distance_unit: The length to consider as one "unit" of distance.
+    """
+    def __init__(self, weight, distance_unit):
+        self._weight = weight
+        self._distance = distance_unit
+
+    def __call__(self, *args):
+        provider = self._Provider(*args)
+        provider.weight = self._weight
+        provider.distance = self._distance
+        return provider
+
+    class _Provider(StandardPredictionProvider):
+        def give_prediction(self, grid, points, time):
+            predictor = _prohotspot.ProspectiveHotSpotContinuous(grid_size=self.distance)
+            predictor.weight = self.weight
+            predictor.data = points
+            cts_pred = predictor.predict(time, time)
+            cts_pred.samples = -5
+            pred = _predictors.GridPredictionArray.from_continuous_prediction_grid(cts_pred, grid)
+            return pred
+        
+        def __repr__(self):
+            return "ProHotspotCtsProvider(Weight={}, DistanceUnit={})".format(self.weight, self.distance)
+    
+        @property
+        def args(self):
+            return "{},{}".format(self.weight.args, self.distance)
+
+    
+class ProHotspotProvider():
+    """A factory class which when called produces the actual provider.  The
+    "weight" is very tightly coupled to the grid size (which is set from, ahem,
+    the grid!) and the time unit.
+    
+    :param weight: The :class:`open_cp.prohotspot.Weight: instance to use.
+    :param distance: The :class:`open_cp.prohotspot.GridDistance` instance to
+      use to measure distance between grid cells.
+    :param time_unit: The time unit to use.
+    """
+    def __init__(self, weight, distance, time_unit=datetime.timedelta(days=1)):
+        self._weight = weight
+        self._distance = distance
+        self._time_unit = _np.timedelta64(time_unit)
+
+    def __call__(self, *args):
+        provider = self._Provider(*args)
+        provider.weight = self._weight
+        provider.distance = self._distance
+        provider.timeunit = self._time_unit
+        return provider
+
+    class _Provider(StandardPredictionProvider):
+        def give_prediction(self, grid, points, time):
+            predictor = _prohotspot.ProspectiveHotSpot(grid=grid, time_unit=self.timeunit)
+            predictor.weight = self.weight
+            predictor.distance = self.distance
+            predictor.data = points
+            return predictor.predict(time, time)
+        
+        def __repr__(self):
+            return "ProHotspotProvider(Weight={}, Distance={}, TimeUnit={}h)".format(
+                    self.weight, self.distance, self.timeunit / _np.timedelta64(1, "h"))
+
+        @property
+        def args(self):
+            return "{},{},{}".format(self.weight.args, self.distance, self.timeunit / _np.timedelta64(1, "h"))
+
+
+from . import kde as _kde
+
+class KDEProvider():
+    """A factory class which when called produces the actual provider.  We keep
+    the time unit fixed at "one day", but you can (and should!) vary the time
+    and space kernels in use.
+    
+    :param time_kernel: A "time kernel" from :mod:`open_cp.kde`
+    :param space_kernel: A "space kernel" from :mod:`open_cp.kde`
+    """
+    def __init__(self, time_kernel, space_kernel):
+        self._time_kernel = time_kernel
+        self._space_kernel = space_kernel
+       
+    def __call__(self, *args):
+        provider = self._Provider(*args)
+        provider.time_kernel = self._time_kernel
+        provider.space_kernel = self._space_kernel
+        return provider
+
+    class _Provider(StandardPredictionProvider):
+        def give_prediction(self, grid, points, time):
+            predictor = _kde.KDE(grid=grid)
+            predictor.time_kernel = self.time_kernel
+            predictor.space_kernel = self.space_kernel
+            predictor.data = points
+            cts_pred = predictor.cts_predict(end_time=time)
+            cts_pred.samples = -5
+            pred = _predictors.GridPredictionArray.from_continuous_prediction_grid(cts_pred, grid)
+            return pred
+        
+        def __repr__(self):
+            return "KDEProvider(TimeKernel={}, SpaceKernel={})".format(self.time_kernel, self.space_kernel)
+
+        @property
+        def args(self):
+            return "{},{}".format(self.time_kernel.args, self.space_kernel.args)
+
+
+# Hit rate calculation; not used by `scripted` package
 
 HitRateDetail = _collections.namedtuple("HitRateDetail",
     ["total_cell_count", "prediction"])

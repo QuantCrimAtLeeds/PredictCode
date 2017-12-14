@@ -35,7 +35,7 @@ class ProcessorBase():
 
 
 class _TextFileOpenMixin():
-    def _open(self, filename):
+    def _open(self, filename, callback):
         need_close = False
         if isinstance(filename, str):
             file = open(filename, "wt", newline="")
@@ -43,7 +43,7 @@ class _TextFileOpenMixin():
         else:
             file = filename
         try:
-            yield file
+            callback(file)
         finally:
             if need_close:
                 file.close()
@@ -68,10 +68,12 @@ class HitRateSave(_TextFileOpenMixin):
         pass
     
     def done(self):
-        for file in self._open(self._filename):
-            writer = _csv.writer(file)
-            writer.writerow(self._header())
-            writer.writerows(self._rows)
+        self._open(self._filename, self._done)
+    
+    def _done(self, file):
+        writer = _csv.writer(file)
+        writer.writerow(self._header())
+        writer.writerows(self._rows)
     
     def _header(self):
         header = ["Predictor", "Start time", "End time"]
@@ -112,10 +114,12 @@ class HitCountSave(_TextFileOpenMixin):
         pass
     
     def done(self):
-        for file in self._open(self._filename):
-            writer = _csv.writer(file)
-            writer.writerow(self._header())
-            writer.writerows(self._rows)
+        self._open(self._filename, self._done)
+            
+    def _done(self, file):
+        writer = _csv.writer(file)
+        writer.writerow(self._header())
+        writer.writerows(self._rows)
     
     def _header(self):
         header = ["Predictor", "Start time", "End time", "Number events"]

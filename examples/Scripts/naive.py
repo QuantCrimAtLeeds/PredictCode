@@ -19,7 +19,7 @@ import open_cp.sources.chicago
 import lzma
 
 datadir = os.path.join("..", "..", "..", "..", "..", "Data")
-#datadir = os.path.join("/media", "disk", "Data")
+datadir = os.path.join("/media", "disk", "Data")
 
 def load_points():
     """Load Chicago data for 2016"""

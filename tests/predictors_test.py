@@ -229,6 +229,17 @@ def test_ContinuousPrediction_to_matrix(cp1):
             midy = 100*y + 7 + 50
             assert abs(matrix[y,x] - (midx + midy)) < 12
 
+def test_ContinuousPrediction_to_matrix_regular_grid(cp1):
+    cp1.samples = -5
+    matrix = cp1.to_matrix(10, 5)
+    # (y,x) -> region from (50*x+5, 100*y+7) ...(50*x+55, 100*y+107)
+    assert matrix.shape == (5,10)
+    for y in range(5):
+        for x in range(10):
+            midx = 50*x + 5 + 25
+            midy = 100*y + 7 + 50
+            assert matrix[y,x] == pytest.approx(midx + midy)
+
 def test_ContinuousPrediction_to_matrix_from_masked_grid(cp1):
     mask = np.random.random((12, 7)) < 0.5
     mgrid = open_cp.data.MaskedGrid(20, 15, 2, 3, mask)
@@ -244,6 +255,22 @@ def test_ContinuousPrediction_to_matrix_from_masked_grid(cp1):
                 midx = 20*x + 2 + 10
                 midy = 15*y + 3 + 15/2
                 assert abs(matrix[y,x] - (midx + midy)) < 3
+
+def test_ContinuousPrediction_to_matrix_from_masked_grid_regular(cp1):
+    mask = np.random.random((12, 7)) < 0.5
+    mgrid = open_cp.data.MaskedGrid(20, 15, 2, 3, mask)
+    cp1.samples = -5
+    matrix = cp1.to_matrix_from_masked_grid(mgrid)
+    assert matrix.shape == (12, 7)
+    # (y,x) -> region from (20*x+2, 15*y+3) ...
+    for y in range(12):
+        for x in range(7):
+            if mask[y,x]:
+                assert matrix[y,x] == 0
+            else:
+                midx = 20*x + 2 + 10
+                midy = 15*y + 3 + 15/2
+                assert matrix[y,x] == pytest.approx(midx + midy)
 
 def test_grid_prediction_from_kernel_and_masked_grid():
     mask = np.random.random((12, 7)) < 0.5

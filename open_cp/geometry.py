@@ -169,7 +169,25 @@ def mask_grid_by_points_intersection(timed_points, grid, bbox=False):
     
     return _data.MaskedGrid(grid.xsize, grid.ysize, xo, yo, mask)
 
+
 def intersect_timed_points(timed_points, geo):
+    """Intersect the :class:`TimedPoints` data with the geometry, using
+    `shapely`.
+    
+    :param timed_points: Instance of :class:`TimedPoints`
+    :param geo: A geometry object
+    
+    :return: Instance of :class:`TimedPoints`
+    """
+    points = [ (x,y) for x,y in zip(timed_points.xcoords, timed_points.ycoords) ]
+    mp = _geometry.MultiPoint(points)
+    mp = mp.intersection(geo)
+    points_we_want = set(tuple(pt) for pt in _np.asarray(mp))
+    mask = [pt in points_we_want for pt in points]
+    mask = _np.array(mask, dtype=_np.bool)
+    return timed_points[mask]
+
+def intersect_timed_points_old(timed_points, geo):
     """Intersect the :class:`TimedPoints` data with the geometry, using
     `shapely`.
     

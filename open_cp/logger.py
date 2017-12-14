@@ -68,6 +68,7 @@ class ProgressLogger():
         self._last_log_time = None
         self.logger = logger
         self._level = level
+        self.message = "Completed %s out of %s, time left: %s"
         
     def increase_count(self):
         """Increase the count, and if appropriate, log.  If the logger is set
@@ -95,7 +96,7 @@ class ProgressLogger():
             out = (self._count, self._target, expected_time_left)
             self._last_log_time = now
         if out is not None and self.logger is not None:
-            self.logger.log(self._level, "Completed %s out of %s, time left: %s", *out)
+            self.logger.log(self._level, self._msg, *out)
         else:
             return out        
         
@@ -120,5 +121,21 @@ class ProgressLogger():
     @level.setter
     def level(self, v):
         self._level = v
+        
+    @property
+    def message(self):
+        """The logger message.  Needs 3 placeholders which will be
+        
+        - Current count
+        - Target count
+        - Time left
+        
+        For example, the default is "Completed %s out of %s, time left: %s"
+        """
+        return self._msg
+    
+    @message.setter
+    def message(self, v):
+        self._msg = v
     
     

@@ -1,6 +1,7 @@
 import pytest
 import open_cp.kde as kde
 import open_cp.data
+import open_cp.kernels
 
 import scipy.integrate
 import numpy as np
@@ -136,4 +137,14 @@ def test_quad_time_kernel_normalised():
     kernel = kde.QuadDecayTimeKernel(2)
     got = scipy.integrate.quad(kernel, 0, 2000)[0]
     assert abs(got - 1) < 0.001
+    
+def test_GaussianFixedBandwidthProvider():
+    prov = kde.GaussianFixedBandwidthProvider(5)
+    ker = prov([1,2,3,4])
+    
+    ker1 = open_cp.kernels.GaussianBase([1,2,3,4])
+    ker1.bandwidth=5
+    ker1.covariance_matrix = 1
+    
+    assert ker(3) == pytest.approx(ker1(3))
     

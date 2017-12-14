@@ -19,7 +19,6 @@ To provide your work kernel / weight, subclass the abstract base class
 """
 
 from . import predictors
-from . import data
 
 import abc as _abc
 import numpy as _np
@@ -62,6 +61,10 @@ class Quartic(Weight):
     def __repr__(self):
         return "Quartic(bandwidth={})".format(self._h)
 
+    @property
+    def args(self):
+        return "Q{}".format(self._h)
+
 
 class TruncatedGaussian(Weight):
     """A Gaussian weight, truncated at a certain number of standard deviations.
@@ -83,6 +86,10 @@ class TruncatedGaussian(Weight):
         
     def __repr__(self):
         return "TruncatedGaussian(bandwidth={}, sd={})".format(self._h, self._range)
+
+    @property
+    def args(self):
+        return "T{},{}".format(self._h, self._range)
 
 
 def _clip_data(data, start_time, end_time):

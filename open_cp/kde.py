@@ -37,6 +37,13 @@ class ExponentialTimeKernel():
     def __call__(self, x):
         return _np.exp( - _np.asarray(x) / self._scale ) / self._scale
 
+    def __repr__(self):
+        return "ExponentialTimeKernel(Scale={})".format(self._scale)
+
+    @property
+    def args(self):
+        return "E{}".format(self._scale)
+
 
 class QuadDecayTimeKernel():
     """A quadratically decaying kernel, :math:`f(x) = (1 + (x/\beta)^2)^{-1]}`
@@ -57,6 +64,13 @@ class QuadDecayTimeKernel():
     def __call__(self, x):
         x = _np.asarray(x)
         return self._norm / (1 + (x / self._scale)**2)
+
+    def __repr__(self):
+        return "QuadDecayTimeKernel(Scale={})".format(self._scale)
+
+    @property
+    def args(self):
+        return "Q{}".format(self._scale)
     
 
 class KernelProvider():
@@ -76,6 +90,34 @@ class GaussianBaseProvider(KernelProvider):
     def __call__(self, data):
         return _kernels.GaussianBase(data)
 
+    def __repr__(self):
+        return "GaussianBaseProvider"
+
+    @property
+    def args(self):
+        return "G".format(self._scale)
+
+
+class GaussianFixedBandwidthProvider(KernelProvider):
+    """Use the :class:`kernels.GaussianBase` to estimate a kernel.
+    Has a fixed bandwidth (and identity covariance matrix).
+    """
+    def __init__(self, bandwidth):
+        self._h = bandwidth
+    
+    def __call__(self, data):
+        ker = _kernels.GaussianBase(data)
+        ker.bandwidth = self._h
+        ker.covariance_matrix = _np.eye(ker.dimension)
+        return ker
+
+    def __repr__(self):
+        return "GaussianFixedBandwidthProvider(bandwidth={})".format(self._h)
+
+    @property
+    def args(self):
+        return "GF{}".format(self._h)
+
 
 class GaussianNearestNeighbourProvider(KernelProvider):
     """Use the :class:`kernels.GaussianNearestNeighbour` to estimate
@@ -94,6 +136,13 @@ class GaussianNearestNeighbourProvider(KernelProvider):
 
     def __call__(self, data):
         return _kernels.GaussianNearestNeighbour(data, self._k)
+
+    def __repr__(self):
+        return "GaussianNearestNeighbourProvider(k={})".format(self._k)
+
+    @property
+    def args(self):
+        return "GNN{}".format(self._k)
 
 
 class KDE(_predictors.DataTrainer):
@@ -161,19 +210,8 @@ class KDE(_predictors.DataTrainer):
     @space_kernel.setter
     def space_kernel(self, v):
         self._space_kernel = v
-
-    def predict(self, start_time=None, end_time=None, samples=None):
-        """Calculate a grid based prediction.
-
-        :param start_time: Only use data after (and including) this time.  If
-          `None` then use from the start of the data.
-        :param end_time: Only use data before this time, and treat this as the
-          time point to calculate the time kernel relative to.  If `None` then use
-          to the end of the data, and use the final timestamp as the "end time".
-        :samples: As for :class:`ContinuousPrediction`.
-
-        :return: An instance of :class:`GridPredictionArray`
-        """
+        
+    def _kernel(self, start_time=None, end_time=None):
         data = self.data
         if start_time is not None:
             start_time = _np.datetime64(start_time)
@@ -187,5 +225,34 @@ class KDE(_predictors.DataTrainer):
         kernel = self.space_kernel(data.coords)
         time_deltas = (end_time - data.timestamps) / self.time_unit
         kernel.weights = self.time_kernel(time_deltas)
+        return kernel        
+
+    def cts_predict(self, start_time=None, end_time=None):
+        """Calculate a "continuous" prediction.
+
+        :param start_time: Only use data after (and including) this time.  If
+          `None` then use from the start of the data.
+        :param end_time: Only use data before this time, and treat this as the
+          time point to calculate the time kernel relative to.  If `None` then use
+          to the end of the data, and use the final timestamp as the "end time".
+          
+        :return: 
+        """
+        kernel = self._kernel(start_time, end_time)
+        return _predictors.KernelRiskPredictor(kernel)
+    
+    def predict(self, start_time=None, end_time=None, samples=None):
+        """Calculate a grid based prediction.
+
+        :param start_time: Only use data after (and including) this time.  If
+          `None` then use from the start of the data.
+        :param end_time: Only use data before this time, and treat this as the
+          time point to calculate the time kernel relative to.  If `None` then use
+          to the end of the data, and use the final timestamp as the "end time".
+        :samples: As for :class:`ContinuousPrediction`.
+
+        :return: An instance of :class:`GridPredictionArray`
+        """
+        kernel = self._kernel(start_time, end_time)
         return _predictors.grid_prediction_from_kernel(kernel, self.region,
                                 self.grid, samples)

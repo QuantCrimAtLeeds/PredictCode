@@ -57,7 +57,7 @@ def plot_data_grid(loaded, ax):
     ax.add_collection(pc)
     _set_standard_limits(loaded, ax)
 
-def _open_text_file(filename):
+def _open_text_file(filename, callback):
     need_close = False
     if isinstance(filename, str):
         file = open(filename, "rt", newline="")
@@ -65,7 +65,7 @@ def _open_text_file(filename):
     else:
         file = filename
     try:
-        yield file
+        return callback(file)
     finally:
         if need_close:
             file.close()
@@ -81,7 +81,7 @@ def hit_counts_to_beta(csv_file):
     :return: Dictionary from prediction name to dictionary from coverage level
       to a :class:`scipy.stats.beta` instance.
     """
-    for file in _open_text_file(csv_file):
+    def func(file):
         reader = _csv.reader(file)
         header = next(reader)
         if header[:4] != ["Predictor", "Start time", "End time" ,"Number events"]:
@@ -104,8 +104,10 @@ def hit_counts_to_beta(csv_file):
                 betas[name][cov] = _stats.beta(a, b)
 
         return betas
+    
+    return _open_text_file(csv_file, func)
 
-def plot_betas(betas, ax, coverages=None):
+def plot_betas(betas, ax, coverages=None, plot_sds=True):
     """Plot hit rate curves using the data from :func:`hit_counts_to_beta`.
     Plots the median and +/-34% (roughly a +/- 1 standard deviation) of the
     posterior estimate of the hit-rate probability.
@@ -113,6 +115,7 @@ def plot_betas(betas, ax, coverages=None):
     :param betas: Dict as from :func:`hit_counts_to_beta`.
     :param ax: `matplotlib` Axis object to draw to.
     :param coverages: If not `None`, plot only these coverages.
+    :param plot_sds: If `False` then omit the "standard deviation" ranges.
     """
     if coverages is not None:
         coverages = list(coverages)
@@ -123,9 +126,38 @@ def plot_betas(betas, ax, coverages=None):
             x = _np.sort(coverages)
         y = [data[xx].ppf(0.5) for xx in x]
         ax.plot(x,y,label=name)
-        y1 = [data[xx].ppf(0.5 - 0.34) for xx in x]
-        y2 = [data[xx].ppf(0.5 + 0.34) for xx in x]
-        ax.fill_between(x,y1,y2,alpha=0.5)
+        if plot_sds:
+            y1 = [data[xx].ppf(0.5 - 0.34) for xx in x]
+            y2 = [data[xx].ppf(0.5 + 0.34) for xx in x]
+            ax.fill_between(x,y1,y2,alpha=0.5)
     ax.legend()
     ax.set(xlabel="Coverage (%)", ylabel="Hit rate (probability)")
 
+def plot_betas_means_against_max(betas, ax, coverages=None):
+    """Plot hit rate curves using the data from :func:`hit_counts_to_beta`.
+    We use the mean "hit rate" and normalise against the maximum hit rate
+    at that coverage from any prediction.
+    
+    :param betas: Dict as from :func:`hit_counts_to_beta`.
+    :param ax: `matplotlib` Axis object to draw to.
+    :param coverages: If not `None`, plot only these coverages.
+    
+    :return: Dictionary from keys of `betas` to list of y values.
+    """
+    if coverages is not None:
+        x = _np.sort(list(coverages))
+    else:
+        data = next(iter(betas.values()))
+        x = _np.sort(list(data))
+
+    ycs = dict()
+    for name, data in betas.items():
+        ycs[name] = [data[xx].mean() for xx in x]
+    maximum = [ max(ycs[k][i] for k in ycs) for i in range(len(x)) ]
+
+    normed = {k : [y/m for y,m in zip(ycs[k], maximum)] for k in ycs}
+
+    for name, y in normed.items():
+        ax.plot(x,y,label=name)
+    
+    return normed
