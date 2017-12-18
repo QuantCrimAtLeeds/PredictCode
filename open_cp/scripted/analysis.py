@@ -19,6 +19,69 @@ def _add_outline(loaded, ax):
     ax.add_patch(p)
     ax.set_aspect(1)
 
+PredictionKey = _collections.namedtuple("PredictionKey", "name details")
+
+def _split_by_comma_not_in_brackets(name):
+    bracket_count = 0
+    out = ""
+    for c in name:
+        if c == "(":
+            bracket_count += 1
+        elif c == ")":
+            bracket_count -= 1
+        if c == ",":
+            if bracket_count == 0:
+                yield out
+                out = ""
+            else:
+                out += c
+        else:
+            out += c
+    yield out
+
+def parse_key_details(details):
+    """Take a dictionary of "details", as returned by
+    :func:`parse_prediction_key`, and splits recursively into dictionaries.
+    """
+    out = {}
+    for k,v in details.items():
+        name, dets = parse_prediction_key(v)
+        out[k] = {name:dets}
+    return out    
+
+def parse_prediction_key(key):
+    """The "name" or "key" of a predictor is assumed to be like:
+     `ProHotspotCtsProvider(Weight=Classic(sb=400, tb=8), DistanceUnit=150)`
+    
+    Parse this into a :class:`PredictionKey` instance, where
+    - `name` == "ProHotspotCtsProvider"
+    - `details` will be the dict: {"Weight" : "Classic(sb=400, tb=8)",
+                                      "DistanceUnit" : 150}
+    (Attempts to parse to ints or floats if possible).
+    """
+    i = key.index("(")
+    name = key[:i].strip()
+    dets = key[i+1:-1]
+
+    dets = [x.strip() for x in _split_by_comma_not_in_brackets(dets)]
+    details = {}
+    for x in dets:
+        i = x.index("=")
+        key = x[:i].strip()
+        value = x[i+1:].strip()
+        try:
+            value = int(value)
+        except ValueError:
+            pass
+        if isinstance(value, str):
+            try:
+                value = float(value)
+            except ValueError:
+                pass
+        details[key] = value
+    
+    return PredictionKey(name, details)
+
 def plot_prediction(loaded, prediction, ax):
     """Visualise a single prediction.
 
@@ -159,5 +222,6 @@ def plot_betas_means_against_max(betas, ax, coverages=None):
 
     for name, y in normed.items():
         ax.plot(x,y,label=name)
-    
+        
+    ax.set(ylabel="Fraction of maximum hit rate", xlabel="Coverage (%)")
     return normed

@@ -782,3 +782,21 @@ def test_KDEProvider(mock_provider, mock_preds, timed_pts_10):
     assert args[0] == mock_provider.return_value.cts_predict.return_value
     assert args[1] == grid
     assert pred is mock_preds.from_continuous_prediction_grid.return_value.renormalise.return_value
+
+@mock.patch("open_cp.stscan.STSTrainer")
+def test_STScabProvider(mock_provider, timed_pts_10):
+    mat = np.asarray([[False, True, True, False], [True]*4])
+    grid = open_cp.data.MaskedGrid(15, 15, 5, 7, mat)
+    
+    provider = evaluation.STScanProvider(150, datetime.timedelta(days=5), True)
+    prov = provider(timed_pts_10, grid)
+    assert repr(prov).startswith("STScanProvider")
+    pred = prov.predict(datetime.datetime(2017,2,3))
+    mock_provider.assert_called_with()
+    assert mock_provider.return_value.geographic_radius_limit == pytest.approx(150)
+    assert mock_provider.return_value.time_max_interval == np.timedelta64(5, "D")
+    mock_provider.return_value.predict.assert_called_with(datetime.datetime(2017,2,3))
+    stresult = mock_provider.return_value.predict.return_value
+    assert tuple(stresult.region) == tuple(grid.region())
+    stresult.grid_prediction.assert_called_with(grid_size=15, use_maximal_clusters=True)
+    assert pred is stresult.grid_prediction.return_value.renormalise.return_value
