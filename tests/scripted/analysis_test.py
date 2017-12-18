@@ -28,3 +28,28 @@ def test_hit_counts_to_beta(counts_csv_file):
     assert betas["Pred2"][3].args == pytest.approx((8, 2))
     assert betas["Pred2"][4].args == pytest.approx((4, 6))
     
+def test_parse_prediction_key():
+    x = analysis.parse_prediction_key("RetroHotspotProvider(Weight=Quartic(bandwidth=50))")
+    assert x.name == "RetroHotspotProvider"
+    assert x.details == {"Weight":"Quartic(bandwidth=50)"}
+    
+    x = analysis.parse_prediction_key("RetroHotspotProvider ( Weight = Quartic(bandwidth=50)  )")
+    assert x.name == "RetroHotspotProvider"
+    assert x.details == {"Weight":"Quartic(bandwidth=50)"}
+
+    x = analysis.parse_prediction_key("ProHotspotCtsProvider(Weight=Classic(sb=400, tb=8), DistanceUnit=150)")
+    assert x.name == "ProHotspotCtsProvider"
+    assert x.details == {"Weight":"Classic(sb=400, tb=8)", "DistanceUnit":150}
+
+    x = analysis.parse_prediction_key("ProHotspotCtsProvider(Weight=Classic(sb=400, tb=8), DistanceUnit=150.566)")
+    assert x.name == "ProHotspotCtsProvider"
+    assert x.details == {"Weight":"Classic(sb=400, tb=8)", "DistanceUnit":150.566}
+    
+def test_parse_key_details():
+    details = {"TimeKernel":"ExponentialTimeKernel(Scale=1)",
+               "SpaceKernel":"GaussianFixedBandwidthProvider(bandwidth=100)"}
+    assert analysis.parse_key_details(details) == {
+        "TimeKernel":{"ExponentialTimeKernel":{"Scale":1}},
+        "SpaceKernel":{"GaussianFixedBandwidthProvider":{"bandwidth":100}}
+        }
+    

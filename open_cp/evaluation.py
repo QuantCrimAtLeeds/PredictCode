@@ -1138,6 +1138,49 @@ class KDEProvider():
             return "{},{}".format(self.time_kernel.args, self.space_kernel.args)
 
 
+from . import stscan as _stscan
+
+class STScanProvider():
+    """Use the space/time scan method to find "clusters".
+    
+    :param radius: Limit to clusters having this radius or less.
+    :param max_interval: Limit to clusters of this length in time, or less.
+    :param use_max_clusters: True or False.
+    """
+    def __init__(self, radius, max_interval, use_max_clusters=False):
+        self._radius = radius
+        self._max_interval = max_interval
+        self._use_max_clusters = use_max_clusters
+    
+    def __call__(self, *args):
+        provider = self._Provider(*args)
+        provider.radius = self._radius
+        provider.max_interval = self._max_interval
+        provider.use_max_clusters = self._use_max_clusters
+        return provider
+    
+    class _Provider(StandardPredictionProvider):
+        def give_prediction(self, grid, points, time):
+            predictor = _stscan.STSTrainer()
+            predictor.geographic_radius_limit = self.radius
+            predictor.time_max_interval = self.max_interval
+            predictor.data = points
+            result = predictor.predict(time)
+            
+            result.region = grid.region()
+            if grid.xsize != grid.ysize:
+                raise ValueError("Only supports square grids!")
+            return result.grid_prediction(grid_size=grid.xsize, use_maximal_clusters=self.use_max_clusters)
+        
+        def __repr__(self):
+            return "STScanProvider(r={}, time={}, max={})".format(self.radius,
+                    self.max_interval, self.use_max_clusters)
+
+        @property
+        def args(self):
+            return "{},{},{}".format(self.radius, self.max_interval, self.use_max_clusters)
+    
+
 # Hit rate calculation; not used by `scripted` package
 
 HitRateDetail = _collections.namedtuple("HitRateDetail",

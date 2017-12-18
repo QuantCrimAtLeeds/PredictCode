@@ -15,6 +15,10 @@ accelerate the (original) algorithm to speeds whereby this is a useful method.
       {0,1}, {1,2} and {0,1,2}.  More naively, we'd only look at {0,1,2}.
   This _still_ doesn't exactly reproduce what SaTScan does.
      
+  
+The classes here are useful for testing and verification.  The module
+:mod:`stscan` should still be used for making actual predictions (it uses
+:class:`STScanNumpy` below internally).
 """
 
 import numpy as _np
