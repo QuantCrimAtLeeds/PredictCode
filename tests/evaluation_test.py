@@ -686,7 +686,7 @@ def test_ScipyKDEProvider(mock_provider, mock_preds, timed_pts_10):
     grid = open_cp.data.MaskedGrid(10, 15, 5, 7, mat)
     prov = evaluation.ScipyKDEProvider(timed_pts_10, grid)
     pred = prov.predict(datetime.datetime(2017,2,3))
-    mock_provider.assert_called()
+    mock_provider.assert_called_with()
     args = mock_preds.from_continuous_prediction_grid.call_args[0]
     assert args[0] == mock_provider.return_value.predict.return_value
     assert args[1] == grid
