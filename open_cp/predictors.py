@@ -131,6 +131,18 @@ class GridPredictionArray(GridPrediction):
         return GridPredictionArray(xsize=self.xsize, ysize=self.ysize,
             xoffset=xoffset, yoffset=yoffset, matrix=new_matrix)
 
+    def zero_to_constant(self):
+        """Adjust in place the intensity matrix to be constant (non-zero!) if
+        it is currently constantly zero."""
+        norm = _np.ma.sum(self._matrix)
+        if norm <= 0:
+            try:
+                mat = _np.ma.zeros(self._matrix.shape) + 1
+                mat.mask = _np.array(self._matrix.mask)
+            except AttributeError:
+                mat = _np.zeros(self._matrix.shape) + 1
+            self._matrix = mat
+
     def renormalise(self):
         """Return a new instance with the intensity matrix scaled so that it
         sums to 1, taking account of any mask."""

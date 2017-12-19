@@ -909,6 +909,7 @@ class StandardPredictionProvider(PredictionProvider):
         time = _np.datetime64(time)
         points = self.points[self.points.timestamps < time]
         pred = self.give_prediction(self.grid, points, time)
+        pred.zero_to_constant()
         pred.mask_with(self.grid)
         return pred.renormalise()
 
@@ -1143,6 +1144,15 @@ from . import stscan as _stscan
 class STScanProvider():
     """Use the space/time scan method to find "clusters".
     
+    Implements an internal cache which can use extra memory, but allows
+    quickly re-running the same predictions with a different
+    `use_max_clusters` setting.
+    
+    The STScan method can sometimes (or often, depending on the settings)
+    produce predictions which cover rather little of the study area.  In the
+    extreme case that we cover none of the region, the resulting prediction
+    will be constant.
+    
     :param radius: Limit to clusters having this radius or less.
     :param max_interval: Limit to clusters of this length in time, or less.
     :param use_max_clusters: True or False.
@@ -1151,27 +1161,42 @@ class STScanProvider():
         self._radius = radius
         self._max_interval = max_interval
         self._use_max_clusters = use_max_clusters
+        self._results = dict()
+        self._previous = None
     
     def __call__(self, *args):
         provider = self._Provider(*args)
         provider.radius = self._radius
         provider.max_interval = self._max_interval
         provider.use_max_clusters = self._use_max_clusters
+        provider.parent = self
         return provider
-    
+        
+    def with_new_max_cluster(self, use_max_clusters):
+        """Creates a new instance with a different `use_max_clusters` option.
+        If possible, uses a cached result from the previous run."""
+        prov = STScanProvider(self._radius, self._max_interval, use_max_clusters)
+        prov._previous = self
+        return prov
+        
     class _Provider(StandardPredictionProvider):
         def give_prediction(self, grid, points, time):
-            predictor = _stscan.STSTrainer()
-            predictor.geographic_radius_limit = self.radius
-            predictor.time_max_interval = self.max_interval
-            predictor.data = points
-            result = predictor.predict(time)
+            key = (str(grid), time)
+            if self.parent._previous is not None and key in self.parent._previous._results:
+                result = self.parent._previous._results[key]
+            else:
+                predictor = _stscan.STSTrainer()
+                predictor.geographic_radius_limit = self.radius
+                predictor.time_max_interval = self.max_interval
+                predictor.data = points
+                result = predictor.predict(time)
+            self.parent._results[key] = result
             
             result.region = grid.region()
             if grid.xsize != grid.ysize:
                 raise ValueError("Only supports square grids!")
             return result.grid_prediction(grid_size=grid.xsize, use_maximal_clusters=self.use_max_clusters)
-        
+    
         def __repr__(self):
             return "STScanProvider(r={}, time={}, max={})".format(self.radius,
                     self.max_interval, self.use_max_clusters)
