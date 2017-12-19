@@ -334,10 +334,18 @@ class GraphBuilder():
         """Set of vertices.  Mutate to add a vertex."""
         return self._vertices
 
+    @vertices.setter
+    def vertices(self, v):
+        self._vertices = v
+
     @property
     def edges(self):
         """List of unordered edges `(key1, key2)`.  Mutate to change."""
         return self._edges
+
+    @edges.setter
+    def edges(self, v):
+        self._edges = v
 
     @property
     def lengths(self):
@@ -359,6 +367,12 @@ class GraphBuilder():
         used_keys = set(k for k,_ in self._edges)
         used_keys.update(k for _,k in self._edges)
         self._vertices.intersection_update(used_keys)
+
+    def remove_duplicate_edges(self):
+        if self.lengths is not None:
+            raise ValueError("Cannot process if we have lengths")
+        edges = set(frozenset(e) for e in self._edges)
+        self._edges = [tuple(e) for e in edges]
 
     def build(self):
         if self.lengths is not None and len(self.edges) != len(self.lengths):

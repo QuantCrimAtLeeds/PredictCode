@@ -529,6 +529,21 @@ def test_GraphBuilder():
     
     assert list(g.paths_between(0, 2)) == [[0,1,2]]
     
+def test_GraphBuilder_duplicate_edges():
+    b = network.GraphBuilder()
+    b.add_edge(0,1)
+    b.add_edge(1,2)
+    b.add_edge(0,1)
+    b.add_edge(1,2)
+    b.add_edge(3,4)
+    with pytest.raises(ValueError):
+        g = b.build()
+
+    b.remove_duplicate_edges()
+    g = b.build()
+    assert g.number_edges == 3
+    assert g.vertices == {0,1,2,3,4}
+
 @pytest.fixture
 def graph3():
     b = network.GraphBuilder()
