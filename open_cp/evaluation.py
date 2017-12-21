@@ -1159,7 +1159,7 @@ class STScanProvider():
     """
     def __init__(self, radius, max_interval, use_max_clusters=False):
         self._radius = radius
-        self._max_interval = max_interval
+        self._max_interval = _np.timedelta64(max_interval)
         self._use_max_clusters = use_max_clusters
         self._results = dict()
         self._previous = None
@@ -1198,8 +1198,8 @@ class STScanProvider():
             return result.grid_prediction(grid_size=grid.xsize, use_maximal_clusters=self.use_max_clusters)
     
         def __repr__(self):
-            return "STScanProvider(r={}, time={}, max={})".format(self.radius,
-                    self.max_interval, self.use_max_clusters)
+            return "STScanProvider(r={}, time={}h, max={})".format(self.radius,
+                    self.max_interval / _np.timedelta64(1, "h"), self.use_max_clusters)
 
         @property
         def args(self):

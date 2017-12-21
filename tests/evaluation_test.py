@@ -791,7 +791,7 @@ def test_STScanProvider(mock_provider, timed_pts_10):
     provider = evaluation.STScanProvider(150, datetime.timedelta(days=5), True)
     provider1 = provider.with_new_max_cluster(False)
     prov = provider(timed_pts_10, grid)
-    assert repr(prov).startswith("STScanProvider")
+    assert repr(prov) == "STScanProvider(r=150, time=120.0h, max=True)"
     pred = prov.predict(datetime.datetime(2017,2,3))
     mock_provider.assert_called_with()
     assert mock_provider.return_value.geographic_radius_limit == pytest.approx(150)
