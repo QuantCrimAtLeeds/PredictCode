@@ -6,10 +6,7 @@ A quick guide to installing and getting going with the software.
 
 ## Install
 
-This is less easy than it should be, thanks to the Python ecosystem.
-
-(TODO.  Add extra page with more details.  Replice in VirtualBox.)
-
+This is less easy than it should be, thanks to the Python ecosystem.  See the [guide here](install.md).
 
 
 ## GUI mode
@@ -34,4 +31,4 @@ The main part of `open_cp` (not in terms of code, but it terms of importance) is
 
 A half-way house between the full python library and the GUI mode.  This is a (much) simplified API to the main python library, and allows you to write _short_ python scripts which load data, run algorithsm and assessment methods, and then save data to e.g. CSV format.  Writing small scripts gives a huge advantage in being _reproducible_, while the output could be analysed in your programme of choice (the examples use Jupyter Notebooks and Python).
 
-An example [scripted_intro.md](step by step guide is available).
+An example [step by step guide is available](scripted_intro.md).
