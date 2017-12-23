@@ -1,6 +1,6 @@
 # `scripted` module quick start
 
-Follow the instructions to install the `open_cp` library.
+Follow the [instructions to install](install.md) the `open_cp` library.
 
 We will consider the problem of loading in some data, running two different predictions algorithms on it, and then saving the result and viewing it in a spread-sheet.
 
