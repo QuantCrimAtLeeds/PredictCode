@@ -723,6 +723,18 @@ class PlanarGraph(Graph):
         else:
             self._lengths = _np.sqrt((quads[0] - quads[2])**2 + (quads[1] - quads[3])**2)
             
+    def project(self, projector):
+        """Returns a new instance with the geometry projected according to
+        `projector`.
+
+        :param projector: Function object of signature `projector(x, y)` returning
+          a pair of coordinates.  For example, a :class:`pyproj.Proj` object.
+
+        :return: A new instance of :class:`PlanarGraph`.
+        """
+        vertices = [(k, *projector(*pt)) for k, pt in self._vertices.items()]
+        return PlanarGraph(vertices, list(self._edges))
+
     def dump_bytes(self):
         """Write data to a `bytes` object.  The vertices are saved using the
         `numpy.save` method (which is portable and won't leave to floating

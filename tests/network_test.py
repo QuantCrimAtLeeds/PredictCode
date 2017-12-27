@@ -134,6 +134,16 @@ def test_PlanarGraph_constructs():
     assert g.vertices == {0:(1,2), 1:(2,3)}
     assert g.edges == [(0,1)]
 
+def test_PlanarGraph_projects():
+    g = network.PlanarGraph([(0,1,2), (1,2,3)], [(0,1)])
+    def proj(x, y):
+        return x-1, y-2
+    gg = g.project(proj)
+    assert gg.vertices[0] == pytest.approx((0,0))
+    assert gg.vertices[1] == pytest.approx((1,1))
+    assert set(gg.vertices.keys()) == {0,1}
+    assert gg.edges == [(0,1)]
+
 @pytest.fixture
 def graph1():
     b = network.PlanarGraphGeoBuilder()

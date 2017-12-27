@@ -5,10 +5,10 @@ matplotlib
 Pillow
 
 # Semi-optional
-pyproj
-shapely
+#pyproj
+#shapely
 geopandas
-rtree
+#rtree
 
 pytest
 codecov
