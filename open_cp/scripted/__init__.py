@@ -82,8 +82,8 @@ class Data():
             all_scores = dict()
             pl = logger.ProgressLogger(len(self._predictors), datetime.timedelta(minutes=1), _logger, level=logging.INFO)
             pl.message = "Total prediction tasks; completed %s / %s, time left: %s"
-            for predictor, time_range in self._predictors:
-                all_scores[predictor] = self._run_predictor(predictor, time_range), time_range
+            for predictor, time_range, class_type in self._predictors:
+                all_scores[predictor] = self._run_predictor(predictor, time_range, class_type), time_range
                 pl.increase_count()
             
             for processor in self._processors:
@@ -97,7 +97,7 @@ class Data():
             for watcher in self._prediction_notifiers:
                 watcher.close()
 
-    def _run_predictor(self, predictor, times):
+    def _run_predictor(self, predictor, times, class_type):
         _logger.info("Making predictions using %s for %s", predictor, times)
         pl = logger.ProgressLogger(len(times), datetime.timedelta(minutes=1), _logger, level=logging.INFO)
         scores = {ev : list() for ev in self._evaluators}
@@ -105,7 +105,12 @@ class Data():
         for start, end in times:
             if not self._prediction_cache.has(predictor, start):
                 _logger.debug("Making prediction for time %s", start)
-                pred = predictor.predict(start)
+                if class_type == 0:
+                    pred = predictor.predict(start)
+                elif class_type == 1:
+                    pred = predictor.predict(start, end)
+                else:
+                    raise ValueError("Unsupported class type {}".format(class_type))
                 self._prediction_cache.put(predictor, start, pred)
                 for watcher in self._prediction_notifiers:
                     watcher.notify(predictor, start, pred)
@@ -127,7 +132,20 @@ class Data():
           example, :class:`TimeRange`
         """
         predictor = prediction_provider(self._points, self._grid)
-        self._predictors.append((predictor, times))
+        self._predictors.append((predictor, times, 0))
+
+    def add_prediction_range(self, prediction_provider, times):
+        """Add a prediction method to be run.  For the newer interface, where
+        having an `end_time` on the prediction method is supported.
+        
+        :param prediction_provider: Class of type
+          :class:`open_cp.evaluation.StandardPredictionProvider` (not an
+          instance!)
+        :param times: An iterable of time intervals `[start, end)`, for
+          example, :class:`TimeRange`
+        """
+        predictor = prediction_provider(self._points, self._grid)
+        self._predictors.append((predictor, times, 1))
 
     def score(self, evaluator):
         """Add an evaluation step.

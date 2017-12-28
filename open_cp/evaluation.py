@@ -905,15 +905,18 @@ class StandardPredictionProvider(PredictionProvider):
         """The masked grid."""
         return self._grid
 
-    def predict(self, time):
+    def predict(self, time, end_time=None):
         time = _np.datetime64(time)
         points = self.points[self.points.timestamps < time]
-        pred = self.give_prediction(self.grid, points, time)
+        if end_time is None:
+            pred = self.give_prediction(self.grid, points, time)
+        else:
+            pred = self.give_prediction(self.grid, points, time, end_time)
         pred.zero_to_constant()
         pred.mask_with(self.grid)
         return pred.renormalise()
 
-    def give_prediction(self, grid, points, time):
+    def give_prediction(self, grid, points, time, end_time=None):
         """Abstract method to be overridden.
 
         :param grid: Instance of :class:`data.BoundedGrid` to base the
@@ -921,6 +924,9 @@ class StandardPredictionProvider(PredictionProvider):
         :param points: The data to use to make the prediction; will be confined
           to the time range already.
         :param time: If needed, the time to make a prediction at.
+        :param end_time: (Added later) If not `None` then compute the
+          prediction for the time range from `time` to `end_time`, assuming
+          this makes sense for this prediction method.
         """
         raise NotImplementedError()
 
