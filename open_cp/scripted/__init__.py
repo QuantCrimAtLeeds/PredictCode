@@ -50,7 +50,6 @@ class Data():
         if geometry_provider is not None:
             _logger.info("Loading geometry...")
             self._geometry = geometry_provider()
-            # TODO: Grid tuning???
             _logger.info("Masking grid with geometry...")
             self._grid = geometry.mask_grid_by_intersection(self._geometry, self._grid)
             _logger.info("Grid is now: %s", self._grid)
@@ -156,6 +155,18 @@ class Data():
         """
         saver = Saver(filename, self._points, self._geometry, self._grid)        
         self._prediction_notifiers.append(saver)
+
+    @property
+    def grid(self):
+        """The grid we'll use for predictions"""
+        return self._grid
+
+    @property
+    def timed_points(self):
+        """The :class:`open_cp.data.TimedPoints" instance containing the input
+        data."""
+        return self._points
+
 
 
 class Saver():

@@ -249,6 +249,9 @@ def test_PredictorBase():
     expected = sum(t*10 for t in np.linspace(0,1,20))
     assert pred.range_predict(0, 1, [2,3]) == pytest.approx(expected / 20)
     
+    assert pred.background_predict(1, [2,3]) == pytest.approx(1)
+    assert pred.background_predict(2, [4,7]) == pytest.approx(2)
+
 def test_Predictor(trainer):
     mask = np.asarray([[False, True, False], [False]*3])
     grid = open_cp.data.MaskedGrid(xsize=10, ysize=15, xoffset=2, yoffset=3, mask=mask)
@@ -262,6 +265,10 @@ def test_Predictor(trainer):
     assert (gp.xsize, gp.ysize) == (grid.xsize, grid.ysize)
     
     gp = pred.predict(np.datetime64("2017-05-04T00:00"), end_time=np.datetime64("2017-05-05T00:00"))
+    np.testing.assert_allclose(gp.intensity_matrix.mask, mask)
+    assert (gp.xsize, gp.ysize) == (grid.xsize, grid.ysize)
+
+    gp = pred.background_predict(np.datetime64("2017-05-04T00:00"))
     np.testing.assert_allclose(gp.intensity_matrix.mask, mask)
     assert (gp.xsize, gp.ysize) == (grid.xsize, grid.ysize)
 

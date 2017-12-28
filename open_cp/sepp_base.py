@@ -83,6 +83,23 @@ class PredictorBase():
     def points(self):
         return self._points
     
+    def background_predict(self, time, space_points):
+        """Find a point prediction at one time and one or more locations.
+        Ignores triggers, and only uses the background intensity.
+        
+        :param time: Time point to evaluate at
+        :param space_points: Array of shape `(2,n)`
+        
+        :return: Array of shape `(n,)`
+        """
+        space_points = _np.asarray(space_points)
+        if len(space_points.shape) == 1:
+            space_points = space_points[:,None]
+        eval_points = _np.asarray([[time] * space_points.shape[1],
+                                   space_points[0], space_points[1]])
+        out = self._model.background(eval_points)
+        return out        
+
     def point_predict(self, time, space_points):
         """Find a point prediction at one time and one or more locations.
         The data the class holds will be clipped to be before `time` and
@@ -364,16 +381,15 @@ class Predictor(_BaseTrainer):
         self._grid = grid
         self._model = model
         
-    def predict(self, predict_time, end_time=None, time_samples=20, space_samples=20):
-        """Make a prediction at this time.
+    def continuous_predict(self, predict_time, end_time=None, time_samples=20, space_samples=20):
+        """Make a prediction at this time, returning a continuous prediction.
         
         :param predict_time: Limit to data before this time, and
           use this as the predict time.
         :param end_time: If not `None`, then approximately intergate
           over this time range.
          
-        :return: A grid prediction, masked if possible with the grid, and
-          normalised.
+        :return: A continuous prediction.
         """
         predict_time, for_fixed, data = self.make_data(predict_time)
         time = _np.max(for_fixed)
@@ -388,13 +404,64 @@ class Predictor(_BaseTrainer):
             def kernel(pts):
                 return pred.range_predict(time, time_end, pts, samples=time_samples)
         
-        cts_predictor = predictors.KernelRiskPredictor(kernel,
+        return predictors.KernelRiskPredictor(kernel,
             xoffset=self._grid.xoffset, yoffset=self._grid.yoffset,
             cell_width=self._grid.xsize, cell_height=self._grid.ysize,
             samples=space_samples)
 
+    def background_continuous_predict(self, predict_time, space_samples=20):
+        """Make a prediction at this time, returning a continuous prediction.
+        
+        :param predict_time: Limit to data before this time, and
+          use this as the predict time.
+        :param end_time: If not `None`, then approximately intergate
+          over this time range.
+         
+        :return: A continuous prediction.
+        """
+        predict_time, for_fixed, data = self.make_data(predict_time)
+        time = _np.max(for_fixed)
+        pred = PredictorBase(self._model, data)
+
+        def kernel(pts):
+            return pred.background_predict(time, pts)
+        
+        return predictors.KernelRiskPredictor(kernel,
+            xoffset=self._grid.xoffset, yoffset=self._grid.yoffset,
+            cell_width=self._grid.xsize, cell_height=self._grid.ysize,
+            samples=space_samples)
+
+    def background_predict(self, predict_time, space_samples=20):
+        """Make a prediction at this time.
+        
+        :param predict_time: Limit to data before this time, and
+          use this as the predict time.
+        :param end_time: If not `None`, then approximately intergate
+          over this time range.
+         
+        :return: A grid prediction, masked if possible with the grid, and
+          normalised.
+        """
+        cts_predictor = self.background_continuous_predict(predict_time, space_samples)
+        return self._to_grid_pred(cts_predictor)
+
+    def predict(self, predict_time, end_time=None, time_samples=20, space_samples=20):
+        """Make a prediction at this time.
+        
+        :param predict_time: Limit to data before this time, and
+          use this as the predict time.
+        :param end_time: If not `None`, then approximately intergate
+          over this time range.
+         
+        :return: A grid prediction, masked if possible with the grid, and
+          normalised.
+        """
+        cts_predictor = self.continuous_predict(predict_time, end_time, time_samples, space_samples)
+        return self._to_grid_pred(cts_predictor)
+
+    def _to_grid_pred(self, cts_predictor):
         grid_pred = predictors.GridPredictionArray.from_continuous_prediction_grid(
-                    cts_predictor, self._grid)
+                cts_predictor, self._grid)
         try:
             grid_pred.mask_with(self._grid)
         except:

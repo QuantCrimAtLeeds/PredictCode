@@ -49,3 +49,18 @@ class TimeRange():
     def __repr__(self):
         return "TimeRange({} -> {}, length={})".format(self._first,
                           self._stop_before, self._duration)
+
+    @property
+    def first(self):
+        """Start of the time range."""
+        return self._first
+
+    @property
+    def stop_before(self):
+        """End (not inclusive) of the time range."""
+        return self._stop_before
+
+    @property
+    def duration(self):
+        """Gap between each entry."""
+        return self._duration

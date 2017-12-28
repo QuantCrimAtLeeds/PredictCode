@@ -7,6 +7,11 @@ import datetime
 def test_TimeRange():
     tr = preds.TimeRange(datetime.datetime(2016,1,1),
         datetime.datetime(2016,1,5), datetime.timedelta(days=1))
+
+    assert tr.first == datetime.datetime(2016,1,1)
+    assert tr.stop_before == datetime.datetime(2016,1,5)
+    assert tr.duration == datetime.timedelta(hours=24)
+
     assert list(tr) == [
         (datetime.datetime(2016,1,1), datetime.datetime(2016,1,2)),
         (datetime.datetime(2016,1,2), datetime.datetime(2016,1,3)),
