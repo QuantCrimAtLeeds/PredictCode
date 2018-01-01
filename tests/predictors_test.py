@@ -43,6 +43,18 @@ def test_GridPrediction():
     test.want = (1, 2)
     test.risk(12, 21)
 
+def test_grid_risk():
+    mat = np.random.random((10,10))
+    pred = testmod.GridPredictionArray(10,15,mat,-20,-45)
+    assert pred.grid_risk(0, 0) == mat[0, 0]
+    assert pred.grid_risk(2, 3) == mat[3, 2]
+
+    np.testing.assert_allclose(pred.grid_risk([2,3], [4,6]), [mat[4,2], mat[6,3]])
+
+    assert pred.risk(-20, -45) == mat[0, 0]
+    assert pred.risk(0, 0) == mat[3, 2]
+    np.testing.assert_allclose(pred.risk([0,-20], [0,-45]), [mat[3,2], mat[0,0]])
+
 def test_GridPrediction_with_offset():
     class Test(testmod.GridPrediction):
         def __init__(self, xsize, ysize, xoffset = 0, yoffset = 0):
@@ -358,7 +370,6 @@ def test_GridPredictionArray_zeros_to_constant():
     np.testing.assert_allclose(gpa.intensity_matrix, [[1,1,1], [1,1,1]])
     np.testing.assert_allclose(gpa.intensity_matrix.mask, [[False]*3, [True,False,True]])
     
-
 def test_GridPredictionArray_break_ties():
     matrix = np.array([[1,2,3], [4,5,6]])
     gpa = testmod.GridPredictionArray(10, 10, matrix, xoffset=2, yoffset=7)

@@ -181,6 +181,13 @@ class GridPredictionArray(GridPrediction):
           of the data we have.
         """
         ylim, xlim = self._matrix.shape
+        gx = _np.asarray(gx)
+        gy = _np.asarray(gy)
+        mask = (gx >= 0) & (gy >= 0) & (gx < xlim) & (gy < ylim)
+        out = _np.empty(gx.shape)
+        out[~mask] = 0
+        out[mask] = self._matrix[gy[mask], gx[mask]]
+        return out
         if gx < 0 or gy < 0 or gx >= xlim or gy >= ylim:
             return 0
         return self._matrix[gy][gx]

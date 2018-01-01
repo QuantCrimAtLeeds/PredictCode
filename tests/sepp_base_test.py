@@ -321,4 +321,109 @@ def test_Optimiser_sample_to_points():
     expected_trigger = np.asarray(expected_trigger).T
     np.testing.assert_allclose(tr, expected_trigger)
 
+def slow_predict_at_time(fp, t, space_points):
+    out = np.zeros(space_points.shape[-1])
+    for i, pt in enumerate(fp.points.T):
+        tk = fp.time_kernel(t - pt[0])
+        sk = fp.space_kernel(space_points - pt[1:,None])
+        out += tk * sk
+    return out
+
+def slow_range_predict(fp, time_start, time_end, space_points, time_samples=5):
+    space_points = np.asarray(space_points)
+    if len(space_points.shape) == 1:
+        space_points = space_points[:,None]
+    out = fp._background_grid.risk(*space_points)
+    for i in range(time_samples):
+        t = time_start + (time_end - time_start) * i / (time_samples-1)
+        out += slow_predict_at_time(fp, t, space_points)
+    return out
+
+def test_FastPredictorBase():
+    model = mock.Mock()
+    points = np.random.random((3,100)) * np.asarray([100, 250, 250])[:,None]
+    time_hist = np.random.random(500)
+    smat = np.random.random((10, 10))
+    sg = open_cp.predictors.GridPredictionArray(10, 10, smat, -50, -50)
+    bmat = np.random.random((10, 10))
+    bg = open_cp.predictors.GridPredictionArray(25, 25, bmat, 0, 0)
+    fp = sepp_base.FastPredictorBase(model, points, time_hist, 0.3, sg, bg)
     
+    assert fp.model is model
+    np.testing.assert_allclose(fp.points, points)
+
+    assert fp.space_kernel([0,0]) == smat[5, 5]
+    assert fp.space_kernel([0,7]) == smat[5, 5]
+    assert fp.space_kernel([0,10]) == smat[6, 5]
+    np.testing.assert_allclose(fp.space_kernel([[0,0,0], [0,7,10]]),
+            [smat[5,5], smat[5,5], smat[6,5]])
+
+    assert fp.time_kernel(5) == time_hist[int(5/0.3)]
+    assert fp.time_kernel(15) == time_hist[int(15/0.3)]
+    assert fp.time_kernel(300) == 0
+    np.testing.assert_allclose(fp.time_kernel([5,15,300]), 
+            [time_hist[int(5/0.3)], time_hist[int(15/0.3)], 0])
+
+    assert fp.range_predict(100,101,[2,4],5) == pytest.approx(slow_range_predict(fp, 100, 101, [2,4], 5))
+    assert fp.range_predict(100,102,[2,14],25) == pytest.approx(slow_range_predict(fp, 100, 102, [2,14], 25))
+
+    got = fp.range_predict(101, 103, [[1,2,3], [6,7,3]], 50)
+    exp = slow_range_predict(fp, 101, 103, [[1,2,3], [6,7,3]], 50)
+    np.testing.assert_allclose(got, exp)
+
+def test_PredictorBase_to_fast_split_predictor():
+    class Model(sepp_base.FastModel):
+        def background(self, points):
+            return points[0]
+
+        def time_trigger(self, times):
+            return np.exp(-times) * 0.2
+
+        def space_trigger(self, pts):
+            dd = pts[0]**2 + pts[1]**2
+            return np.exp(-dd/50)
+        
+    pts = [[0,1,2,3], [4,7,2,3], [4,5,6,1]]
+    model = Model()
+    pred = sepp_base.PredictorBase(model, pts)
+
+    mmat = np.asarray([[False]*8]*12)
+    grid = open_cp.data.MaskedGrid(50, 50, 0, 0, mmat)
+
+    fp = pred.to_fast_split_predictor(grid)
+    assert fp._time[1] == 1
+    assert len(fp._time[0]) == 7
+    np.testing.assert_allclose(fp._time[0], model.time_trigger(np.arange(7)))
+    assert repr(fp._space_grid) == "GridPredictionArray(offset=(-125,-125), size=25x25, risk intensity size=10x10)"
+    assert repr(fp._background_grid) == "GridPredictionArray(offset=(0,0), size=50x50, risk intensity size=8x12)"
+
+    fp = pred.to_fast_split_predictor(grid, time_bin_size=0.2)
+    assert fp._time[1] == 0.2
+    assert len(fp._time[0]) == 35
+    np.testing.assert_allclose(fp._time[0], model.time_trigger(0.2*np.arange(35)))
+    assert repr(fp._space_grid) == "GridPredictionArray(offset=(-125,-125), size=25x25, risk intensity size=10x10)"
+
+    fp = pred.to_fast_split_predictor(grid, space_bin_size=5)
+    assert fp._time[1] == 1
+    assert len(fp._time[0]) == 7
+    np.testing.assert_allclose(fp._time[0], model.time_trigger(np.arange(7)))
+    assert repr(fp._space_grid) == "GridPredictionArray(offset=(-50,-50), size=5x5, risk intensity size=20x20)"
+
+def test_FastPredictor():
+    mat = np.asarray([[False]*3, [True, False, True]])
+    grid = open_cp.data.MaskedGrid(15, 20, 5, 10, mat)
+    fpb_mock = mock.Mock()
+    fp = sepp_base.FastPredictor(grid, fpb_mock)
+
+    t = [np.datetime64("2017-05-01T00:00"), np.datetime64("2017-05-02T00:00"),
+        np.datetime64("2017-05-04T00:00"), np.datetime64("2017-05-10T23:45")]
+    x = [1,2,3,4]
+    y = [5,6,7,8]
+    fp.data = open_cp.data.TimedPoints.from_coords(t, x, y)
+
+    pred = fp.continuous_predict(datetime.datetime(2017,5,10), datetime.datetime(2017,5,10, 12,30))
+    pred.risk(10, 12)
+    assert fpb_mock.range_predict.call_args[0][0] == pytest.approx(9)
+    assert fpb_mock.range_predict.call_args[0][1] == pytest.approx(9+12.5/24)
+    np.testing.assert_allclose(fpb_mock.range_predict.call_args[0][2], [[10], [12]])
+    assert fpb_mock.range_predict.call_args[1] == {"time_samples":5}
