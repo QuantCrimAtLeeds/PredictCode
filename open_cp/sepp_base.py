@@ -84,6 +84,15 @@ class FastModel():
         """
         raise NotImplementedError()
 
+    def background_in_space(self, space_points):
+        """Return the background risk, which is assumed not to vary in time.
+        
+        :param space_points: Array of shape `(2,n)` of space locations.
+
+        :return: Array of shape `(n,)` giving intensity at these places.
+        """
+        raise NotImplementedError()
+
 
 class PredictorBase():
     """Base class which can perform "predictions".  Predictions are formed by
@@ -154,7 +163,13 @@ class PredictorBase():
             out = out + n
         return out / samples
 
-    def to_fast_split_predictor(self, grid, time_bin_size=1, space_bin_size=25):
+    def to_fast_split_predictor(self):
+        """Return a new instance of a "predictor" which better performance if
+        the model conforms to the interface :class:`FastModel`.
+        """
+        return FastPredictorBase(self._model)
+        
+    def to_fast_split_predictor_histogram(self, grid, time_bin_size=1, space_bin_size=25):
         """Return a new instance of a "predictor" which offers faster
         predictions by using approximations.
 
@@ -172,14 +187,14 @@ class PredictorBase():
           results, this should be the same grid you will eventually make
           predictions for.
         """
-        return FastPredictorBase(self._model, self._points,
+        return FastPredictorHist(self._model,
             self._to_time_hist(time_bin_size), time_bin_size,
             self._to_space_grid(space_bin_size), self._to_background(grid))
 
     def _to_background(self, grid):
-        # TODO: Maybe the grid isn't masked!!
-        return predictors.grid_prediction_from_kernel_and_masked_grid(
-                self._model.space_trigger, grid, samples=-5)
+        cts_pred = predictors.KernelRiskPredictor(self._model.background_in_space)
+        cts_pred.samples = -5
+        return predictors.grid_prediction(cts_pred, grid)
 
     def _to_space_grid(self, space_bin_size):
         size = 5
@@ -227,25 +242,14 @@ class PredictorBase():
 
 
 class FastPredictorBase():
-    """Base class which can perform fast "predictions", based on using
-    histograms to approximate the kernels.
+    """Base class which can perform fast "predictions" by assuming that the
+    background rate does not vary in time, and that the trigger kernel factors.
     
-    :param model: The :class:`ModelBase` object to get the trigger and
+    :param model: The :class:`FastModel` object to get the trigger and
       background from.
-    :param points: Usual array of shape `(3,N)`
-    :param time_hist: Array of shape `(k,)` giving the time kernel.
-    :param time_bandwidth: Width of each bin in the time histogram.
-    :param space_grid: Instance of :class:`GridPredictionArray` to use as an
-      approximation to the space kernel.
-    :param background_grid: Instance of :class:`GridPredictionArray` to use as an
-      approximation to the (time-invariant) background rate.
     """
-    def __init__(self, model, points, time_hist, time_bandwidth, space_grid, background_grid):
+    def __init__(self, model):
         self._model = model
-        self._points = _np.asarray(points)
-        self._time = (time_hist, time_bandwidth)
-        self._space_grid = space_grid
-        self._background_grid = background_grid
         
     @property
     def model(self):
@@ -262,16 +266,13 @@ class FastPredictorBase():
         self._points = v
 
     def time_kernel(self, times):
-        times = _np.atleast_1d(times)
-        indices = _np.floor_divide(times, self._time[1]).astype(_np.int)
-        m = indices < self._time[0].shape[0]
-        out = _np.empty(times.shape)
-        out[m] = self._time[0][indices[m]]
-        out[~m] = 0
-        return out
+        return self._model.time_trigger(times)
 
     def space_kernel(self, pts):
-        return self._space_grid.risk(*pts)
+        return self._model.space_trigger(pts)
+
+    def background_kernel(self, pts):
+        return self._model.background_in_space(pts)
 
     def range_predict(self, time_start, time_end, space_points, time_samples=5):
         space_points = _np.asarray(space_points)
@@ -284,9 +285,61 @@ class FastPredictorBase():
         space_triggers = self.space_kernel(pts).reshape(space_points.shape[-1], data.shape[-1])
 
         times = _np.linspace(time_start, time_end, time_samples)
-        time_triggers = _np.sum(self.time_kernel(times[None,:] - data[0][:,None]), axis=1)
+        dtimes = (times[None,:] - data[0][:,None])
+        time_triggers = self.time_kernel(dtimes.flatten()).reshape(dtimes.shape)
+        time_triggers = _np.mean(time_triggers, axis=1)
 
-        return self._background_grid.risk(*space_points) + _np.sum(space_triggers * time_triggers[None,:], axis=1)
+        return self.background_kernel(space_points) + _np.sum(space_triggers * time_triggers[None,:], axis=1)
+
+
+class FastPredictorHist(FastPredictorBase):
+    """Base class which can perform fast "predictions", based on using
+    histograms to approximate the kernels.
+    
+    :param model: The :class:`FastModel` object to get the trigger and
+      background from.
+    :param time_hist: Array of shape `(k,)` giving the time kernel.
+    :param time_bandwidth: Width of each bin in the time histogram.
+    :param space_grid: Instance of :class:`GridPredictionArray` to use as an
+      approximation to the space kernel.
+    :param background_grid: Instance of :class:`GridPredictionArray` to use as an
+      approximation to the (time-invariant) background rate.
+    """
+    def __init__(self, model, time_hist, time_bandwidth, space_grid, background_grid):
+        super().__init__(model)
+        self._time = (time_hist, time_bandwidth)
+        self._space_grid = space_grid
+        self._background_grid = background_grid
+        
+    @property
+    def time_histogram_width(self):
+        """The width of each bar in the time histogram."""
+        return self._time[1]
+
+    @property
+    def time_histogram(self):
+        """An array giving the height of each bar in the time histogram."""
+        return self._time[0]
+    
+    @property
+    def space_grid(self):
+        """The grid array we use for approximating the space kernel."""
+        return self._space_grid
+
+    def time_kernel(self, times):
+        times = _np.atleast_1d(times)
+        indices = _np.floor_divide(times, self._time[1]).astype(_np.int)
+        m = indices < self._time[0].shape[0]
+        out = _np.empty(times.shape)
+        out[m] = self._time[0][indices[m]]
+        out[~m] = 0
+        return out
+
+    def space_kernel(self, pts):
+        return self._space_grid.risk(*pts)
+
+    def background_kernel(self, pts):
+        return self._background_grid.risk(*pts)
 
 
 def non_normalised_p_matrix(model, points):
@@ -538,7 +591,7 @@ class Predictor(_BaseTrainer):
         self._grid = grid
         self._model = model
         
-    def to_fast_split_predictor(self, time_bin_size=1, space_bin_size=25):
+    def to_fast_split_predictor_histogram(self, time_bin_size=1, space_bin_size=25):
         """Return a new instance of a "predictor" which offers faster
         predictions by using approximations.
 
@@ -554,8 +607,16 @@ class Predictor(_BaseTrainer):
           we use to approximate the space kernel.
         """
         pred = PredictorBase(self._model, [])
-        fsp = pred.to_fast_split_predictor(self._grid, time_bin_size, space_bin_size)
+        fsp = pred.to_fast_split_predictor_histogram(self._grid, time_bin_size, space_bin_size)
         return FastPredictor(self._grid, fsp)
+
+    def to_fast_split_predictor(self):
+        """Return a new instance of a "predictor" which offers faster
+        predictions, assuming that the model conforms to the interface
+        :class:`FastModel`.
+        """
+        pred = PredictorBase(self._model, [])
+        return FastPredictor(self._grid, pred.to_fast_split_predictor())
 
     def background_continuous_predict(self, predict_time, space_samples=20):
         """Make a prediction at this time, returning a continuous prediction.
@@ -647,14 +708,13 @@ class Predictor(_BaseTrainer):
 
 class FastPredictor(_BaseTrainer):
     """A :class:`DataTrainer` which uses a model to make predictions.
-    Is optimised for certain classes of models; approximates kernels by
-    histograms.
+    Is optimised for certain classes of models and can optionally also
+    approximate kernels by histograms.
 
     Currently we assume the the trigger intensity does not vary with
     starting position, and that it "factors" into a product of a time
     kernel and a space kernel.  The model must conform to the
-    :class:`FastModel` interface.  We also assume that the background
-    intensity does not vary in time.
+    :class:`FastModel` interface.
 
     :param grid: The Grid object to make predictions against.
     :param fast_pred_base: The instance of :class:`FastPredictorBase`
@@ -665,7 +725,19 @@ class FastPredictor(_BaseTrainer):
         self._grid = grid
         self._fast_pred_base = fast_pred_base
 
-    def continuous_predict(self, predict_time, end_time, time_samples=5):
+    @property
+    def fast_predictor_base(self):
+        """The underlying :class:`FastPredictorBase` which is used."""
+        return self._fast_pred_base
+    
+    def background_predict(self, space_samples=-5):
+        cts_predictor = predictors.KernelRiskPredictor(self._fast_pred_base.background_kernel,
+            xoffset=self._grid.xoffset, yoffset=self._grid.yoffset,
+            cell_width=self._grid.xsize, cell_height=self._grid.ysize,
+            samples=space_samples)
+        return self._to_grid_pred(cts_predictor)
+
+    def continuous_predict(self, predict_time, end_time, time_samples=5, space_samples=-5):
         """Make a prediction at this time, returning a continuous prediction.
         
         :param predict_time: Limit to data before this time, and use this as
@@ -673,6 +745,8 @@ class FastPredictor(_BaseTrainer):
         :param end_time: Approximately intergate over this time range.
         :param time_samples: The number of samples to use in approximating the
           integral over time.
+        :param space_samples: The number of samples to use in the monte-carlo
+          integration over space
          
         :return: A continuous prediction.
         """
@@ -687,19 +761,25 @@ class FastPredictor(_BaseTrainer):
         
         return predictors.KernelRiskPredictor(kernel,
             xoffset=self._grid.xoffset, yoffset=self._grid.yoffset,
-            cell_width=self._grid.xsize, cell_height=self._grid.ysize)
+            cell_width=self._grid.xsize, cell_height=self._grid.ysize,
+            samples=space_samples)
 
-    def predict(self, predict_time, end_time, time_samples=5):
+    def predict(self, predict_time, end_time, time_samples=5, space_samples=-5):
         """Make a prediction at this time.
         
         :param predict_time: Limit to data before this time, and
           use this as the predict time.
         :param end_time: Approximately intergate over this time range.
+        :param time_samples: The number of samples to use in approximating the
+          integral over time.
+        :param space_samples: The number of samples to use in the monte-carlo
+          integration over space
          
         :return: A grid prediction, masked if possible with the grid, and
           normalised.
         """
-        cts_predictor = self.continuous_predict(predict_time, end_time, time_samples, space_samples)
+        cts_predictor = self.continuous_predict(predict_time, end_time,
+                                    time_samples, space_samples)
         return self._to_grid_pred(cts_predictor)
 
     def _to_grid_pred(self, cts_predictor):
