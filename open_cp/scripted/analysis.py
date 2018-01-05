@@ -66,18 +66,21 @@ def parse_prediction_key(key):
     dets = [x.strip() for x in _split_by_comma_not_in_brackets(dets)]
     details = {}
     for x in dets:
-        i = x.index("=")
-        key = x[:i].strip()
-        value = x[i+1:].strip()
-        try:
-            value = int(value)
-        except ValueError:
-            pass
-        if isinstance(value, str):
+        if "=" not in x:
+            key, value = x, None
+        else:
+            i = x.index("=")
+            key = x[:i].strip()
+            value = x[i+1:].strip()
             try:
-                value = float(value)
+                value = int(value)
             except ValueError:
                 pass
+            if isinstance(value, str):
+                try:
+                    value = float(value)
+                except ValueError:
+                    pass
         details[key] = value
     
     return PredictionKey(name, details)
@@ -196,16 +199,16 @@ def plot_betas(betas, ax, coverages=None, plot_sds=True):
     ax.legend()
     ax.set(xlabel="Coverage (%)", ylabel="Hit rate (probability)")
 
-def plot_betas_means_against_max(betas, ax, coverages=None):
-    """Plot hit rate curves using the data from :func:`hit_counts_to_beta`.
+def compute_betas_means_against_max(betas, coverages=None):
+    """Compute hit rate curves using the data from :func:`hit_counts_to_beta`.
     We use the mean "hit rate" and normalise against the maximum hit rate
     at that coverage from any prediction.
     
     :param betas: Dict as from :func:`hit_counts_to_beta`.
-    :param ax: `matplotlib` Axis object to draw to.
     :param coverages: If not `None`, plot only these coverages.
     
-    :return: Dictionary from keys of `betas` to list of y values.
+    :return: Pair `(x, d)` where `x` is the coverage values used, and 
+      `d` is a dictionary from `betas` to list of y values.
     """
     if coverages is not None:
         x = _np.sort(list(coverages))
@@ -218,10 +221,21 @@ def plot_betas_means_against_max(betas, ax, coverages=None):
         ycs[name] = [data[xx].mean() for xx in x]
     maximum = [ max(ycs[k][i] for k in ycs) for i in range(len(x)) ]
 
-    normed = {k : [y/m for y,m in zip(ycs[k], maximum)] for k in ycs}
+    return x, {k : [y/m for y,m in zip(ycs[k], maximum)] for k in ycs}
 
+def plot_betas_means_against_max(betas, ax, coverages=None):
+    """Plot hit rate curves using the data from :func:`hit_counts_to_beta`.
+    We use the mean "hit rate" and normalise against the maximum hit rate
+    at that coverage from any prediction.
+    
+    :param betas: Dict as from :func:`hit_counts_to_beta`.
+    :param ax: `matplotlib` Axis object to draw to.
+    :param coverages: If not `None`, plot only these coverages.
+    
+    :return: Dictionary from keys of `betas` to list of y values.
+    """
+    x, normed = compute_betas_means_against_max(betas, coverages)
     for name, y in normed.items():
         ax.plot(x,y,label=name)
-        
     ax.set(ylabel="Fraction of maximum hit rate", xlabel="Coverage (%)")
     return normed

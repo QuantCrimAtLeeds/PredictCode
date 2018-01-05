@@ -3,6 +3,7 @@ import pytest
 import open_cp.scripted.analysis as analysis
 
 import io
+import numpy as np
 
 @pytest.fixture
 def counts_csv_file():
@@ -45,6 +46,10 @@ def test_parse_prediction_key():
     assert x.name == "ProHotspotCtsProvider"
     assert x.details == {"Weight":"Classic(sb=400, tb=8)", "DistanceUnit":150.566}
     
+    x = analysis.parse_prediction_key("NaiveProvider (CountingGridKernel)")
+    assert x.name == "NaiveProvider"
+    assert x.details == {"CountingGridKernel":None}
+    
 def test_parse_key_details():
     details = {"TimeKernel":"ExponentialTimeKernel(Scale=1)",
                "SpaceKernel":"GaussianFixedBandwidthProvider(bandwidth=100)"}
@@ -52,4 +57,13 @@ def test_parse_key_details():
         "TimeKernel":{"ExponentialTimeKernel":{"Scale":1}},
         "SpaceKernel":{"GaussianFixedBandwidthProvider":{"bandwidth":100}}
         }
+    
+def test_compute_betas_means_against_max(counts_csv_file):
+    betas = analysis.hit_counts_to_beta(counts_csv_file)
+    x, d = analysis.compute_betas_means_against_max(betas)
+    np.testing.assert_allclose(x, [1,2,3,4])
+    assert set(d) == {"Pred1", "Pred2"}
+    np.testing.assert_allclose(d["Pred1"], [5/12, 5/6, 5/6, 1])
+    np.testing.assert_allclose(d["Pred2"], [1, 1, 1, 3/5])
+    
     
