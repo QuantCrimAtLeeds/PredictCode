@@ -9,7 +9,7 @@ import numpy as _np
 import math as _math
 from . import data as _data
 import logging as _logging
-# For what we use this for, we could use e.g binary search; but why invent
+# For what we use this for, we could use e.g binary search; but why re-invent
 # the wheel?
 import scipy.optimize as _optimize
 
@@ -187,25 +187,11 @@ def intersect_timed_points(timed_points, geo):
     mask = _np.array(mask, dtype=_np.bool)
     return timed_points[mask]
 
-def intersect_timed_points_old(timed_points, geo):
-    """Intersect the :class:`TimedPoints` data with the geometry, using
-    `shapely`.
+
     
-    :param timed_points: Instance of :class:`TimedPoints`
-    :param geo: A geometry object
-    
-    :return: Instance of :class:`TimedPoints`
-    """
-    mask = []
-    for (x,y) in timed_points.coords.T:
-        pt = _geometry.Point((x,y))
-        mask.append( geo.intersects(pt) )
-    mask = _np.array(mask, dtype=_np.bool)
-    return _data.TimedPoints(timed_points.timestamps[mask],
-                       timed_points.coords[:,mask])
-    
-    
-##### Point and line geometry #####
+#############################################################################    
+# Point and line geometry
+#############################################################################    
 
 def _project_point_to_line(point, line):
     """Assumes line is only 2 points
@@ -320,13 +306,35 @@ def intersect_line_box(start, end, box_bounds):
         c, d = ymin - start[1], ymax - start[1]
         if dy > 0:
             c, d = c / dy, d / dy
-        else:
+        else: 
             c, d = d / dy, c / dy
         tmin = max(a, c, 0)
         tmax = min(b, d, 1)
         if tmin < tmax:
             return (tmin, tmax)
         return None
+
+def line_meets_geometry(geo, line):
+    """Does the line intersect the geometry?
+    
+    :param geo: `shapely` object
+    :param line: A line in the usual format, an iterable of points `(x,y)`
+    
+    :return: True or False
+    """
+    line = _geometry.LineString(list(line))
+    return geo.intersects(line)
+
+def lines_which_meet_geometry(geo, lines):
+    """Which of the lines intersect the geometry?
+    
+    :param geo: `shapely` object
+    :param lines: An iterable of lines in the usual format: each an iterable of
+      points `(x,y)`
+    
+    :return: List of True or False
+    """
+    return [line_meets_geometry(geo, line) for line in lines]
 
 def intersect_line_grid_most(line, grid):
     """Intersect a line with a grid.  Finds the grid cell which contains the
@@ -453,6 +461,11 @@ class ProjectPointLinesRTree():
                     return best
             h += h
 
+
+
+#############################################################################
+# Voroni cell stuff
+#############################################################################
 
 try:
     import scipy.spatial as _spatial

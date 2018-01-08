@@ -263,6 +263,18 @@ def test_intersect_line_grid_most():
     line = ( (2, 2), (30, 30) )
     assert geometry.intersect_line_grid_most(line, grid) == (1,1)
     
+def test_line_meets_geometry(unit_square):
+    assert geometry.line_meets_geometry(unit_square, [[0,0], [-1,-1]])
+    assert geometry.line_meets_geometry(unit_square, [[0,0], [0.2, 0.1], [-1,-1]])
+    assert not geometry.line_meets_geometry(unit_square, [[-0.1, 0], [-1,-1]])
+
+def test_lines_which_meet_geometry(unit_square):
+    lines = [ [[0,0], [-1,-1]],
+            [[0,0], [0.2, 0.1], [-1,-1]],
+            [[-0.1, 0], [-1,-1]] ]
+
+    assert geometry.lines_which_meet_geometry(unit_square, lines) == [True, True, False]
+    
 def test_voroni_perp():
     points = np.asarray([[1,2], [2,3], [3,4]])
     x, y = geometry.Voroni.perp_direction(points, 0, 1, [0,0])
