@@ -24,7 +24,7 @@ from .. import logger
 import logging, lzma, pickle, collections, datetime
 from .. import geometry
 
-logger.log_to_stdout()
+logger.log_to_true_stdout()
 _logger = logging.getLogger(__name__)
 _logger.setLevel(logging.INFO)
 
