@@ -275,6 +275,16 @@ def test_lines_which_meet_geometry(unit_square):
 
     assert geometry.lines_which_meet_geometry(unit_square, lines) == [True, True, False]
     
+def test_full_intersect_line_grid():
+    line = [(418381, 436950), (418388.5, 436945.5)]
+    grid = open_cp.data.Grid(xoffset=414450, yoffset=430200, xsize=150, ysize=150)
+    segs, ints = geometry.full_intersect_line_grid(line, grid)
+    np.testing.assert_allclose(np.asarray(segs), [line])
+    assert len(ints) == 1
+    assert ints[0][:2] == (26, 44)
+    assert ints[0][2] == pytest.approx(0)
+    assert ints[0][3] == pytest.approx(1)
+    
 def test_voroni_perp():
     points = np.asarray([[1,2], [2,3], [3,4]])
     x, y = geometry.Voroni.perp_direction(points, 0, 1, [0,0])
