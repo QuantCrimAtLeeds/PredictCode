@@ -66,4 +66,28 @@ def test_compute_betas_means_against_max(counts_csv_file):
     np.testing.assert_allclose(d["Pred1"], [5/12, 5/6, 5/6, 1])
     np.testing.assert_allclose(d["Pred2"], [1, 1, 1, 3/5])
     
-    
+@pytest.fixture
+def counts_csv_file_with_zeros():
+    txt = "Predictor,Start time,End time,Number events,1%,2%,3%,4%\n"
+    txt += "Pred1,_,_,5,0,0,3,4\n"
+    txt += "Pred1,_,_,7,0,1,5,4\n"
+    txt += "Pred2,_,_,10,6,3,8,4\n"
+    return io.StringIO(txt)
+
+def test_compute_betas_means_against_max_with_zeros(counts_csv_file_with_zeros):
+    betas = analysis.hit_counts_to_beta(counts_csv_file_with_zeros)
+    x, d = analysis.compute_betas_means_against_max(betas)
+    np.testing.assert_allclose(x, [1,2,3,4])
+    assert set(d) == {"Pred1", "Pred2"}
+    np.testing.assert_allclose(d["Pred1"], [0, 5/18, 5/6, 1])
+    np.testing.assert_allclose(d["Pred2"], [1, 1, 1, 3/5])
+
+def test_single_hit_counts_to_beta():
+    hit_counts = {
+        "a" : {1:(0,3), 2:(1,3)},
+        "b" : {1:(1,2), 2:(2,2)}
+    }
+    out = analysis.single_hit_counts_to_beta(hit_counts)
+    assert set(out) == {1, 2}
+    assert out[1].args == (1, 4)
+    assert out[2].args == (3, 2)
