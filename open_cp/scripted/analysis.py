@@ -176,6 +176,24 @@ def hit_counts_to_beta(csv_file):
     
     return _open_text_file(csv_file, func)
 
+def single_hit_counts_to_beta(hit_counts):
+    """Convert a dictionary of hit_counts to beta distributed posteriors.
+    
+    :param hit_counts: Dictionary from arbitrary keys to dictionarys from
+      coverage level to pairs `(hit_count, total_count)`.
+      
+    :return: Dictionary from coverage levels to :class:`scipy.stats.beta`
+      instances.
+    """
+    total_counts = {}
+    for key, cov_to_counts in hit_counts.items():
+        for cov, (hit, total) in cov_to_counts.items():
+            if cov not in total_counts:
+                total_counts[cov] = (0, 0)
+            total_counts[cov] = total_counts[cov][0] + hit, total_counts[cov][1] + total
+    
+    return {k : _stats.beta(a, b-a) for k, (a,b) in total_counts.items()}
+
 def plot_betas(betas, ax, coverages=None, plot_sds=True):
     """Plot hit rate curves using the data from :func:`hit_counts_to_beta`.
     Plots the median and +/-34% (roughly a +/- 1 standard deviation) of the
@@ -202,6 +220,11 @@ def plot_betas(betas, ax, coverages=None, plot_sds=True):
     ax.legend()
     ax.set(xlabel="Coverage (%)", ylabel="Hit rate (probability)")
 
+def _mean_or_zero(beta_dist):
+    if beta_dist.args[0] == 0:
+        return 0
+    return beta_dist.mean()
+
 def compute_betas_means_against_max(betas, coverages=None):
     """Compute hit rate curves using the data from :func:`hit_counts_to_beta`.
     We use the mean "hit rate" and normalise against the maximum hit rate
@@ -221,10 +244,15 @@ def compute_betas_means_against_max(betas, coverages=None):
 
     ycs = dict()
     for name, data in betas.items():
-        ycs[name] = [data[xx].mean() for xx in x]
+        ycs[name] = [_mean_or_zero(data[xx]) for xx in x]
     maximum = [ max(ycs[k][i] for k in ycs) for i in range(len(x)) ]
 
-    return x, {k : [y/m for y,m in zip(ycs[k], maximum)] for k in ycs}
+    def div_or_zero(y, m):
+        if m == 0:
+            return 0
+        return y / m
+
+    return x, {k : [div_or_zero(y, m) for y,m in zip(ycs[k], maximum)] for k in ycs}
 
 def plot_betas_means_against_max(betas, ax, coverages=None):
     """Plot hit rate curves using the data from :func:`hit_counts_to_beta`.

@@ -378,7 +378,7 @@ def full_intersect_line_grid(line, grid):
     :return: `(segments, intervals)` where `segments` is as
       :meth:`intersect_line_grid_most` and `intervals` is a list of tuples
       `(gx, gy, t1, t2)` telling that the line segment from (line coordinates)
-      `t1` to `t2` is in grid cell `gx, gy`.  The ordering as the same as
+      `t1` to `t2` is in grid cell `gx, gy`.  The ordering is the same as
       `segments`.
     """
     gx, gy = grid.grid_coord(*line[0])
@@ -395,12 +395,16 @@ def full_intersect_line_grid(line, grid):
     while True:
         gx, gy = _math.floor(search[0] / grid.xsize), _math.floor(search[1] / grid.ysize)
         bbox = (gx * grid.xsize, gy * grid.ysize, (gx+1) * grid.xsize, (gy+1) * grid.ysize)
-        t1, t2 = intersect_line_box(start, end, bbox)
-        segments.append((
-                (start[0]*(1-t1) + end[0]*t1 + grid.xoffset, start[1]*(1-t1) + end[1]*t1 + grid.yoffset),
-                (start[0]*(1-t2) + end[0]*t2 + grid.xoffset, start[1]*(1-t2) + end[1]*t2 + grid.yoffset)
-                ))
-        intervals.append((gx, gy, t1, t2))
+        intersects = intersect_line_box(start, end, bbox)
+        if intersects is None:
+            t2 = 0
+        else:
+            t1, t2 = intersects
+            segments.append((
+                    (start[0]*(1-t1) + end[0]*t1 + grid.xoffset, start[1]*(1-t1) + end[1]*t1 + grid.yoffset),
+                    (start[0]*(1-t2) + end[0]*t2 + grid.xoffset, start[1]*(1-t2) + end[1]*t2 + grid.yoffset)
+                    ))
+            intervals.append((gx, gy, t1, t2))
         t2 += delta
         if t2 >= 1:
             break
