@@ -57,6 +57,12 @@ def test_parse_key_details():
         "TimeKernel":{"ExponentialTimeKernel":{"Scale":1}},
         "SpaceKernel":{"GaussianFixedBandwidthProvider":{"bandwidth":100}}
         }
+
+    details = {'DistanceUnit': 150, 'Weight': 'Classic(sb=2, tb=6)'}
+    assert analysis.parse_key_details(details) == {
+        "DistanceUnit":150,
+        "Weight":{"Classic":{"sb":2, "tb":6}}
+        }
     
 def test_compute_betas_means_against_max(counts_csv_file):
     betas = analysis.hit_counts_to_beta(counts_csv_file)

@@ -45,8 +45,11 @@ def parse_key_details(details):
     """
     out = {}
     for k,v in details.items():
-        name, dets = parse_prediction_key(v)
-        out[k] = {name:dets}
+        try:
+            name, dets = parse_prediction_key(v)
+            out[k] = {name:dets}
+        except:
+            out[k] = v
     return out    
 
 def parse_prediction_key(key):
