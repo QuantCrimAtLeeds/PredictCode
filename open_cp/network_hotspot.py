@@ -279,14 +279,17 @@ class Predictor():
         :param cutoff_time: Use only events after this time.  If `None` then use
           all events from the start of the input data.
         """
-        if predict_time is None:
-            predict_time = self.network_timed_points.time_range[1]
         if cutoff_time is None:
             cutoff_time = self.network_timed_points.time_range[0]
-        
-        mask = ( (self.network_timed_points.timestamps >= cutoff_time) &
-            (self.network_timed_points.timestamps <= predict_time) )
+        cutoff_time = _np.datetime64(cutoff_time)
+        mask = (self.network_timed_points.timestamps >= cutoff_time)
+        if predict_time is not None:
+            predict_time = _np.datetime64(predict_time)
+            mask &= (self.network_timed_points.timestamps < predict_time)
+        else:
+            predict_time = self.network_timed_points.time_range[1]
         data = self.network_timed_points[mask]
+
         times = (predict_time - data.timestamps) / self.time_kernel_unit
         time_weights = self.time_kernel(times)
         risks = _np.zeros(len(self.graph.edges))
