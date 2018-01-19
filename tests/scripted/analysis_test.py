@@ -50,6 +50,10 @@ def test_parse_prediction_key():
     assert x.name == "NaiveProvider"
     assert x.details == {"CountingGridKernel":None}
     
+    x = analysis.parse_prediction_key("ExpDecayGridProvider")
+    assert x.name == 'ExpDecayGridProvider'
+    assert x.details == {}
+
 def test_parse_key_details():
     details = {"TimeKernel":"ExponentialTimeKernel(Scale=1)",
                "SpaceKernel":"GaussianFixedBandwidthProvider(bandwidth=100)"}

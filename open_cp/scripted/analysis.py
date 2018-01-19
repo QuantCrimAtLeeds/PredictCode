@@ -62,6 +62,9 @@ def parse_prediction_key(key):
                                       "DistanceUnit" : 150}
     (Attempts to parse to ints or floats if possible).
     """
+    if "(" not in key:
+        return PredictionKey(key, {})
+    
     i = key.index("(")
     name = key[:i].strip()
     dets = key[i+1:-1]
