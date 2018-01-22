@@ -429,7 +429,8 @@ class Optimiser():
         for i in range(1, self._p.shape[0]):
             out += _np.sum(self._p[:i, i])
         if abs(out) < 1e-10:
-            raise ValueError()
+            #raise ValueError()
+            self._logger.warn("p-matrix has become diagonal-- no repeat behaviour!")
         return out
     
     def upper_tri_col(self, col):
